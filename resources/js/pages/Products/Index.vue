@@ -21,7 +21,7 @@ import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Category, Paginated, Product } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Boxes, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
+import { Boxes, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -155,7 +155,12 @@ function stockTone(qty: number | null | undefined) {
                                             <Boxes v-else class="size-4 text-muted-foreground" />
                                         </div>
                                         <div class="min-w-0">
-                                            <p class="truncate font-medium leading-tight">{{ p.name }}</p>
+                                            <Link
+                                                :href="route('products.show', { product: p.id })"
+                                                class="block truncate font-medium leading-tight hover:underline"
+                                            >
+                                                {{ p.name }}
+                                            </Link>
                                             <p class="tabular truncate font-mono text-xs text-muted-foreground">
                                                 {{ p.sku }}<span v-if="p.barcode"> · {{ p.barcode }}</span>
                                             </p>
@@ -180,9 +185,12 @@ function stockTone(qty: number | null | undefined) {
                                     </Badge>
                                 </TableCell>
                                 <TableCell>
-                                    <div
-                                        class="flex items-center gap-1"
-                                    >
+                                    <div class="flex items-center gap-1">
+                                        <Button as-child variant="ghost" size="icon" class="press size-8">
+                                            <Link :href="route('products.show', { product: p.id })" aria-label="View">
+                                                <Eye class="size-4" />
+                                            </Link>
+                                        </Button>
                                         <Button as-child variant="ghost" size="icon" class="press size-8">
                                             <Link :href="route('products.edit', { product: p.id })" aria-label="Edit">
                                                 <Pencil class="size-4" />

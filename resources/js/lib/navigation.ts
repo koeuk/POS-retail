@@ -9,7 +9,6 @@ import {
     ReceiptText,
     ScanBarcode,
     Shapes,
-    Store,
     Users,
     UsersRound,
 } from 'lucide-vue-next';
@@ -45,7 +44,13 @@ export const navGroups: NavGroup[] = [
         items: [
             { title: 'Customers', href: '/customers', icon: UsersRound, requires: 'manage' },
             { title: 'Staff', href: '/users', icon: Users, requires: 'isAdmin' },
-            { title: 'Stores', href: '/stores', icon: Store, requires: 'manage' },
+            /*
+             * Stores is deliberately not in the nav: this is a single-store
+             * shop, so the screen has nothing to choose between. The route is
+             * still live at /stores — it remains the only place registers can
+             * be added or renamed — so put it back here the day a second
+             * location opens.
+             */
         ],
     },
 ];

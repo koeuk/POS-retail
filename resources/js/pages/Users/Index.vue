@@ -190,9 +190,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                     </span>
                                 </TableCell>
                                 <TableCell>
-                                    <div
-                                        class="flex items-center gap-1"
-                                    >
+                                    <div class="flex items-center gap-1">
                                         <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(u)">
                                             <Pencil class="size-4" />
                                         </Button>

@@ -89,6 +89,48 @@ class StoreController extends Controller
         return back()->with('success', 'Store updated.');
     }
 
+    /**
+     * Deleting a store is guarded three ways, and each refusal explains
+     * itself rather than letting a foreign key throw a 500 at the operator.
+     *
+     * Orders are the hard one: `orders.store_id` is restrictOnDelete, so the
+     * database would refuse anyway — a sale must always point at a real shop.
+     * Stock rows, registers and the inventory ledger cascade, which is
+     * correct: they describe a place that no longer exists.
+     */
+    public function destroy(Request $request, Store $store): RedirectResponse
+    {
+        $this->authorize('delete', $store);
+
+        if (Store::count() <= 1) {
+            return back()->withErrors([
+                'store' => 'This is the only store. The app needs at least one to sell anything.',
+            ]);
+        }
+
+        if ($store->orders()->exists()) {
+            return back()->withErrors([
+                'store' => "“{$store->name}” has sales history and cannot be deleted. Its orders must keep pointing at a real store.",
+            ]);
+        }
+
+        // A cashier without a store cannot open the POS at all, so make the
+        // operator reassign people deliberately rather than silently orphan
+        // them via the nullOnDelete foreign key.
+        $staff = $store->users()->count();
+
+        if ($staff > 0) {
+            return back()->withErrors([
+                'store' => "Move the {$staff} staff member(s) assigned to “{$store->name}” to another store first.",
+            ]);
+        }
+
+        $name = $store->name;
+        $store->delete();
+
+        return back()->with('success', "“{$name}” was deleted.");
+    }
+
     public function storeRegister(Request $request, Store $store): RedirectResponse
     {
         $this->authorize('update', $store);

@@ -103,9 +103,7 @@ function confirmDelete() {
                                 {{ c.products_count ?? 0 }} product{{ c.products_count === 1 ? '' : 's' }}
                             </Badge>
 
-                            <Pencil
-                                class="hidden size-4 shrink-0 text-muted-foreground md:block"
-                            />
+                            <Pencil class="hidden size-4 shrink-0 text-muted-foreground md:block" />
                         </button>
 
                         <button type="button" class="list-row-action" :aria-label="`Delete ${c.name}`" @click="pendingDelete = c">

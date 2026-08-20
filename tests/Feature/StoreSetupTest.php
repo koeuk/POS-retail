@@ -2,12 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderStatus;
 use App\Models\Category;
+use App\Models\Order;
 use App\Models\Product;
+use App\Models\Register;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class StoreSetupTest extends TestCase
@@ -48,6 +52,94 @@ class StoreSetupTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('stores', ['name' => 'Empty Branch']);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Deleting */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * orders.store_id is restrictOnDelete, so the database would refuse this
+     * anyway — the guard exists so an operator gets a sentence instead of a
+     * 500, and so sales history can never lose the shop it belongs to.
+     */
+    public function test_a_store_with_sales_history_cannot_be_deleted(): void
+    {
+        $keep = Store::factory()->create();
+        $doomed = Store::factory()->create();
+        $admin = User::factory()->admin()->create();
+
+        Order::create([
+            'client_uuid' => (string) Str::uuid(),
+            'order_no' => 'KEEP-1',
+            'store_id' => $doomed->id,
+            'cashier_id' => $admin->id,
+            'subtotal' => '1.00', 'discount_amount' => '0.00', 'tax_amount' => '0.00',
+            'total' => '1.00', 'paid_amount' => '1.00', 'change_amount' => '0.00',
+            'status' => OrderStatus::Completed,
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('stores.destroy', $doomed))
+            ->assertSessionHasErrors('store');
+
+        $this->assertDatabaseHas('stores', ['id' => $doomed->id]);
+        $this->assertSame(2, Store::count());
+        $this->assertNotNull($keep);
+    }
+
+    /** A cashier with no store cannot open the POS, so never orphan one. */
+    public function test_a_store_with_staff_cannot_be_deleted(): void
+    {
+        Store::factory()->create();
+        $doomed = Store::factory()->create();
+        User::factory()->cashier($doomed)->create();
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->delete(route('stores.destroy', $doomed))
+            ->assertSessionHasErrors('store');
+
+        $this->assertDatabaseHas('stores', ['id' => $doomed->id]);
+    }
+
+    public function test_the_last_store_cannot_be_deleted(): void
+    {
+        $only = Store::factory()->create();
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->delete(route('stores.destroy', $only))
+            ->assertSessionHasErrors('store');
+
+        $this->assertSame(1, Store::count());
+    }
+
+    /** An unused store goes, and takes its stock rows and registers with it. */
+    public function test_an_unused_store_is_deleted_with_its_stock_and_registers(): void
+    {
+        Store::factory()->create();
+        $doomed = Store::factory()->create();
+        Register::factory()->create(['store_id' => $doomed->id]);
+        Stock::create(['product_id' => Product::factory()->create()->id, 'store_id' => $doomed->id, 'qty' => 0]);
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->delete(route('stores.destroy', $doomed))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('stores', ['id' => $doomed->id]);
+        $this->assertSame(0, Stock::where('store_id', $doomed->id)->count());
+        $this->assertSame(0, Register::where('store_id', $doomed->id)->count());
+    }
+
+    public function test_a_manager_cannot_delete_a_store(): void
+    {
+        Store::factory()->create();
+        $doomed = Store::factory()->create();
+
+        $this->actingAs(User::factory()->manager($doomed)->create())
+            ->delete(route('stores.destroy', $doomed))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('stores', ['id' => $doomed->id]);
     }
 
     /** Both directions must hold: a product added later reaches every store. */

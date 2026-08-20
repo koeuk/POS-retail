@@ -33,6 +33,12 @@ class StorePolicy
         return false;
     }
 
+    /**
+     * Admins only, and `before()` already grants them everything — this is
+     * the rule for everyone else. Whether a *particular* store may go is a
+     * data question (orders, staff, being the last one), and that lives in
+     * StoreController::destroy where a refusal can explain itself.
+     */
     public function delete(User $user, Store $store): bool
     {
         return false;

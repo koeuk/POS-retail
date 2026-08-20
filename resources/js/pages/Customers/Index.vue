@@ -136,9 +136,7 @@ function confirmDelete() {
                                     <span v-else class="text-muted-foreground">—</span>
                                 </TableCell>
                                 <TableCell>
-                                    <div
-                                        class="flex items-center gap-1"
-                                    >
+                                    <div class="flex items-center gap-1">
                                         <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(c)">
                                             <Pencil class="size-4" />
                                         </Button>

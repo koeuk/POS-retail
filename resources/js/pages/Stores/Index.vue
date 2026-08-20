@@ -9,14 +9,33 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Register, Store } from '@/types';
-import { Head, useForm } from '@inertiajs/vue3';
-import { MapPin, Monitor, Phone, Plus, Store as StoreIcon } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { MapPin, Monitor, Phone, Plus, Store as StoreIcon, Trash2 } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
 defineProps<{
     stores: Store[];
     canManage: boolean;
 }>();
+
+/*
+ * Deleting a store is refused for three different reasons, each of which is
+ * worth reading, so the message comes back as a validation error rather than
+ * a toast that vanishes.
+ */
+const page = usePage();
+const deleteError = computed(() => (page.props.errors as Record<string, string>)?.store ?? null);
+
+const pendingDelete = ref<Store | null>(null);
+
+function confirmDelete() {
+    if (!pendingDelete.value) return;
+
+    router.delete(route('stores.destroy', { store: pendingDelete.value.id }), {
+        preserveScroll: true,
+        onFinish: () => (pendingDelete.value = null),
+    });
+}
 
 const storeDialog = ref(false);
 const editingStore = ref<Store | null>(null);
@@ -91,6 +110,13 @@ function submitRegister() {
                 </template>
             </PageHeader>
 
+            <div
+                v-if="deleteError"
+                class="animate-rise mb-4 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+                {{ deleteError }}
+            </div>
+
             <div v-if="stores.length" class="stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <article v-for="store in stores" :key="store.id" class="lift rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
                     <div class="flex items-start justify-between gap-3">
@@ -105,9 +131,26 @@ function submitRegister() {
                                 </p>
                             </div>
                         </div>
-                        <Button v-if="canManage" variant="ghost" size="sm" class="press touch-target shrink-0" @click="openStore(store)">
-                            Edit
-                        </Button>
+                        <div v-if="canManage" class="flex shrink-0 items-center gap-1">
+                            <Button variant="ghost" size="sm" class="press touch-target" @click="openStore(store)"> Edit </Button>
+                            <!--
+                                Disabled rather than hidden when it is the only
+                                store: a control that vanishes makes people hunt
+                                for it, whereas a dead one with a reason attached
+                                answers the question on the spot.
+                            -->
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="press touch-target size-8 text-muted-foreground enabled:hover:text-destructive disabled:opacity-40"
+                                :disabled="stores.length <= 1"
+                                :aria-label="`Delete ${store.name}`"
+                                :title="stores.length <= 1 ? 'This is the only store — the app needs at least one' : `Delete ${store.name}`"
+                                @click="pendingDelete = store"
+                            >
+                                <Trash2 class="size-4" />
+                            </Button>
+                        </div>
                     </div>
 
                     <dl class="mt-4 space-y-1.5 text-sm text-muted-foreground">
@@ -234,6 +277,31 @@ function submitRegister() {
                         </Button>
                     </DialogFooter>
                 </form>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Delete confirmation -->
+        <Dialog :open="!!pendingDelete" @update:open="(v) => !v && (pendingDelete = null)">
+            <DialogContent class="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Delete “{{ pendingDelete?.name }}”?</DialogTitle>
+                    <DialogDescription>
+                        Its registers, stock rows and inventory history go with it. A store that has ever recorded a sale cannot be deleted at all —
+                        those orders must keep pointing at a real shop.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="py-2">
+                    <p class="tabular font-mono text-xs text-muted-foreground">
+                        {{ pendingDelete?.orders_count ?? 0 }} orders · {{ pendingDelete?.users_count ?? 0 }} staff ·
+                        {{ pendingDelete?.registers?.length ?? 0 }} registers
+                    </p>
+                </div>
+
+                <DialogFooter>
+                    <Button variant="ghost" class="press" @click="pendingDelete = null">Cancel</Button>
+                    <Button class="press bg-destructive text-destructive-foreground hover:bg-destructive/90" @click="confirmDelete">Delete</Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     </AppLayout>

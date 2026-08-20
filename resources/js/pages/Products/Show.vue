@@ -1,0 +1,193 @@
+<script setup lang="ts">
+import Money from '@/components/Money.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import AppLayout from '@/layouts/AppLayout.vue';
+import type { Product, Stock } from '@/types';
+import { Head, Link } from '@inertiajs/vue3';
+import { ArrowLeft, Boxes, PackageSearch, Pencil } from 'lucide-vue-next';
+import { computed } from 'vue';
+
+interface Movement {
+    id: number;
+    type: string;
+    qty_change: number;
+    note: string | null;
+    created_at: string;
+    store: { id: number; name: string } | null;
+    creator: { id: number; name: string } | null;
+}
+
+const props = defineProps<{
+    product: Product;
+    taxRate: number;
+    stocks: Stock[];
+    movements: Movement[];
+    sales: { qty: number; revenue: string } | null;
+}>();
+
+const onHand = computed(() => props.stocks.reduce((sum, s) => sum + s.qty, 0));
+
+const withTax = computed(() => Number(props.product.sell_price) * (1 + props.taxRate / 100));
+
+function tone(stock: Stock) {
+    if (stock.qty < 0) return 'text-destructive';
+    if (stock.low_stock_threshold !== null && stock.qty <= stock.low_stock_threshold) return 'text-primary';
+    return '';
+}
+
+const when = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+
+const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'restock' || type === 'return' ? 'secondary' : 'default');
+</script>
+
+<template>
+    <Head :title="product.name" />
+
+    <AppLayout
+        :breadcrumbs="[
+            { title: 'Products', href: '/products' },
+            { title: product.name, href: `/products/${product.id}` },
+        ]"
+    >
+        <div class="px-5 py-6 md:px-8">
+            <PageHeader eyebrow="Catalogue" :title="product.name" :description="product.category?.name">
+                <template #actions>
+                    <Button as-child variant="ghost" class="press">
+                        <Link :href="route('products.index')">
+                            <ArrowLeft class="size-4" />
+                            Back
+                        </Link>
+                    </Button>
+                    <Button as-child class="press">
+                        <Link :href="route('products.edit', { product: product.id })">
+                            <Pencil class="size-4" />
+                            Edit
+                        </Link>
+                    </Button>
+                </template>
+            </PageHeader>
+
+            <div class="grid items-start gap-4 lg:grid-cols-3">
+                <!-- Identity -->
+                <section class="animate-rise rounded-xl border border-border bg-card p-5 shadow-sm">
+                    <div
+                        class="mb-4 flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40"
+                    >
+                        <img v-if="product.image" :src="`/storage/${product.image}`" :alt="product.name" class="size-full object-cover" />
+                        <Boxes v-else class="size-8 text-muted-foreground/50" />
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <Badge :variant="product.is_active ? 'secondary' : 'outline'">
+                            {{ product.is_active ? 'Active' : 'Inactive' }}
+                        </Badge>
+                        <Badge v-if="!product.track_stock" variant="outline">Stock not tracked</Badge>
+                    </div>
+
+                    <dl class="mt-4 space-y-2.5 text-sm">
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-muted-foreground">SKU</dt>
+                            <dd class="tabular font-mono">{{ product.sku }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-muted-foreground">Barcode</dt>
+                            <dd class="tabular font-mono">{{ product.barcode ?? '—' }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-muted-foreground">Unit</dt>
+                            <dd>{{ product.unit }}</dd>
+                        </div>
+                    </dl>
+
+                    <p v-if="product.description" class="mt-4 border-t border-border pt-4 text-sm text-muted-foreground">
+                        {{ product.description }}
+                    </p>
+                </section>
+
+                <div class="space-y-4 lg:col-span-2">
+                    <!-- Money -->
+                    <section class="animate-rise rounded-xl border border-border bg-card p-5 shadow-sm" style="animation-delay: 60ms">
+                        <h2 class="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Price</h2>
+                        <div class="flex flex-wrap gap-6">
+                            <div>
+                                <p class="text-xs text-muted-foreground">Shelf price</p>
+                                <p class="text-2xl font-bold text-primary">
+                                    <Money :value="product.sell_price" :muted="false" />
+                                </p>
+                                <p class="text-[0.7rem] text-muted-foreground">tax-exclusive</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-muted-foreground">Customer pays</p>
+                                <p class="tabular font-mono text-2xl font-semibold">{{ withTax.toFixed(2) }}</p>
+                                <p class="text-[0.7rem] text-muted-foreground">includes {{ taxRate }}% tax</p>
+                            </div>
+                            <div v-if="sales">
+                                <p class="text-xs text-muted-foreground">Sold to date</p>
+                                <p class="tabular font-mono text-2xl font-semibold">{{ sales.qty }}</p>
+                                <p class="text-[0.7rem] text-muted-foreground"><Money :value="sales.revenue" /> revenue</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Stock -->
+                    <section class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 100ms">
+                        <div class="flex items-baseline justify-between border-b border-border px-4 py-3">
+                            <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Stock on hand</h2>
+                            <p class="tabular font-mono text-sm font-semibold">{{ onHand }} {{ product.unit }} total</p>
+                        </div>
+                        <ul v-if="stocks.length" class="divide-y divide-border">
+                            <li v-for="stock in stocks" :key="stock.id" class="flex items-center gap-3 px-4 py-2.5">
+                                <span class="flex-1 text-sm">{{ stock.store?.name }}</span>
+                                <span v-if="stock.low_stock_threshold !== null" class="tabular font-mono text-[0.7rem] text-muted-foreground">
+                                    alert at {{ stock.low_stock_threshold }}
+                                </span>
+                                <span class="tabular font-mono text-base font-semibold" :class="tone(stock)">
+                                    {{ stock.qty }}
+                                </span>
+                            </li>
+                        </ul>
+                        <p v-else class="px-4 py-6 text-center text-sm text-muted-foreground">No stock rows yet.</p>
+
+                        <div class="border-t border-border px-4 py-3">
+                            <Button as-child variant="outline" size="sm" class="press">
+                                <Link :href="route('inventory.index', { search: product.sku })">
+                                    <PackageSearch class="size-4" />
+                                    Adjust in Inventory
+                                </Link>
+                            </Button>
+                        </div>
+                    </section>
+
+                    <!-- Ledger -->
+                    <section class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 140ms">
+                        <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                            Recent movements
+                        </h2>
+                        <ul v-if="movements.length" class="divide-y divide-border">
+                            <li v-for="movement in movements" :key="movement.id" class="flex items-center gap-3 px-4 py-2.5">
+                                <Badge :variant="typeTone(movement.type)" class="w-[5.5rem] justify-center capitalize">
+                                    {{ movement.type }}
+                                </Badge>
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-[0.75rem] text-muted-foreground">
+                                        {{ movement.store?.name }} · {{ movement.creator?.name ?? 'System' }} · {{ when(movement.created_at) }}
+                                        <span v-if="movement.note">· {{ movement.note }}</span>
+                                    </p>
+                                </div>
+                                <span
+                                    class="tabular shrink-0 font-mono text-sm font-semibold"
+                                    :class="movement.qty_change < 0 ? 'text-destructive' : 'text-primary'"
+                                >
+                                    {{ movement.qty_change > 0 ? '+' : '' }}{{ movement.qty_change }}
+                                </span>
+                            </li>
+                        </ul>
+                        <p v-else class="px-4 py-6 text-center text-sm text-muted-foreground">Nothing has moved yet.</p>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </AppLayout>
+</template>
