@@ -37,6 +37,19 @@ class DatabaseSeeder extends Seeder
 
     private function seedUsers(Store $store): void
     {
+        // Owner account. There is no separate "superadmin" role — admin is the
+        // top of the ladder and already bypasses every policy check via the
+        // before() hook, with no store binding so it sees all stores.
+        User::create([
+            'name' => 'Koeuk',
+            'email' => 'koeukkos@gmail.com',
+            'password' => Hash::make('12345678'),
+            'email_verified_at' => now(),
+            'role' => Role::Admin,
+            'store_id' => null,
+            'is_active' => true,
+        ]);
+
         User::create([
             'name' => 'Admin',
             'email' => 'admin@pos.test',
