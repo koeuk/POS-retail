@@ -6,17 +6,10 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Customer, Paginated } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
@@ -34,11 +27,7 @@ let debounce: ReturnType<typeof setTimeout>;
 watch(search, () => {
     clearTimeout(debounce);
     debounce = setTimeout(() => {
-        router.get(
-            route('customers.index'),
-            { search: search.value || undefined },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
+        router.get(route('customers.index'), { search: search.value || undefined }, { preserveState: true, preserveScroll: true, replace: true });
     }, 300);
 });
 
@@ -89,11 +78,7 @@ function confirmDelete() {
 
     <AppLayout :breadcrumbs="[{ title: 'Customers', href: '/customers' }]">
         <div class="px-5 py-6 md:px-8">
-            <PageHeader
-                eyebrow="People"
-                title="Customers"
-                description="Optional at the till — attach a customer to a sale to track loyalty points."
-            >
+            <PageHeader eyebrow="People" title="Customers" description="Optional at the till — attach a customer to a sale to track loyalty points.">
                 <template #actions>
                     <Button class="press" @click="openCreate">
                         <Plus class="size-4" />
@@ -151,7 +136,9 @@ function confirmDelete() {
                                     <span v-else class="text-muted-foreground">—</span>
                                 </TableCell>
                                 <TableCell>
-                                    <div class="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                                    <div
+                                        class="flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+                                    >
                                         <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(c)">
                                             <Pencil class="size-4" />
                                         </Button>
@@ -180,12 +167,7 @@ function confirmDelete() {
                     <Button variant="outline" class="press" @click="openCreate">Add a customer</Button>
                 </EmptyState>
 
-                <Pagination
-                    :links="customers.links"
-                    :from="customers.from"
-                    :to="customers.to"
-                    :total="customers.total"
-                />
+                <Pagination :links="customers.links" :from="customers.from" :to="customers.to" :total="customers.total" />
             </div>
         </div>
 
@@ -237,18 +219,12 @@ function confirmDelete() {
                 <DialogHeader>
                     <DialogTitle>Delete “{{ pendingDelete?.name }}”?</DialogTitle>
                     <DialogDescription>
-                        A customer with order history cannot be deleted — the sales records must
-                        keep pointing at a real row.
+                        A customer with order history cannot be deleted — the sales records must keep pointing at a real row.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                     <Button variant="ghost" class="press" @click="pendingDelete = null">Cancel</Button>
-                    <Button
-                        class="press bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        @click="confirmDelete"
-                    >
-                        Delete
-                    </Button>
+                    <Button class="press bg-destructive text-destructive-foreground hover:bg-destructive/90" @click="confirmDelete"> Delete </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

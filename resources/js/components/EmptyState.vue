@@ -14,9 +14,7 @@ withDefaults(
 
 <template>
     <div class="animate-scale flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-        <div
-            class="flex size-12 items-center justify-center rounded-full border border-dashed border-border bg-muted/40 text-muted-foreground"
-        >
+        <div class="flex size-12 items-center justify-center rounded-full border border-dashed border-border bg-muted/40 text-muted-foreground">
             <component :is="icon" class="size-5" />
         </div>
         <div class="space-y-1">

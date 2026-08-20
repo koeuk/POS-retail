@@ -2,10 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\Register;
 use App\Models\Store;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/** @extends Factory<\App\Models\Register> */
+/** @extends Factory<Register> */
 class RegisterFactory extends Factory
 {
     public function definition(): array

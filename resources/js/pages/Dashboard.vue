@@ -34,11 +34,7 @@ const tiles = [
 
     <AppLayout :breadcrumbs="[{ title: 'Dashboard', href: '/dashboard' }]">
         <div class="px-5 py-6 md:px-8">
-            <PageHeader
-                :eyebrow="greeting"
-                :title="user?.name ?? 'Dashboard'"
-                description="A summary of today across the shop floor."
-            >
+            <PageHeader :eyebrow="greeting" :title="user?.name ?? 'Dashboard'" description="A summary of today across the shop floor.">
                 <template #actions>
                     <Button as-child class="press">
                         <Link href="/pos">
@@ -50,11 +46,7 @@ const tiles = [
             </PageHeader>
 
             <div class="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <article
-                    v-for="tile in tiles"
-                    :key="tile.label"
-                    class="lift rounded-xl border border-border bg-card p-5 shadow-sm"
-                >
+                <article v-for="tile in tiles" :key="tile.label" class="lift rounded-xl border border-border bg-card p-5 shadow-sm">
                     <div class="flex items-center justify-between">
                         <p class="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
                             {{ tile.label }}
@@ -66,14 +58,11 @@ const tiles = [
                 </article>
             </div>
 
-            <div
-                class="animate-rise mt-6 rounded-xl border border-dashed border-border bg-card/50 p-8 text-center"
-                style="animation-delay: 200ms"
-            >
+            <div class="animate-rise mt-6 rounded-xl border border-dashed border-border bg-card/50 p-8 text-center" style="animation-delay: 200ms">
                 <p class="font-display text-lg font-semibold">Reports land in Phase 8</p>
                 <p class="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-                    Sales by day and by product, payment-method breakdown, and the oversold-stock
-                    reconciliation list all arrive once the POS and sync layers are proven.
+                    Sales by day and by product, payment-method breakdown, and the oversold-stock reconciliation list all arrive once the POS and sync
+                    layers are proven.
                 </p>
                 <div v-if="can.manage" class="mt-4 flex flex-wrap justify-center gap-2">
                     <Button as-child variant="outline" size="sm" class="press">

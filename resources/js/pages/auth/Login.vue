@@ -7,12 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { LoaderCircle } from 'lucide-vue-next';
+import { Eye, EyeOff, LoaderCircle } from 'lucide-vue-next';
+import { ref } from 'vue';
 
 defineProps<{
     status?: string;
     canResetPassword: boolean;
 }>();
+
+const showPassword = ref(false);
 
 const form = useForm({
     email: '',
@@ -55,17 +58,33 @@ const submit = () => {
                 <div class="grid gap-2">
                     <div class="flex items-center justify-between">
                         <Label for="password">Password</Label>
-                        <TextLink v-if="canResetPassword" :href="route('password.request')" class="text-sm" :tabindex="5"> Forgot password? </TextLink>
+                        <TextLink v-if="canResetPassword" :href="route('password.request')" class="text-sm" :tabindex="5">
+                            Forgot password?
+                        </TextLink>
                     </div>
-                    <Input
-                        id="password"
-                        type="password"
-                        required
-                        tabindex="2"
-                        autocomplete="current-password"
-                        v-model="form.password"
-                        placeholder="Password"
-                    />
+                    <div class="relative">
+                        <Input
+                            id="password"
+                            :type="showPassword ? 'text' : 'password'"
+                            required
+                            tabindex="2"
+                            autocomplete="current-password"
+                            v-model="form.password"
+                            placeholder="Password"
+                            class="pr-10"
+                        />
+                        <button
+                            type="button"
+                            tabindex="-1"
+                            class="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                            :aria-pressed="showPassword"
+                            @click="showPassword = !showPassword"
+                        >
+                            <EyeOff v-if="showPassword" class="h-4 w-4" />
+                            <Eye v-else class="h-4 w-4" />
+                        </button>
+                    </div>
                     <InputError :message="form.errors.password" />
                 </div>
 
@@ -82,9 +101,7 @@ const submit = () => {
                 </Button>
             </div>
 
-            <div class="text-center text-sm text-muted-foreground">
-                Staff accounts are created by an administrator.
-            </div>
+            <div class="text-center text-sm text-muted-foreground">Staff accounts are created by an administrator.</div>
         </form>
     </AuthBase>
 </template>

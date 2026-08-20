@@ -7,7 +7,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import type { Category, Product, Stock } from '@/types';
 import { Head } from '@inertiajs/vue3';
 
-const props = defineProps<{
+defineProps<{
     product: Product;
     categories: Category[];
     stocks: Stock[];
@@ -41,24 +41,13 @@ const tone = (s: Stock) => {
 
             <!-- Stock is read-only here: it may only change through a sale or an
                  explicit inventory movement, never by editing a product. -->
-            <section
-                v-if="stocks.length"
-                class="animate-rise mb-5 rounded-xl border border-border bg-card p-4 shadow-sm"
-            >
+            <section v-if="stocks.length" class="animate-rise mb-5 rounded-xl border border-border bg-card p-4 shadow-sm">
                 <div class="mb-3 flex items-baseline justify-between">
-                    <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                        Stock on hand
-                    </h2>
-                    <p class="text-xs text-muted-foreground">
-                        Adjusted by sales and inventory movements only
-                    </p>
+                    <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Stock on hand</h2>
+                    <p class="text-xs text-muted-foreground">Adjusted by sales and inventory movements only</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <div
-                        v-for="s in stocks"
-                        :key="s.id"
-                        class="rounded-lg border border-border px-3 py-2"
-                    >
+                    <div v-for="s in stocks" :key="s.id" class="rounded-lg border border-border px-3 py-2">
                         <p class="text-xs text-muted-foreground">{{ s.store?.name }}</p>
                         <p class="tabular font-mono text-lg font-medium" :class="tone(s)">
                             {{ s.qty }}

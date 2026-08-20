@@ -14,15 +14,7 @@ import {
 } from '@/components/ui/sidebar';
 import type { NavGroup, SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import {
-    Boxes,
-    LayoutGrid,
-    ScanBarcode,
-    Shapes,
-    Store,
-    Users,
-    UsersRound,
-} from 'lucide-vue-next';
+import { Boxes, LayoutGrid, ScanBarcode, Shapes, Store, Users, UsersRound } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
 
@@ -65,8 +57,7 @@ const visibleGroups = computed(() =>
         .filter((group) => group.items.length > 0),
 );
 
-const isActive = (href: string) =>
-    currentPath.value === href || currentPath.value.startsWith(`${href}/`);
+const isActive = (href: string) => currentPath.value === href || currentPath.value.startsWith(`${href}/`);
 </script>
 
 <template>
@@ -91,12 +82,7 @@ const isActive = (href: string) =>
                 <SidebarGroupContent>
                     <SidebarMenu>
                         <SidebarMenuItem v-for="item in group.items" :key="item.href">
-                            <SidebarMenuButton
-                                as-child
-                                :is-active="isActive(item.href)"
-                                :tooltip="item.title"
-                                class="press"
-                            >
+                            <SidebarMenuButton as-child :is-active="isActive(item.href)" :tooltip="item.title" class="press">
                                 <Link :href="item.href">
                                     <component :is="item.icon" />
                                     <span>{{ item.title }}</span>

@@ -9,10 +9,7 @@ defineProps<{
 <template>
     <header class="animate-rise flex flex-wrap items-end justify-between gap-4 pb-6">
         <div class="space-y-1.5">
-            <p
-                v-if="eyebrow"
-                class="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-primary"
-            >
+            <p v-if="eyebrow" class="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-primary">
                 {{ eyebrow }}
             </p>
             <h1 class="font-display text-3xl font-semibold leading-none tracking-tight">

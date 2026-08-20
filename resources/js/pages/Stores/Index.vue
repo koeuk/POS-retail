@@ -4,14 +4,7 @@ import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -99,11 +92,7 @@ function submitRegister() {
             </PageHeader>
 
             <div v-if="stores.length" class="stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <article
-                    v-for="store in stores"
-                    :key="store.id"
-                    class="lift rounded-xl border border-border bg-card p-5 shadow-sm"
-                >
+                <article v-for="store in stores" :key="store.id" class="lift rounded-xl border border-border bg-card p-5 shadow-sm">
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex items-center gap-3">
                             <div class="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -116,15 +105,7 @@ function submitRegister() {
                                 </p>
                             </div>
                         </div>
-                        <Button
-                            v-if="canManage"
-                            variant="ghost"
-                            size="sm"
-                            class="press"
-                            @click="openStore(store)"
-                        >
-                            Edit
-                        </Button>
+                        <Button v-if="canManage" variant="ghost" size="sm" class="press" @click="openStore(store)"> Edit </Button>
                     </div>
 
                     <dl class="mt-4 space-y-1.5 text-sm text-muted-foreground">
@@ -140,16 +121,8 @@ function submitRegister() {
 
                     <div class="mt-4 border-t border-border pt-4">
                         <div class="mb-2 flex items-center justify-between">
-                            <h3 class="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
-                                Registers
-                            </h3>
-                            <Button
-                                v-if="canManage"
-                                variant="ghost"
-                                size="sm"
-                                class="press h-7 px-2 text-xs"
-                                @click="openRegister(store, null)"
-                            >
+                            <h3 class="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">Registers</h3>
+                            <Button v-if="canManage" variant="ghost" size="sm" class="press h-7 px-2 text-xs" @click="openRegister(store, null)">
                                 <Plus class="size-3" />
                                 Add
                             </Button>
@@ -166,13 +139,7 @@ function submitRegister() {
                                 <Badge :variant="reg.is_active ? 'secondary' : 'outline'" class="text-[0.65rem]">
                                     {{ reg.is_active ? 'Active' : 'Off' }}
                                 </Badge>
-                                <Button
-                                    v-if="canManage"
-                                    variant="ghost"
-                                    size="sm"
-                                    class="press h-6 px-1.5 text-xs"
-                                    @click="openRegister(store, reg)"
-                                >
+                                <Button v-if="canManage" variant="ghost" size="sm" class="press h-6 px-1.5 text-xs" @click="openRegister(store, reg)">
                                     Edit
                                 </Button>
                             </li>
@@ -188,9 +155,7 @@ function submitRegister() {
                 title="No stores yet"
                 description="A store is required before anything can be sold — stock and orders both hang off it."
             >
-                <Button v-if="canManage" variant="outline" class="press" @click="openStore(null)">
-                    Add a store
-                </Button>
+                <Button v-if="canManage" variant="outline" class="press" @click="openStore(null)"> Add a store </Button>
             </EmptyState>
         </div>
 
@@ -200,9 +165,7 @@ function submitRegister() {
                 <form @submit.prevent="submitStore">
                     <DialogHeader>
                         <DialogTitle>{{ editingStore ? 'Edit store' : 'New store' }}</DialogTitle>
-                        <DialogDescription>
-                            New stores start with no stock rows until a product is created.
-                        </DialogDescription>
+                        <DialogDescription> New stores start with no stock rows until a product is created. </DialogDescription>
                     </DialogHeader>
 
                     <div class="grid gap-4 py-5">
@@ -239,9 +202,7 @@ function submitRegister() {
                 <form @submit.prevent="submitRegister">
                     <DialogHeader>
                         <DialogTitle>{{ editingRegister ? 'Edit register' : 'New register' }}</DialogTitle>
-                        <DialogDescription>
-                            In {{ registerStore?.name }}. Registers label which terminal made a sale.
-                        </DialogDescription>
+                        <DialogDescription> In {{ registerStore?.name }}. Registers label which terminal made a sale. </DialogDescription>
                     </DialogHeader>
 
                     <div class="grid gap-4 py-5">

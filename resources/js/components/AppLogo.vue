@@ -8,11 +8,17 @@ const appName = computed(() => page.props.name ?? 'POS Retail');
 </script>
 
 <template>
-    <div
-        class="flex aspect-square size-8 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm"
-    >
-        <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.2"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <div class="flex aspect-square size-8 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+        <svg
+            viewBox="0 0 24 24"
+            class="size-4"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+        >
             <path d="M4 5h16l-1.2 9.5a2 2 0 0 1-2 1.75H7.2a2 2 0 0 1-2-1.75L4 5Z" />
             <path d="M9 20.5h.01M16 20.5h.01" />
             <path d="M8.5 9.5h7" />
@@ -22,8 +28,6 @@ const appName = computed(() => page.props.name ?? 'POS Retail');
         <span class="truncate font-display text-[0.95rem] font-semibold leading-tight tracking-tight">
             {{ appName }}
         </span>
-        <span class="truncate font-mono text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground">
-            Retail
-        </span>
+        <span class="truncate font-mono text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground"> Retail </span>
     </div>
 </template>

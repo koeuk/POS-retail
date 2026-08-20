@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class Order extends Model
 {
@@ -91,7 +92,7 @@ class Order extends Model
      * Reports must bucket by when the sale actually happened, not when it
      * synced — an offline batch can land hours or days later.
      */
-    public function transactedAt(): \Illuminate\Support\Carbon
+    public function transactedAt(): Carbon
     {
         return $this->created_offline_at ?? $this->created_at;
     }

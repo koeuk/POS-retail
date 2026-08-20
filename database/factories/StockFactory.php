@@ -3,10 +3,11 @@
 namespace Database\Factories;
 
 use App\Models\Product;
+use App\Models\Stock;
 use App\Models\Store;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/** @extends Factory<\App\Models\Stock> */
+/** @extends Factory<Stock> */
 class StockFactory extends Factory
 {
     public function definition(): array

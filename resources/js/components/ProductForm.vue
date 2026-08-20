@@ -3,13 +3,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import type { Category, Product } from '@/types';
@@ -41,9 +35,7 @@ const form = useForm({
     low_stock_threshold: 10,
 });
 
-const preview = ref<string | null>(
-    props.product?.image ? `/storage/${props.product.image}` : null,
-);
+const preview = ref<string | null>(props.product?.image ? `/storage/${props.product.image}` : null);
 
 function onFile(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0] ?? null;
@@ -62,9 +54,9 @@ const margin = computed(() => {
 function submit() {
     if (isEdit.value) {
         // Multipart cannot be sent as a real PUT, so spoof the method.
-        form
-            .transform((data) => ({ ...data, _method: 'put' }))
-            .post(route('products.update', { product: props.product!.id }), { forceFormData: true });
+        form.transform((data) => ({ ...data, _method: 'put' })).post(route('products.update', { product: props.product!.id }), {
+            forceFormData: true,
+        });
     } else {
         form.post(route('products.store'), { forceFormData: true });
     }
@@ -76,9 +68,7 @@ function submit() {
         <!-- Main -->
         <div class="stagger space-y-5 lg:col-span-2">
             <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
-                <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    Details
-                </h2>
+                <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Details</h2>
 
                 <div class="grid gap-4">
                     <div class="grid gap-2">
@@ -124,9 +114,7 @@ function submit() {
             </section>
 
             <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
-                <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    Pricing
-                </h2>
+                <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Pricing</h2>
 
                 <div class="grid gap-4 sm:grid-cols-3">
                     <div class="grid gap-2">
@@ -141,15 +129,23 @@ function submit() {
                     </div>
                     <div class="grid gap-2">
                         <Label for="tax">Tax rate %</Label>
-                        <Input id="tax" v-model="form.tax_rate" type="number" step="0.01" min="0" max="100"
-                               placeholder="0" class="tabular font-mono" />
+                        <Input
+                            id="tax"
+                            v-model="form.tax_rate"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            placeholder="0"
+                            class="tabular font-mono"
+                        />
                         <InputError :message="form.errors.tax_rate" />
                     </div>
                 </div>
 
                 <p class="mt-3 text-xs text-muted-foreground">
-                    Prices are <strong class="font-medium text-foreground">tax-exclusive</strong> — tax is
-                    added per line at checkout. Leave the rate blank for 0%.
+                    Prices are <strong class="font-medium text-foreground">tax-exclusive</strong> — tax is added per line at checkout. Leave the rate
+                    blank for 0%.
                     <span v-if="margin !== null" class="ml-1">
                         Margin
                         <span class="tabular font-mono font-medium" :class="margin < 0 ? 'text-destructive' : 'text-primary'">
@@ -160,9 +156,7 @@ function submit() {
             </section>
 
             <section v-if="!isEdit" class="rounded-xl border border-border bg-card p-5 shadow-sm">
-                <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    Opening stock
-                </h2>
+                <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Opening stock</h2>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
                         <Label for="qty">Quantity per store</Label>
@@ -181,9 +175,7 @@ function submit() {
         <!-- Aside -->
         <div class="stagger space-y-5">
             <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
-                <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    Image
-                </h2>
+                <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Image</h2>
 
                 <label
                     class="lift flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted/40"
@@ -199,9 +191,7 @@ function submit() {
             </section>
 
             <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
-                <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    Options
-                </h2>
+                <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Options</h2>
 
                 <div class="grid gap-4">
                     <div class="grid gap-2">

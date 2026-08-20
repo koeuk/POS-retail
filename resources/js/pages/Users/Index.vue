@@ -5,25 +5,12 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Paginated, SharedData, Store, User } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
@@ -123,8 +110,7 @@ function confirmDelete() {
     });
 }
 
-const roleTone = (role: string) =>
-    role === 'admin' ? 'default' : role === 'manager' ? 'secondary' : 'outline';
+const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'manager' ? 'secondary' : 'outline');
 </script>
 
 <template>
@@ -198,19 +184,15 @@ const roleTone = (role: string) =>
                                     {{ u.store?.name ?? 'All stores' }}
                                 </TableCell>
                                 <TableCell>
-                                    <span
-                                        class="inline-flex items-center gap-1.5 text-sm"
-                                        :class="u.is_active ? '' : 'text-muted-foreground'"
-                                    >
-                                        <span
-                                            class="size-1.5 rounded-full"
-                                            :class="u.is_active ? 'bg-primary' : 'bg-muted-foreground/40'"
-                                        />
+                                    <span class="inline-flex items-center gap-1.5 text-sm" :class="u.is_active ? '' : 'text-muted-foreground'">
+                                        <span class="size-1.5 rounded-full" :class="u.is_active ? 'bg-primary' : 'bg-muted-foreground/40'" />
                                         {{ u.is_active ? 'Active' : 'Disabled' }}
                                     </span>
                                 </TableCell>
                                 <TableCell>
-                                    <div class="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                                    <div
+                                        class="flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+                                    >
                                         <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(u)">
                                             <Pencil class="size-4" />
                                         </Button>
@@ -315,9 +297,7 @@ const roleTone = (role: string) =>
                         <div class="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
                             <div>
                                 <p class="text-sm font-medium">Active</p>
-                                <p class="text-xs text-muted-foreground">
-                                    Disabling locks them out on their very next request
-                                </p>
+                                <p class="text-xs text-muted-foreground">Disabling locks them out on their very next request</p>
                             </div>
                             <Switch v-model="form.is_active" :disabled="editing?.id === currentUserId" />
                         </div>
@@ -338,18 +318,12 @@ const roleTone = (role: string) =>
                 <DialogHeader>
                     <DialogTitle>Delete {{ pendingDelete?.name }}?</DialogTitle>
                     <DialogDescription>
-                        If they have rung up any sales the account is deactivated instead, so the
-                        order history keeps its cashier.
+                        If they have rung up any sales the account is deactivated instead, so the order history keeps its cashier.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                     <Button variant="ghost" class="press" @click="pendingDelete = null">Cancel</Button>
-                    <Button
-                        class="press bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        @click="confirmDelete"
-                    >
-                        Delete
-                    </Button>
+                    <Button class="press bg-destructive text-destructive-foreground hover:bg-destructive/90" @click="confirmDelete"> Delete </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

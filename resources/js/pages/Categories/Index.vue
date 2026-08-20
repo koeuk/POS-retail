@@ -4,23 +4,10 @@ import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Category } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
@@ -39,11 +26,7 @@ let debounce: ReturnType<typeof setTimeout>;
 watch(search, () => {
     clearTimeout(debounce);
     debounce = setTimeout(() => {
-        router.get(
-            route('categories.index'),
-            { search: search.value || undefined },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
+        router.get(route('categories.index'), { search: search.value || undefined }, { preserveState: true, preserveScroll: true, replace: true });
     }, 300);
 });
 
@@ -110,9 +93,7 @@ function confirmDelete() {
 }
 
 /** A category may not be reparented into itself. */
-const parentOptions = computed(() =>
-    props.categories.filter((c) => c.id !== editing.value?.id && !c.parent_id),
-);
+const parentOptions = computed(() => props.categories.filter((c) => c.id !== editing.value?.id && !c.parent_id));
 </script>
 
 <template>
@@ -155,16 +136,14 @@ const parentOptions = computed(() =>
                             <p class="truncate font-medium leading-tight" :class="c.depth ? 'text-sm' : ''">
                                 {{ c.name }}
                             </p>
-                            <p v-if="c.parent" class="truncate text-xs text-muted-foreground">
-                                in {{ c.parent.name }}
-                            </p>
+                            <p v-if="c.parent" class="truncate text-xs text-muted-foreground">in {{ c.parent.name }}</p>
                         </div>
 
                         <Badge variant="outline" class="tabular font-mono">
                             {{ c.products_count ?? 0 }} product{{ c.products_count === 1 ? '' : 's' }}
                         </Badge>
 
-                        <div class="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                        <div class="flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                             <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(c)">
                                 <Pencil class="size-4" />
                             </Button>
@@ -198,9 +177,7 @@ const parentOptions = computed(() =>
                 <form @submit.prevent="submit">
                     <DialogHeader>
                         <DialogTitle>{{ editing ? 'Edit category' : 'New category' }}</DialogTitle>
-                        <DialogDescription>
-                            Leave the parent empty to make this a top-level category.
-                        </DialogDescription>
+                        <DialogDescription> Leave the parent empty to make this a top-level category. </DialogDescription>
                     </DialogHeader>
 
                     <div class="grid gap-4 py-5">
@@ -228,9 +205,7 @@ const parentOptions = computed(() =>
                     </div>
 
                     <DialogFooter>
-                        <Button type="button" variant="ghost" class="press" @click="dialogOpen = false">
-                            Cancel
-                        </Button>
+                        <Button type="button" variant="ghost" class="press" @click="dialogOpen = false"> Cancel </Button>
                         <Button type="submit" class="press" :disabled="form.processing">
                             {{ editing ? 'Save' : 'Create' }}
                         </Button>
@@ -245,18 +220,12 @@ const parentOptions = computed(() =>
                 <DialogHeader>
                     <DialogTitle>Delete “{{ pendingDelete?.name }}”?</DialogTitle>
                     <DialogDescription>
-                        Any sub-categories are promoted to top level. A category that still holds
-                        products cannot be deleted.
+                        Any sub-categories are promoted to top level. A category that still holds products cannot be deleted.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                     <Button variant="ghost" class="press" @click="pendingDelete = null">Cancel</Button>
-                    <Button
-                        class="press bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        @click="confirmDelete"
-                    >
-                        Delete
-                    </Button>
+                    <Button class="press bg-destructive text-destructive-foreground hover:bg-destructive/90" @click="confirmDelete"> Delete </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

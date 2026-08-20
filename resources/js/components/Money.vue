@@ -27,6 +27,7 @@ const formatted = computed(() =>
 
 <template>
     <span class="tabular whitespace-nowrap font-mono text-[0.9em]">
-        <span :class="muted ? 'text-muted-foreground' : ''">{{ symbol }}</span>{{ formatted }}
+        <span :class="muted ? 'text-muted-foreground' : ''">{{ symbol }}</span
+        >{{ formatted }}
     </span>
 </template>

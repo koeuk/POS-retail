@@ -16,14 +16,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Category, Paginated, Product } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
@@ -87,11 +81,7 @@ function stockTone(qty: number | null | undefined) {
 
     <AppLayout :breadcrumbs="[{ title: 'Products', href: '/products' }]">
         <div class="px-5 py-6 md:px-8">
-            <PageHeader
-                eyebrow="Catalogue"
-                title="Products"
-                description="Everything you sell, with live stock across all stores."
-            >
+            <PageHeader eyebrow="Catalogue" title="Products" description="Everything you sell, with live stock across all stores.">
                 <template #actions>
                     <Button as-child class="press">
                         <Link :href="route('products.create')">
@@ -106,15 +96,8 @@ function stockTone(qty: number | null | undefined) {
                 <!-- Filters -->
                 <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
                     <div class="relative min-w-[14rem] flex-1">
-                        <Search
-                            class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                        />
-                        <Input
-                            v-model="search"
-                            placeholder="Search name, SKU or barcode…"
-                            class="pl-9"
-                            autocomplete="off"
-                        />
+                        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input v-model="search" placeholder="Search name, SKU or barcode…" class="pl-9" autocomplete="off" />
                     </div>
 
                     <Select v-model="categoryId">
@@ -123,11 +106,7 @@ function stockTone(qty: number | null | undefined) {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem :value="ALL">All categories</SelectItem>
-                            <SelectItem
-                                v-for="c in categories"
-                                :key="c.id"
-                                :value="String(c.id)"
-                            >
+                            <SelectItem v-for="c in categories" :key="c.id" :value="String(c.id)">
                                 {{ c.name }}
                             </SelectItem>
                         </SelectContent>
@@ -173,12 +152,7 @@ function stockTone(qty: number | null | undefined) {
                                         <div
                                             class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/50"
                                         >
-                                            <img
-                                                v-if="p.image"
-                                                :src="`/storage/${p.image}`"
-                                                :alt="p.name"
-                                                class="size-full object-cover"
-                                            />
+                                            <img v-if="p.image" :src="`/storage/${p.image}`" :alt="p.name" class="size-full object-cover" />
                                             <Boxes v-else class="size-4 text-muted-foreground" />
                                         </div>
                                         <div class="min-w-0">
@@ -211,7 +185,7 @@ function stockTone(qty: number | null | undefined) {
                                 </TableCell>
                                 <TableCell>
                                     <div
-                                        class="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+                                        class="flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
                                     >
                                         <Button as-child variant="ghost" size="icon" class="press size-8">
                                             <Link :href="route('products.edit', { product: p.id })" aria-label="Edit">
@@ -245,12 +219,7 @@ function stockTone(qty: number | null | undefined) {
                     </Button>
                 </EmptyState>
 
-                <Pagination
-                    :links="products.links"
-                    :from="products.from"
-                    :to="products.to"
-                    :total="products.total"
-                />
+                <Pagination :links="products.links" :from="products.from" :to="products.to" :total="products.total" />
             </div>
         </div>
 
@@ -259,16 +228,12 @@ function stockTone(qty: number | null | undefined) {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Delete “{{ pendingDelete?.name }}”?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        If this product has any sales history it will be deactivated instead of
-                        deleted, so past receipts keep working.
+                        If this product has any sales history it will be deactivated instead of deleted, so past receipts keep working.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        @click="confirmDelete"
-                    >
+                    <AlertDialogAction class="bg-destructive text-destructive-foreground hover:bg-destructive/90" @click="confirmDelete">
                         Delete
                     </AlertDialogAction>
                 </AlertDialogFooter>

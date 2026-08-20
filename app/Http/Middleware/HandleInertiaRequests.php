@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\Role;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -49,8 +50,8 @@ class HandleInertiaRequests extends Middleware
                 'can' => [
                     'accessAdmin' => (bool) $request->user()?->role?->canAccessAdmin(),
                     'manage' => (bool) $request->user()?->hasRole(
-                        \App\Enums\Role::Admin,
-                        \App\Enums\Role::Manager,
+                        Role::Admin,
+                        Role::Manager,
                     ),
                     'isAdmin' => (bool) $request->user()?->isAdmin(),
                 ],
