@@ -25,7 +25,7 @@ class MenuController extends Controller
 
         $products = Product::query()
             ->active()
-            ->with('category:id,name,parent_id')
+            ->with('category:id,name')
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")

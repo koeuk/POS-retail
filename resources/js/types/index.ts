@@ -84,10 +84,7 @@ export interface Register {
 export interface Category {
     id: number;
     name: string;
-    parent_id: number | null;
-    parent?: Pick<Category, 'id' | 'name'> | null;
     products_count?: number;
-    children_count?: number;
 }
 
 export interface Product {

@@ -54,18 +54,23 @@ class PublicMenuTest extends TestCase
             'tax_rate' => '10.00',
         ]);
 
-        $this->get(route('menu'))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('products.0.price', 11.0));
+        // JSON renders 11.0 as `11`, so compare numerically rather than by
+        // strict type — this is a money value, not an integer.
+        $this->assertEqualsWithDelta(11.0, $this->firstMenuPrice(), 0.001);
     }
 
     public function test_a_null_tax_rate_means_zero_percent_not_a_default(): void
     {
         Product::factory()->taxFree()->create(['name' => 'Untaxed', 'sell_price' => '10.00']);
 
-        $this->get(route('menu'))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('products.0.price', 10.0));
+        $this->assertEqualsWithDelta(10.0, $this->firstMenuPrice(), 0.001);
+    }
+
+    private function firstMenuPrice(): float
+    {
+        $response = $this->get(route('menu'))->assertOk();
+
+        return (float) $response->viewData('page')['props']['products'][0]['price'];
     }
 
     /** The menu must never leak cost price, stock levels or staff data. */

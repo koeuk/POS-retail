@@ -12,7 +12,6 @@ class CategoryFactory extends Factory
     {
         return [
             'name' => fake()->unique()->word(),
-            'parent_id' => null,
         ];
     }
 }

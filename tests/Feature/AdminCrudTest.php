@@ -111,44 +111,30 @@ class AdminCrudTest extends TestCase
     /* Categories */
     /* ------------------------------------------------------------------ */
 
-    public function test_category_cannot_be_its_own_parent(): void
+    public function test_admin_can_create_and_rename_a_category(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('categories.store'), ['name' => 'Frozen'])
+            ->assertRedirect();
+
+        $category = Category::where('name', 'Frozen')->firstOrFail();
+
+        $this->actingAs($this->admin)
+            ->put(route('categories.update', $category), ['name' => 'Frozen Goods'])
+            ->assertRedirect();
+
+        $this->assertSame('Frozen Goods', $category->fresh()->name);
+    }
+
+    public function test_an_empty_category_can_be_deleted(): void
     {
         $category = Category::factory()->create();
 
-        $this->actingAs($this->admin)->put(route('categories.update', $category), [
-            'name' => $category->name,
-            'parent_id' => $category->id,
-        ])->assertSessionHasErrors('parent_id');
-    }
-
-    /**
-     * Reparenting a root under its own child would orphan the whole branch
-     * from the tree and make the category list render a cycle.
-     */
-    public function test_category_cannot_be_nested_inside_its_own_descendant(): void
-    {
-        $parent = Category::factory()->create();
-        $child = Category::factory()->create(['parent_id' => $parent->id]);
-
-        $this->actingAs($this->admin)->put(route('categories.update', $parent), [
-            'name' => $parent->name,
-            'parent_id' => $child->id,
-        ])->assertSessionHasErrors('parent_id');
-
-        $this->assertNull($parent->fresh()->parent_id);
-    }
-
-    public function test_deleting_a_category_promotes_its_children_to_roots(): void
-    {
-        $parent = Category::factory()->create();
-        $child = Category::factory()->create(['parent_id' => $parent->id]);
-
         $this->actingAs($this->admin)
-            ->delete(route('categories.destroy', $parent))
+            ->delete(route('categories.destroy', $category))
             ->assertRedirect();
 
-        $this->assertDatabaseMissing('categories', ['id' => $parent->id]);
-        $this->assertNull($child->fresh()->parent_id);
+        $this->assertDatabaseMissing('categories', ['id' => $category->id]);
     }
 
     public function test_category_holding_products_cannot_be_deleted(): void

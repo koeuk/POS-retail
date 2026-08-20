@@ -85,25 +85,21 @@ class DatabaseSeeder extends Seeder
     /** @return array<string, Category> */
     private function seedCategories(): array
     {
-        $tree = [
-            'Beverages' => ['Soft Drinks', 'Water', 'Coffee & Tea'],
-            'Snacks' => ['Chips', 'Biscuits'],
-            'Household' => ['Cleaning', 'Paper Goods'],
-            'Personal Care' => [],
+        $names = [
+            'Soft Drinks',
+            'Water',
+            'Coffee & Tea',
+            'Chips',
+            'Biscuits',
+            'Cleaning',
+            'Paper Goods',
+            'Personal Care',
         ];
 
         $flat = [];
 
-        foreach ($tree as $parentName => $childNames) {
-            $parent = Category::create(['name' => $parentName, 'parent_id' => null]);
-            $flat[$parentName] = $parent;
-
-            foreach ($childNames as $childName) {
-                $flat[$childName] = Category::create([
-                    'name' => $childName,
-                    'parent_id' => $parent->id,
-                ]);
-            }
+        foreach ($names as $name) {
+            $flat[$name] = Category::create(['name' => $name]);
         }
 
         return $flat;

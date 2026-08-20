@@ -17,8 +17,7 @@ class CategoryController extends Controller
 
         return Inertia::render('Categories/Index', [
             'categories' => Category::query()
-                ->with('parent:id,name')
-                ->withCount(['products', 'children'])
+                ->withCount('products')
                 ->when(
                     $request->input('search'),
                     fn ($q, $search) => $q->where('name', 'like', "%{$search}%")
@@ -42,17 +41,7 @@ class CategoryController extends Controller
     {
         $this->authorize('update', $category);
 
-        $data = $request->validated();
-
-        // Reparenting must not create a cycle — walking up from the proposed
-        // parent must never arrive back at this category.
-        if ($data['parent_id'] && $this->wouldCycle($category, (int) $data['parent_id'])) {
-            return back()->withErrors([
-                'parent_id' => 'That would nest the category inside one of its own descendants.',
-            ]);
-        }
-
-        $category->update($data);
+        $category->update($request->validated());
 
         return back()->with('success', 'Category updated.');
     }
@@ -67,32 +56,8 @@ class CategoryController extends Controller
             ]);
         }
 
-        // Orphaned children are promoted to roots rather than deleted.
-        $category->children()->update(['parent_id' => null]);
         $category->delete();
 
         return back()->with('success', 'Category deleted.');
-    }
-
-    private function wouldCycle(Category $category, int $proposedParentId): bool
-    {
-        $seen = [];
-        $cursor = Category::find($proposedParentId);
-
-        while ($cursor) {
-            if ($cursor->id === $category->id) {
-                return true;
-            }
-
-            // Guard against a pre-existing cycle in the data.
-            if (in_array($cursor->id, $seen, true)) {
-                return true;
-            }
-
-            $seen[] = $cursor->id;
-            $cursor = $cursor->parent_id ? Category::find($cursor->parent_id) : null;
-        }
-
-        return false;
     }
 }

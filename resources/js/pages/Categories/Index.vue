@@ -7,19 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Category } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { CornerDownRight, Pencil, Plus, Search, Shapes, Trash2 } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { Pencil, Plus, Search, Shapes, Trash2 } from 'lucide-vue-next';
+import { ref, watch } from 'vue';
 
 const props = defineProps<{
     categories: Category[];
     filters: { search?: string };
 }>();
 
-const NONE = 'none';
 const search = ref(props.filters.search ?? '');
 let debounce: ReturnType<typeof setTimeout>;
 
@@ -30,35 +28,15 @@ watch(search, () => {
     }, 300);
 });
 
-/** Roots first, each followed by its children — a flat list that reads as a tree. */
-const ordered = computed(() => {
-    const roots = props.categories.filter((c) => !c.parent_id);
-    const childrenOf = (id: number) => props.categories.filter((c) => c.parent_id === id);
-    const out: Array<Category & { depth: number }> = [];
-
-    for (const root of roots) {
-        out.push({ ...root, depth: 0 });
-        for (const child of childrenOf(root.id)) out.push({ ...child, depth: 1 });
-    }
-
-    // Anything whose parent fell outside the current filter still shows.
-    for (const c of props.categories) {
-        if (!out.some((o) => o.id === c.id)) out.push({ ...c, depth: 0 });
-    }
-
-    return out;
-});
-
 const editing = ref<Category | null>(null);
 const dialogOpen = ref(false);
 
-const form = useForm({ name: '', parent_id: NONE });
+const form = useForm({ name: '' });
 
 function openCreate() {
     editing.value = null;
     form.reset();
     form.clearErrors();
-    form.parent_id = NONE;
     dialogOpen.value = true;
 }
 
@@ -66,14 +44,11 @@ function openEdit(category: Category) {
     editing.value = category;
     form.clearErrors();
     form.name = category.name;
-    form.parent_id = category.parent_id ? String(category.parent_id) : NONE;
     dialogOpen.value = true;
 }
 
 function submit() {
     const payload = { onSuccess: () => (dialogOpen.value = false), preserveScroll: true };
-
-    form.transform((d) => ({ ...d, parent_id: d.parent_id === NONE ? null : d.parent_id }));
 
     if (editing.value) {
         form.put(route('categories.update', { category: editing.value.id }), payload);
@@ -91,9 +66,6 @@ function confirmDelete() {
         onFinish: () => (pendingDelete.value = null),
     });
 }
-
-/** A category may not be reparented into itself. */
-const parentOptions = computed(() => props.categories.filter((c) => c.id !== editing.value?.id && !c.parent_id));
 </script>
 
 <template>
@@ -104,7 +76,7 @@ const parentOptions = computed(() => props.categories.filter((c) => c.id !== edi
             <PageHeader
                 eyebrow="Catalogue"
                 title="Categories"
-                description="Two levels deep — a parent and its children. Used to filter the POS grid."
+                description="Used to group products and filter the POS grid."
             >
                 <template #actions>
                     <Button class="press" @click="openCreate">
@@ -122,23 +94,15 @@ const parentOptions = computed(() => props.categories.filter((c) => c.id !== edi
                     </div>
                 </div>
 
-                <ul v-if="ordered.length" class="divide-y divide-border">
+                <ul v-if="categories.length" class="divide-y divide-border">
                     <li
-                        v-for="c in ordered"
+                        v-for="c in categories"
                         :key="c.id"
                         class="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40"
-                        :class="c.depth ? 'pl-10' : ''"
                     >
-                        <CornerDownRight v-if="c.depth" class="size-3.5 shrink-0 text-muted-foreground/60" />
-                        <Shapes v-else class="size-4 shrink-0 text-primary" />
+                        <Shapes class="size-4 shrink-0 text-primary" />
 
-                        <div class="min-w-0 flex-1">
-                            <p class="truncate font-medium leading-tight" :class="c.depth ? 'text-sm' : ''">
-                                {{ c.name }}
-                            </p>
-                            <!-- Only when the parent row isn't right above it — i.e. a search left this child orphaned. -->
-                            <p v-if="c.parent && !c.depth" class="truncate text-xs text-muted-foreground">in {{ c.parent.name }}</p>
-                        </div>
+                        <p class="min-w-0 flex-1 truncate font-medium leading-tight">{{ c.name }}</p>
 
                         <Badge variant="outline" class="tabular font-mono">
                             {{ c.products_count ?? 0 }} product{{ c.products_count === 1 ? '' : 's' }}
@@ -178,7 +142,7 @@ const parentOptions = computed(() => props.categories.filter((c) => c.id !== edi
                 <form @submit.prevent="submit">
                     <DialogHeader>
                         <DialogTitle>{{ editing ? 'Edit category' : 'New category' }}</DialogTitle>
-                        <DialogDescription> Leave the parent empty to make this a top-level category. </DialogDescription>
+                        <DialogDescription> Categories group products so cashiers can find them quickly. </DialogDescription>
                     </DialogHeader>
 
                     <div class="grid gap-4 py-5">
@@ -186,22 +150,6 @@ const parentOptions = computed(() => props.categories.filter((c) => c.id !== edi
                             <Label for="cat-name">Name</Label>
                             <Input id="cat-name" v-model="form.name" required autofocus />
                             <InputError :message="form.errors.name" />
-                        </div>
-
-                        <div class="grid gap-2">
-                            <Label for="cat-parent">Parent</Label>
-                            <Select v-model="form.parent_id">
-                                <SelectTrigger id="cat-parent">
-                                    <SelectValue placeholder="Top level" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem :value="NONE">Top level</SelectItem>
-                                    <SelectItem v-for="p in parentOptions" :key="p.id" :value="String(p.id)">
-                                        {{ p.name }}
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <InputError :message="form.errors.parent_id" />
                         </div>
                     </div>
 
@@ -221,7 +169,7 @@ const parentOptions = computed(() => props.categories.filter((c) => c.id !== edi
                 <DialogHeader>
                     <DialogTitle>Delete “{{ pendingDelete?.name }}”?</DialogTitle>
                     <DialogDescription>
-                        Any sub-categories are promoted to top level. A category that still holds products cannot be deleted.
+                        A category that still holds products cannot be deleted.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
