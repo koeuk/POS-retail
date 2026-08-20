@@ -14,7 +14,7 @@ import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Paginated } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Boxes, PackageSearch, Search, TriangleAlert } from 'lucide-vue-next';
+import { Boxes, LoaderCircle, PackageSearch, Plus, Search, TriangleAlert } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 interface StockRow {
@@ -73,20 +73,75 @@ watch([storeId, state], reload);
 /* ------------------------------------------------------------------ */
 
 const MODES = [
-    { value: 'receive', label: 'Receive', hint: 'Goods arrived from a supplier' },
+    { value: 'restock', label: 'Restock', hint: 'New delivery — adds to what is already on hand' },
     { value: 'count', label: 'Count', hint: 'Correct the books to the shelf' },
     { value: 'remove', label: 'Remove', hint: 'Damaged, expired or written off' },
     { value: 'return', label: 'Return', hint: 'A customer brought it back' },
 ] as const;
 
+/* ------------------------------------------------------------------ */
+/* Product picker                                                      */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Adjusting a product should not require finding its row first. The picker
+ * searches the whole catalogue over JSON — the table only ever holds one page,
+ * so filtering it would hide most of the products you might want.
+ */
+const pickerOpen = ref(false);
+const pickerQuery = ref('');
+const pickerResults = ref<StockRow[]>([]);
+const pickerLoading = ref(false);
+let pickerDebounce: ReturnType<typeof setTimeout>;
+let pickerSeq = 0;
+
+async function runLookup() {
+    // Responses can land out of order; only the newest one may paint.
+    const seq = ++pickerSeq;
+    pickerLoading.value = true;
+
+    try {
+        const url = `${route('inventory.lookup')}?q=${encodeURIComponent(pickerQuery.value)}`;
+        const response = await fetch(url, {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        });
+
+        if (!response.ok) throw new Error(String(response.status));
+
+        const data = await response.json();
+        if (seq === pickerSeq) pickerResults.value = data.results ?? [];
+    } catch {
+        if (seq === pickerSeq) pickerResults.value = [];
+    } finally {
+        if (seq === pickerSeq) pickerLoading.value = false;
+    }
+}
+
+function openPicker() {
+    pickerOpen.value = true;
+    pickerQuery.value = '';
+    runLookup();
+}
+
+watch(pickerQuery, () => {
+    clearTimeout(pickerDebounce);
+    pickerDebounce = setTimeout(runLookup, 250);
+});
+
 const adjusting = ref<StockRow | null>(null);
-const form = useForm({ stock_id: 0, mode: 'receive' as string, quantity: 0, note: '' });
+const form = useForm({ stock_id: 0, mode: 'restock' as string, quantity: 0, note: '' });
+
+function pick(stock: StockRow) {
+    pickerOpen.value = false;
+    openAdjust(stock);
+}
 
 function openAdjust(stock: StockRow) {
     adjusting.value = stock;
     form.clearErrors();
     form.stock_id = stock.id;
-    form.mode = 'receive';
+    form.mode = 'restock';
     form.quantity = 0;
     form.note = '';
 }
@@ -99,7 +154,7 @@ const resulting = computed(() => {
     const q = Number(form.quantity) || 0;
 
     switch (form.mode) {
-        case 'receive':
+        case 'restock':
         case 'return':
             return adjusting.value.qty + q;
         case 'remove':
@@ -172,7 +227,14 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                 eyebrow="Catalogue"
                 title="Inventory"
                 description="Stock is never typed in directly — record what happened and the quantity follows, so every change has a reason attached."
-            />
+            >
+                <template #actions>
+                    <Button class="press" @click="openPicker">
+                        <Plus class="size-4" />
+                        Adjust stock
+                    </Button>
+                </template>
+            </PageHeader>
 
             <div class="stagger mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <StatTile label="Tracked" :value="String(summary.tracked)" :icon="Boxes" hint="Product / store rows" />
@@ -218,7 +280,8 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                         <TableHeader>
                             <TableRow class="hover:bg-transparent">
                                 <TableHead>Product</TableHead>
-                                <TableHead>Store</TableHead>
+                                <!-- Only worth a column when there is more than one. -->
+                                <TableHead v-if="stores.length > 1">Store</TableHead>
                                 <TableHead data-numeric class="text-right">On hand</TableHead>
                                 <TableHead data-numeric class="text-right">Alert at</TableHead>
                                 <TableHead class="w-[1%]"></TableHead>
@@ -230,7 +293,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                                     <p class="font-medium leading-tight">{{ stock.product?.name }}</p>
                                     <p class="tabular font-mono text-xs text-muted-foreground">{{ stock.product?.sku }}</p>
                                 </TableCell>
-                                <TableCell class="text-sm text-muted-foreground">{{ stock.store?.name }}</TableCell>
+                                <TableCell v-if="stores.length > 1" class="text-sm text-muted-foreground">{{ stock.store?.name }}</TableCell>
                                 <TableCell data-numeric class="text-right">
                                     <span class="tabular font-mono text-base" :class="tone(stock)">{{ stock.qty }}</span>
                                     <span class="ml-1 text-xs text-muted-foreground">{{ stock.product?.unit }}</span>
@@ -275,7 +338,8 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-medium">{{ movement.product?.name }}</p>
                             <p class="truncate text-[0.7rem] text-muted-foreground">
-                                {{ movement.store?.name }} · {{ movement.creator?.name ?? 'System' }} · {{ when(movement.created_at) }}
+                                <template v-if="stores.length > 1">{{ movement.store?.name }} · </template>{{ movement.creator?.name ?? 'System' }} ·
+                                {{ when(movement.created_at) }}
                                 <span v-if="movement.note">· {{ movement.note }}</span>
                             </p>
                         </div>
@@ -292,6 +356,46 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
         </div>
 
         <!-- Record a movement -->
+        <!-- Product picker -->
+        <Dialog v-model:open="pickerOpen">
+            <DialogContent class="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Adjust stock</DialogTitle>
+                    <DialogDescription>Search the catalogue by name, SKU or barcode.</DialogDescription>
+                </DialogHeader>
+
+                <div class="relative">
+                    <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <LoaderCircle v-if="pickerLoading" class="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                    <Input v-model="pickerQuery" placeholder="Search name, SKU or barcode…" class="pl-9" autocomplete="off" autofocus />
+                </div>
+
+                <ul v-if="pickerResults.length" class="-mx-1 max-h-[45vh] overflow-y-auto">
+                    <li v-for="row in pickerResults" :key="row.id">
+                        <button type="button" class="row-press flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left" @click="pick(row)">
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate font-medium leading-tight">{{ row.product?.name }}</p>
+                                <p class="tabular truncate font-mono text-xs text-muted-foreground">
+                                    {{ row.product?.sku }}<span v-if="stores.length > 1"> · {{ row.store?.name }}</span>
+                                </p>
+                            </div>
+
+                            <!-- The figure is the point of the picker: you choose
+                                 what to adjust by seeing where the stock is. -->
+                            <p class="shrink-0 text-right">
+                                <span class="tabular font-mono text-base" :class="tone(row)">{{ row.qty }}</span>
+                                <span class="ml-1 text-xs text-muted-foreground">{{ row.product?.unit }}</span>
+                            </p>
+                        </button>
+                    </li>
+                </ul>
+
+                <p v-else-if="!pickerLoading" class="px-1 py-6 text-center text-sm text-muted-foreground">
+                    {{ pickerQuery ? 'Nothing matches that.' : 'No tracked products yet.' }}
+                </p>
+            </DialogContent>
+        </Dialog>
+
         <Dialog :open="!!adjusting" @update:open="(v) => !v && (adjusting = null)">
             <DialogContent class="max-w-md">
                 <form @submit.prevent="submitAdjust">

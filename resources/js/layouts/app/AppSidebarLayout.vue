@@ -28,8 +28,18 @@ withDefaults(defineProps<Props>(), {
 
         <AppContent variant="sidebar">
             <!-- One header per breakpoint: breadcrumbs on desktop, app bar on phone. -->
-            <AppSidebarHeader :breadcrumbs="breadcrumbs" class="hidden md:flex" />
-            <MobileAppBar :breadcrumbs="breadcrumbs" />
+            <!--
+                The actions slot is rendered into both headers. Only one is
+                ever visible (the classes above are mutually exclusive), and
+                the content is presentational, so a duplicate instance costs
+                nothing and saves the page from caring which breakpoint it is at.
+            -->
+            <AppSidebarHeader :breadcrumbs="breadcrumbs" class="hidden md:flex">
+                <template #actions><slot name="actions" /></template>
+            </AppSidebarHeader>
+            <MobileAppBar :breadcrumbs="breadcrumbs">
+                <template #actions><slot name="actions" /></template>
+            </MobileAppBar>
 
             <!-- Content clears the fixed tab bar; the desktop has no tab bar to clear. -->
             <div class="pb-tabbar md:pb-0">

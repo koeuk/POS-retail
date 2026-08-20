@@ -80,6 +80,7 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
         | Inventory. Movements, not raw edits — see InventoryController.
         */
         Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
+        Route::get('inventory/lookup', [InventoryController::class, 'lookup'])->name('inventory.lookup');
         Route::post('inventory/movements', [InventoryController::class, 'store'])->name('inventory.store');
         Route::put('inventory/threshold', [InventoryController::class, 'updateThreshold'])->name('inventory.threshold');
 

@@ -45,5 +45,12 @@ const props = withDefaults(
                 </Breadcrumb>
             </template>
         </div>
+
+        <!-- Page-supplied chrome (a sync badge, a register picker) sits with
+             the breadcrumb rather than inside the page body, so it stays put
+             while the content below it scrolls. -->
+        <div class="ml-auto flex items-center gap-2">
+            <slot name="actions" />
+        </div>
     </header>
 </template>

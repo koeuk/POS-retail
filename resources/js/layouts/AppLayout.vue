@@ -27,6 +27,8 @@ const pageKey = computed(() => new URL(page.url, 'http://x').pathname);
 
 <template>
     <AppSidebarLayout :breadcrumbs="breadcrumbs">
+        <template #actions><slot name="actions" /></template>
+
         <div :key="pageKey" class="animate-rise">
             <slot />
         </div>

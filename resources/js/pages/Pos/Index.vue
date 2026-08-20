@@ -209,6 +209,34 @@ onMounted(loadFeed);
     <Head title="Point of Sale" />
 
     <AppLayout :breadcrumbs="[{ title: 'Point of Sale', href: '/pos' }]">
+        <!--
+            Connection state belongs in the app header, not buried beside the
+            cart: it is the one thing a cashier must be able to glance at
+            without looking away from what they are ringing up.
+        -->
+        <template #actions>
+            <div v-if="feed && feed.registers.length > 1" class="flex gap-1">
+                <button
+                    v-for="r in feed.registers"
+                    :key="r.id"
+                    type="button"
+                    class="press h-8 rounded-md border px-2.5 text-xs font-medium"
+                    :class="registerId === r.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'"
+                    @click="chooseRegister(r.id)"
+                >
+                    {{ r.name }}
+                </button>
+            </div>
+
+            <SyncStatusBadge
+                :online="sync.online.value"
+                :syncing="sync.syncing.value"
+                :pending="sync.pending.value"
+                :auth-expired="sync.authExpired.value"
+                @retry="sync.flush()"
+            />
+        </template>
+
         <!-- Fills the viewport under the layout chrome. The grid and cart each
              scroll internally so the page itself never does — a till that
              scrolls as a whole is miserable on a tablet. -->
@@ -239,38 +267,6 @@ onMounted(loadFeed);
                 </section>
 
                 <aside class="flex min-h-0 w-full shrink-0 flex-col border-t border-border lg:w-[24rem] lg:border-t-0">
-                    <!-- Register and sync status live above the cart rather
-                         than in their own band, which duplicated the layout
-                         header running directly above it. -->
-                    <div class="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
-                        <div v-if="feed && feed.registers.length > 1" class="flex gap-1">
-                            <button
-                                v-for="r in feed.registers"
-                                :key="r.id"
-                                type="button"
-                                class="press h-8 rounded-md border px-2.5 text-xs font-medium"
-                                :class="
-                                    registerId === r.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'
-                                "
-                                @click="chooseRegister(r.id)"
-                            >
-                                {{ r.name }}
-                            </button>
-                        </div>
-                        <!-- With a single register there is nothing to choose,
-                             so the label is just clutter above the cart. -->
-
-                        <div class="ml-auto flex items-center gap-1.5">
-                            <SyncStatusBadge
-                                :online="sync.online.value"
-                                :syncing="sync.syncing.value"
-                                :pending="sync.pending.value"
-                                :auth-expired="sync.authExpired.value"
-                                @retry="sync.flush()"
-                            />
-                        </div>
-                    </div>
-
                     <Cart :currency="currency" />
                     <Checkout :currency="currency" @pay="paymentOpen = true" />
                 </aside>

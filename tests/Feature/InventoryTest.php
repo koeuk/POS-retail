@@ -48,9 +48,9 @@ class InventoryTest extends TestCase
     /* Movements */
     /* ------------------------------------------------------------------ */
 
-    public function test_receiving_stock_adds_to_it_and_logs_a_restock(): void
+    public function test_restocking_adds_to_it_and_logs_a_restock(): void
     {
-        $this->move(['mode' => 'receive', 'quantity' => 15, 'note' => 'Supplier delivery'])->assertRedirect();
+        $this->move(['mode' => 'restock', 'quantity' => 15, 'note' => 'Supplier delivery'])->assertRedirect();
 
         $this->assertSame(25, $this->stock->fresh()->qty);
         $this->assertDatabaseHas('inventory_logs', [
@@ -159,10 +159,66 @@ class InventoryTest extends TestCase
         $manager = User::factory()->manager($other)->create();
 
         $this->actingAs($manager)
-            ->post(route('inventory.store'), ['stock_id' => $this->stock->id, 'mode' => 'receive', 'quantity' => 99])
+            ->post(route('inventory.store'), ['stock_id' => $this->stock->id, 'mode' => 'restock', 'quantity' => 99])
             ->assertNotFound();
 
         $this->assertSame(10, $this->stock->fresh()->qty);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Product picker */
+    /* ------------------------------------------------------------------ */
+
+    public function test_the_lookup_returns_products_with_their_current_stock(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->getJson(route('inventory.lookup', ['q' => $this->product->name]));
+
+        $response->assertOk()
+            ->assertJsonPath('results.0.id', $this->stock->id)
+            ->assertJsonPath('results.0.qty', 10)
+            ->assertJsonPath('results.0.product.name', $this->product->name)
+            ->assertJsonPath('results.0.product.unit', 'pcs')
+            ->assertJsonPath('results.0.store.name', $this->store->name);
+    }
+
+    public function test_the_lookup_matches_on_sku_and_ignores_inactive_products(): void
+    {
+        $this->actingAs($this->admin)
+            ->getJson(route('inventory.lookup', ['q' => $this->product->sku]))
+            ->assertOk()
+            ->assertJsonCount(1, 'results');
+
+        $this->product->update(['is_active' => false]);
+
+        $this->actingAs($this->admin)
+            ->getJson(route('inventory.lookup', ['q' => $this->product->sku]))
+            ->assertOk()
+            ->assertJsonCount(0, 'results');
+    }
+
+    /** The picker must not become a way to read another store's shelves. */
+    public function test_the_lookup_is_scoped_to_the_users_own_store(): void
+    {
+        $other = Store::factory()->create();
+        $otherProduct = Product::factory()->create(['name' => 'Elsewhere Only']);
+        Stock::create(['product_id' => $otherProduct->id, 'store_id' => $other->id, 'qty' => 4]);
+
+        $manager = User::factory()->create(['role' => 'manager', 'store_id' => $this->store->id]);
+
+        $this->actingAs($manager)
+            ->getJson(route('inventory.lookup', ['q' => 'Elsewhere']))
+            ->assertOk()
+            ->assertJsonCount(0, 'results');
+    }
+
+    public function test_a_cashier_cannot_reach_the_lookup(): void
+    {
+        $cashier = User::factory()->create(['role' => 'cashier', 'store_id' => $this->store->id]);
+
+        $this->actingAs($cashier)
+            ->getJson(route('inventory.lookup'))
+            ->assertForbidden();
     }
 
     public function test_a_cashier_cannot_reach_inventory(): void
@@ -171,7 +227,7 @@ class InventoryTest extends TestCase
 
         $this->actingAs($cashier)->get(route('inventory.index'))->assertForbidden();
         $this->actingAs($cashier)
-            ->post(route('inventory.store'), ['stock_id' => $this->stock->id, 'mode' => 'receive', 'quantity' => 1])
+            ->post(route('inventory.store'), ['stock_id' => $this->stock->id, 'mode' => 'restock', 'quantity' => 1])
             ->assertForbidden();
     }
 

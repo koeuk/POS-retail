@@ -8,6 +8,7 @@ use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -74,6 +75,51 @@ class InventoryController extends Controller
     }
 
     /**
+     * Products matching a search, for the "adjust any product" picker.
+     *
+     * JSON rather than an Inertia reload: the picker has to reach the whole
+     * catalogue, not the twenty rows the table happens to be showing, and
+     * re-rendering the page on every keystroke to do that would be absurd.
+     */
+    public function lookup(Request $request): JsonResponse
+    {
+        $search = trim((string) $request->input('q'));
+
+        $rows = $this->scoped($request->user())
+            ->with(['product:id,name,sku,barcode,unit', 'store:id,name'])
+            ->whereHas('product', fn (Builder $q) => $q->where('is_active', true))
+            ->when($search !== '', fn (Builder $query) => $query->whereHas(
+                'product',
+                fn (Builder $q) => $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%")
+                    ->orWhere('barcode', 'like', "%{$search}%")
+            ))
+            // Alphabetical by product: a picker should land where the eye
+            // expects, unlike the table which leads with the lowest stock.
+            ->join('products', 'products.id', '=', 'stocks.product_id')
+            ->orderBy('products.name')
+            ->orderBy('stocks.store_id')
+            ->select('stocks.*')
+            ->limit(20)
+            ->get()
+            ->map(fn (Stock $stock) => [
+                'id' => $stock->id,
+                'qty' => $stock->qty,
+                'low_stock_threshold' => $stock->low_stock_threshold,
+                'product' => [
+                    'id' => $stock->product->id,
+                    'name' => $stock->product->name,
+                    'sku' => $stock->product->sku,
+                    'barcode' => $stock->product->barcode,
+                    'unit' => $stock->product->unit,
+                ],
+                'store' => ['id' => $stock->store->id, 'name' => $stock->store->name],
+            ]);
+
+        return response()->json(['results' => $rows]);
+    }
+
+    /**
      * Record a movement. The quantity is a consequence of it, never the input.
      */
     public function store(Request $request): RedirectResponse
@@ -82,8 +128,8 @@ class InventoryController extends Controller
 
         $data = $request->validate([
             'stock_id' => ['required', 'integer', Rule::exists('stocks', 'id')],
-            'mode' => ['required', Rule::in(['receive', 'remove', 'count', 'return'])],
-            // For receive/remove/return this is a delta; for count it is the
+            'mode' => ['required', Rule::in(['restock', 'remove', 'count', 'return'])],
+            // For restock/remove/return this is a delta; for count it is the
             // shelf figure the counter actually saw.
             'quantity' => ['required', 'integer', 'min:0'],
             'note' => ['nullable', 'string', 'max:255'],
@@ -92,7 +138,7 @@ class InventoryController extends Controller
         $stock = $this->scoped($user)->whereKey($data['stock_id'])->firstOrFail();
 
         [$change, $type] = match ($data['mode']) {
-            'receive' => [$data['quantity'], InventoryLogType::Restock],
+            'restock' => [$data['quantity'], InventoryLogType::Restock],
             'remove' => [-$data['quantity'], InventoryLogType::Adjustment],
             'return' => [$data['quantity'], InventoryLogType::Return],
             // A count is absolute: the delta is whatever reconciles the books
