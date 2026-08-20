@@ -3,6 +3,7 @@
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\PosController;
 use App\Http\Controllers\PosDataController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StoreController;
@@ -46,8 +47,14 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
     | POS data endpoints — JSON, not Inertia. See PosDataController.
     | Products and order sync land here in Phase 4.
     */
+    Route::get('pos', [PosController::class, 'index'])->name('pos');
+
     Route::prefix('pos/data')->name('pos.data.')->group(function () {
         Route::get('heartbeat', [PosDataController::class, 'heartbeat'])->name('heartbeat');
+        Route::get('products', [PosDataController::class, 'products'])->name('products');
+        Route::post('orders/sync', [PosDataController::class, 'sync'])->name('orders.sync');
+        Route::get('orders/{clientUuid}/status', [PosDataController::class, 'status'])
+            ->name('orders.status');
     });
 
     /*

@@ -9,8 +9,8 @@
 | 1 — Scaffold & Database | ✅ **Done** — 20 tables, 12 migrations clean, seeded, builds, serves. |
 | 2 — Auth, Roles & Session Longevity | ✅ **Done** — 34 tests green, roles enforced, heartbeat live, `/` → login. |
 | 3 — Admin CRUD | ✅ **Done** — 47 tests green, all 5 CI checks pass, new theme + motion system. |
-| 4 — POS Sync Endpoints | ⏳ **Next** |
-| 5 — POS UI (online) | ⬜ Not started |
+| 4 — POS Sync Endpoints | ✅ **Done** — 19 tests: idempotent replay, oversell, per-line tax, proportional discount. |
+| 5 — POS UI (online) | ⏳ **In progress** |
 | 6 — Offline Layer | ⬜ Not started |
 | 7 — Receipts | ⬜ Not started |
 | 8 — Dashboard & Reports | ⬜ Not started |
