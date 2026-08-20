@@ -169,6 +169,34 @@
     }
 }
 
+@layer components {
+    /*
+     * The card that holds a list. On a phone it goes edge-to-edge — a native
+     * list has no side gutter and no corner radius, and the 20px of page
+     * padding either side is 11% of a 360px screen that the content wants.
+     */
+    .list-panel {
+        @apply -mx-5 border-y border-border bg-card shadow-sm md:mx-0 md:rounded-xl md:border;
+    }
+
+    /*
+     * One row of a phone list: a tap area first, then the row's own controls.
+     * 3.5rem clears the 44px touch floor with the padding included.
+     */
+    .list-row {
+        @apply flex items-stretch border-b border-border last:border-b-0;
+    }
+
+    .list-row-main {
+        @apply row-press flex min-w-0 flex-1 items-center gap-3 px-5 py-3 text-left;
+    }
+
+    /* Trailing destructive control. Wide enough to hit, narrow enough to ignore. */
+    .list-row-action {
+        @apply flex w-12 shrink-0 items-center justify-center text-muted-foreground transition-colors active:text-destructive;
+    }
+}
+
 /*
 |--------------------------------------------------------------------------
 | Motion

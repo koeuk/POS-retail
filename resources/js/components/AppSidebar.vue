@@ -12,56 +12,35 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import type { NavGroup, SharedData } from '@/types';
+import { isActivePath, visibleGroups } from '@/lib/navigation';
+import { useNavLock } from '@/Pos/composables/useNavLock';
+import type { SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Boxes, LayoutGrid, ScanBarcode, Shapes, Store, Users, UsersRound } from 'lucide-vue-next';
+import { Store as StoreIcon } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
 
 const page = usePage<SharedData>();
 const can = computed(() => page.props.auth.can);
+const storeName = computed(() => page.props.auth.store_name);
 const currentPath = computed(() => new URL(page.url, 'http://x').pathname);
 
-const groups: NavGroup[] = [
-    {
-        label: 'Selling',
-        items: [
-            { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-            { title: 'Point of Sale', href: '/pos', icon: ScanBarcode },
-        ],
-    },
-    {
-        label: 'Catalogue',
-        items: [
-            { title: 'Products', href: '/products', icon: Boxes, requires: 'manage' },
-            { title: 'Categories', href: '/categories', icon: Shapes, requires: 'manage' },
-        ],
-    },
-    {
-        label: 'People',
-        items: [
-            { title: 'Customers', href: '/customers', icon: UsersRound, requires: 'manage' },
-            { title: 'Staff', href: '/users', icon: Users, requires: 'isAdmin' },
-            { title: 'Stores', href: '/stores', icon: Store, requires: 'manage' },
-        ],
-    },
-];
+const groups = computed(() => visibleGroups(can.value));
 
-/** Drop whole groups the user cannot see anything in. */
-const visibleGroups = computed(() =>
-    groups
-        .map((group) => ({
-            ...group,
-            items: group.items.filter((item) => !item.requires || can.value[item.requires]),
-        }))
-        .filter((group) => group.items.length > 0),
-);
+const isActive = (href: string) => isActivePath(href, currentPath.value);
 
-const isActive = (href: string) => currentPath.value === href || currentPath.value.startsWith(`${href}/`);
+/*
+ * The POS locks navigation while it holds unsynced sales. Leaving would
+ * unload the page that owns the flush loop, so the queue would sit untouched.
+ * The current page stays clickable so the lock can never trap focus.
+ */
+const navLock = useNavLock();
+
+const isBlocked = (href: string) => navLock.locked && !isActive(href);
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset" class="hidden md:flex">
+    <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>
@@ -75,14 +54,44 @@ const isActive = (href: string) => currentPath.value === href || currentPath.val
         </SidebarHeader>
 
         <SidebarContent>
-            <SidebarGroup v-for="group in visibleGroups" :key="group.label">
+            <!-- Which shop you are standing in. A multi-store operator should
+                 never have to guess which stock they are looking at. -->
+            <SidebarGroup v-if="storeName" class="py-1">
+                <SidebarGroupContent>
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton :tooltip="storeName" class="pointer-events-none">
+                                <StoreIcon class="text-primary" />
+                                <span class="truncate font-medium">{{ storeName }}</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup v-for="group in groups" :key="group.label">
                 <SidebarGroupLabel class="font-mono text-[0.65rem] uppercase tracking-[0.14em]">
                     {{ group.label }}
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                     <SidebarMenu>
                         <SidebarMenuItem v-for="item in group.items" :key="item.href">
-                            <SidebarMenuButton as-child :is-active="isActive(item.href)" :tooltip="item.title" class="press">
+                            <SidebarMenuButton
+                                v-if="isBlocked(item.href)"
+                                :tooltip="navLock.reason ?? 'Finish syncing first'"
+                                class="cursor-not-allowed opacity-40"
+                                aria-disabled="true"
+                            >
+                                <component :is="item.icon" />
+                                <span>{{ item.title }}</span>
+                            </SidebarMenuButton>
+                            <SidebarMenuButton
+                                v-else
+                                as-child
+                                :is-active="isActive(item.href)"
+                                :tooltip="item.title"
+                                class="press"
+                            >
                                 <Link :href="item.href">
                                     <component :is="item.icon" />
                                     <span>{{ item.title }}</span>

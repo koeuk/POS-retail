@@ -4,6 +4,8 @@ export type Role = 'admin' | 'manager' | 'cashier';
 
 export interface Auth {
     user: User | null;
+    /** The shop this person is bound to; null for admins, who see them all. */
+    store_name: string | null;
     can: {
         accessAdmin: boolean;
         manage: boolean;

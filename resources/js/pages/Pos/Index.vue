@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLayout from '@/layouts/AppLayout.vue';
 import Cart from '@/Pos/components/Cart.vue';
 import Checkout from '@/Pos/components/Checkout.vue';
 import PaymentModal from '@/Pos/components/PaymentModal.vue';
@@ -6,14 +7,15 @@ import ProductGrid from '@/Pos/components/ProductGrid.vue';
 import SyncStatusBadge from '@/Pos/components/SyncStatusBadge.vue';
 import { useBarcode } from '@/Pos/composables/useBarcode';
 import { useCart } from '@/Pos/composables/useCart';
+import { useNavLock } from '@/Pos/composables/useNavLock';
 import { useOfflineSync } from '@/Pos/composables/useOfflineSync';
 import { cacheFeed, queueOrder, readCachedFeed } from '@/Pos/db/dexie';
 import { http } from '@/Pos/lib/http';
 import { toDecimalString } from '@/Pos/lib/money';
-import type { PaymentMethod, PosFeed, PosProduct, StoredOrder } from '@/Pos/types';
+import type { PaymentMethod, PosFeed, StoredOrder } from '@/Pos/types';
 import { Head } from '@inertiajs/vue3';
-import { CircleAlert, LoaderCircle, LogOut, Store as StoreIcon } from 'lucide-vue-next';
-import { computed, onMounted, ref } from 'vue';
+import { CircleAlert, LoaderCircle } from 'lucide-vue-next';
+import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 
 const props = defineProps<{
     boot: {
@@ -26,25 +28,40 @@ const props = defineProps<{
 
 const cart = useCart();
 const sync = useOfflineSync();
+const navLock = useNavLock();
 
 const feed = ref<PosFeed | null>(null);
 const loading = ref(true);
 const loadError = ref<string | null>(null);
-const fromCache = ref(false);
 const registerId = ref<number | null>(null);
 const paying = ref(false);
 const paymentOpen = ref(false);
-const lastSale = ref<StoredOrder | null>(null);
 const toast = ref<{ kind: 'ok' | 'warn'; text: string } | null>(null);
 
 const currency = computed(() => feed.value?.settings.currency_symbol ?? '$');
 const products = computed(() => feed.value?.products ?? []);
 
+/*
+ * Close the door whenever there is unsynced work. Navigating away would
+ * unload the page that owns the flush loop, leaving real sales sitting in
+ * IndexedDB with nothing driving them to the server.
+ */
+watchEffect(() => {
+    if (!sync.online.value) {
+        navLock.lock('Offline — stay here until sales have synced');
+    } else if (sync.pending.value > 0) {
+        navLock.lock(`${sync.pending.value} sale(s) still syncing`);
+    } else {
+        navLock.unlock();
+    }
+});
+
+onBeforeUnmount(() => navLock.unlock());
+
 /**
- * Cache first, network second.
- *
- * The cashier sees the catalogue immediately from Dexie even with no signal;
- * a refresh happens behind them only if the server actually answers.
+ * Cache first, network second: the catalogue paints instantly from Dexie
+ * even with no signal, and refreshes behind the cashier only if the server
+ * actually answers.
  */
 async function loadFeed() {
     loading.value = true;
@@ -54,14 +71,12 @@ async function loadFeed() {
 
     if (cached) {
         feed.value = cached as PosFeed;
-        fromCache.value = true;
         loading.value = false;
     }
 
     try {
         const { data } = await http.get<PosFeed>('/products');
         feed.value = data;
-        fromCache.value = false;
         await cacheFeed(data);
     } catch {
         if (!cached) {
@@ -78,8 +93,7 @@ function pickRegister() {
     const registers = feed.value?.registers ?? [];
     const remembered = Number(localStorage.getItem('pos.register_id'));
 
-    registerId.value =
-        registers.find((r) => r.id === remembered)?.id ?? registers[0]?.id ?? null;
+    registerId.value = registers.find((r) => r.id === remembered)?.id ?? registers[0]?.id ?? null;
 }
 
 function chooseRegister(id: number) {
@@ -106,10 +120,9 @@ useBarcode({
 });
 
 /**
- * Completing a sale is a **local** operation. The order is written to Dexie
- * and the cart is cleared straight away; reaching the server is a separate,
- * retryable concern. A cashier must never wait on the network to serve the
- * next customer.
+ * Completing a sale is a **local** operation. The order goes into Dexie and
+ * the cart clears straight away; reaching the server is a separate, retryable
+ * concern. A cashier must never wait on the network to serve the next person.
  */
 async function completeSale(payment: {
     method: PaymentMethod;
@@ -122,8 +135,8 @@ async function completeSale(payment: {
     const change = payment.method === 'cash' ? Math.max(0, payment.amount - totals.total) : 0;
 
     const order: StoredOrder = {
-        // Generated before the network is involved. This is what makes a
-        // retry safe: the server collapses duplicates on it.
+        // Generated before the network is involved — this is what makes a
+        // retry safe, because the server collapses duplicates on it.
         client_uuid: crypto.randomUUID(),
         store_id: props.boot.store_id,
         register_id: registerId.value,
@@ -164,14 +177,13 @@ async function completeSale(payment: {
     try {
         await queueOrder(order);
     } catch {
-        // Dexie itself failed — this is the one case where the sale cannot be
-        // recorded, and the cashier must know before the customer walks off.
+        // IndexedDB itself failed. This is the only case where a sale cannot
+        // be recorded, and the cashier must know before the customer leaves.
         flash('warn', 'Could not save the sale locally. Do not let the customer leave.');
         paying.value = false;
         return;
     }
 
-    lastSale.value = order;
     cart.clear();
     paymentOpen.value = false;
     paying.value = false;
@@ -179,8 +191,6 @@ async function completeSale(payment: {
 
     flash('ok', `Sale saved · ${currency.value}${order.total}`);
 
-    // Try to reach the server immediately; if it fails the order simply stays
-    // queued and the 15s loop will pick it up.
     void sync.flush().then(() => {
         if (sync.online.value) void refreshStockHints();
     });
@@ -203,117 +213,89 @@ onMounted(loadFeed);
 <template>
     <Head title="Point of Sale" />
 
-    <div class="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
-        <header class="flex shrink-0 items-center gap-3 border-b border-border px-4 py-2.5">
-            <div class="flex min-w-0 items-center gap-2">
-                <div class="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                    <StoreIcon class="size-4" />
+    <AppLayout :breadcrumbs="[{ title: 'Point of Sale', href: '/pos' }]">
+        <!-- Fills the viewport under the layout chrome. The grid and cart each
+             scroll internally so the page itself never does — a till that
+             scrolls as a whole is miserable on a tablet. -->
+        <div class="flex h-[calc(100dvh-9rem)] min-h-[28rem] flex-col md:h-[calc(100dvh-4rem)]">
+            <!-- POS toolbar -->
+            <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-2">
+                <div v-if="feed && feed.registers.length > 1" class="flex gap-1">
+                    <button
+                        v-for="r in feed.registers"
+                        :key="r.id"
+                        type="button"
+                        class="press h-8 rounded-md border px-2.5 text-xs font-medium"
+                        :class="
+                            registerId === r.id
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border text-muted-foreground'
+                        "
+                        @click="chooseRegister(r.id)"
+                    >
+                        {{ r.name }}
+                    </button>
                 </div>
-                <div class="min-w-0">
-                    <p class="truncate text-sm font-semibold leading-tight">{{ boot.store_name }}</p>
-                    <p class="truncate font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                        {{ boot.cashier_name }}
-                    </p>
+                <p v-else-if="feed?.registers.length" class="font-mono text-xs text-muted-foreground">
+                    {{ feed.registers[0].name }}
+                </p>
+
+                <div class="ml-auto">
+                    <SyncStatusBadge
+                        :online="sync.online.value"
+                        :syncing="sync.syncing.value"
+                        :pending="sync.pending.value"
+                        :auth-expired="sync.authExpired.value"
+                        @retry="sync.flush()"
+                    />
                 </div>
             </div>
 
-            <div v-if="feed && feed.registers.length > 1" class="hidden gap-1 sm:flex">
+            <div
+                v-if="sync.authExpired.value"
+                class="shrink-0 border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-center text-xs text-destructive"
+            >
+                Your session expired. Sales are still saved on this device —
+                <a href="/login" class="underline">sign in again</a> to sync them.
+            </div>
+
+            <div v-if="loading" class="flex flex-1 items-center justify-center">
+                <LoaderCircle class="size-6 animate-spin text-muted-foreground" />
+            </div>
+
+            <div
+                v-else-if="loadError"
+                class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center"
+            >
+                <CircleAlert class="size-8 text-destructive" />
+                <p class="max-w-sm text-sm text-muted-foreground">{{ loadError }}</p>
                 <button
-                    v-for="r in feed.registers"
-                    :key="r.id"
                     type="button"
-                    class="press h-8 rounded-md border px-2.5 text-xs font-medium"
-                    :class="
-                        registerId === r.id
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-border text-muted-foreground'
-                    "
-                    @click="chooseRegister(r.id)"
+                    class="press h-10 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground"
+                    @click="loadFeed"
                 >
-                    {{ r.name }}
+                    Try again
                 </button>
             </div>
 
-            <div class="ml-auto flex items-center gap-2">
-                <SyncStatusBadge
-                    :online="sync.online.value"
-                    :syncing="sync.syncing.value"
-                    :pending="sync.pending.value"
-                    :auth-expired="sync.authExpired.value"
-                    @retry="sync.flush()"
-                />
+            <main v-else class="flex min-h-0 flex-1 flex-col lg:flex-row">
+                <section class="min-h-0 flex-1 lg:border-r lg:border-border">
+                    <ProductGrid
+                        :products="products"
+                        :categories="feed!.categories"
+                        :currency="currency"
+                        @add="cart.add($event)"
+                    />
+                </section>
 
-                <!--
-                    Nav lockout. Leaving /pos while offline would unload the
-                    only page that can reach the queue, and the cashier would
-                    be stranded on a dead shell. Queued sales are safe in
-                    Dexie either way, but there is no way back until signal
-                    returns, so the door is simply closed.
-                -->
-                <a
-                    v-if="sync.online.value && sync.pending.value === 0"
-                    href="/dashboard"
-                    class="press flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm text-muted-foreground"
+                <aside
+                    class="flex min-h-0 w-full shrink-0 flex-col border-t border-border lg:w-[24rem] lg:border-t-0"
                 >
-                    <LogOut class="size-4" />
-                    <span class="hidden sm:inline">Exit</span>
-                </a>
-                <span
-                    v-else
-                    class="flex h-9 cursor-not-allowed items-center gap-1.5 rounded-md border border-dashed border-border px-3 text-sm text-muted-foreground/50"
-                    :title="
-                        sync.online.value
-                            ? 'Finish syncing before leaving'
-                            : 'Offline — stay here until sales have synced'
-                    "
-                >
-                    <LogOut class="size-4" />
-                    <span class="hidden sm:inline">Exit</span>
-                </span>
-            </div>
-        </header>
-
-        <!-- Session expiry keeps selling alive but blocks syncing. -->
-        <div
-            v-if="sync.authExpired.value"
-            class="shrink-0 border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-center text-xs text-destructive"
-        >
-            Your session expired. Sales are still being saved on this device — sign in again to sync
-            them.
-            <a href="/login" class="underline">Sign in</a>
+                    <Cart :currency="currency" />
+                    <Checkout :currency="currency" @pay="paymentOpen = true" />
+                </aside>
+            </main>
         </div>
-
-        <div v-if="loading" class="flex flex-1 items-center justify-center">
-            <LoaderCircle class="size-6 animate-spin text-muted-foreground" />
-        </div>
-
-        <div v-else-if="loadError" class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-            <CircleAlert class="size-8 text-destructive" />
-            <p class="max-w-sm text-sm text-muted-foreground">{{ loadError }}</p>
-            <button
-                type="button"
-                class="press h-10 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground"
-                @click="loadFeed"
-            >
-                Try again
-            </button>
-        </div>
-
-        <main v-else class="flex min-h-0 flex-1 flex-col lg:flex-row">
-            <section class="min-h-0 flex-1 lg:border-r lg:border-border">
-                <ProductGrid
-                    :products="products"
-                    :categories="feed!.categories"
-                    :currency="currency"
-                    @add="cart.add($event)"
-                />
-            </section>
-
-            <aside class="flex min-h-0 w-full shrink-0 flex-col border-t border-border lg:w-[26rem] lg:border-t-0">
-                <Cart :currency="currency" />
-                <Checkout :currency="currency" @pay="paymentOpen = true" />
-            </aside>
-        </main>
 
         <PaymentModal
             :open="paymentOpen"
@@ -343,5 +325,5 @@ onMounted(loadFeed);
                 {{ toast.text }}
             </div>
         </Transition>
-    </div>
+    </AppLayout>
 </template>

@@ -47,6 +47,9 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user()?->only([
                     'id', 'name', 'email', 'role', 'store_id', 'is_active',
                 ]),
+                // Which shop this person is standing in — shown in the sidebar
+                // so a multi-store operator always knows where they are.
+                'store_name' => $request->user()?->store?->name,
                 'can' => [
                     'accessAdmin' => (bool) $request->user()?->role?->canAccessAdmin(),
                     'manage' => (bool) $request->user()?->hasRole(
