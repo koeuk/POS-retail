@@ -92,7 +92,7 @@ function submitRegister() {
             </PageHeader>
 
             <div v-if="stores.length" class="stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <article v-for="store in stores" :key="store.id" class="lift rounded-xl border border-border bg-card p-5 shadow-sm">
+                <article v-for="store in stores" :key="store.id" class="lift rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex items-center gap-3">
                             <div class="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -105,7 +105,9 @@ function submitRegister() {
                                 </p>
                             </div>
                         </div>
-                        <Button v-if="canManage" variant="ghost" size="sm" class="press" @click="openStore(store)"> Edit </Button>
+                        <Button v-if="canManage" variant="ghost" size="sm" class="press touch-target shrink-0" @click="openStore(store)">
+                            Edit
+                        </Button>
                     </div>
 
                     <dl class="mt-4 space-y-1.5 text-sm text-muted-foreground">
@@ -122,7 +124,13 @@ function submitRegister() {
                     <div class="mt-4 border-t border-border pt-4">
                         <div class="mb-2 flex items-center justify-between">
                             <h3 class="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">Registers</h3>
-                            <Button v-if="canManage" variant="ghost" size="sm" class="press h-7 px-2 text-xs" @click="openRegister(store, null)">
+                            <Button
+                                v-if="canManage"
+                                variant="ghost"
+                                size="sm"
+                                class="press touch-target h-7 px-2 text-xs"
+                                @click="openRegister(store, null)"
+                            >
                                 <Plus class="size-3" />
                                 Add
                             </Button>
@@ -132,14 +140,20 @@ function submitRegister() {
                             <li
                                 v-for="reg in store.registers"
                                 :key="reg.id"
-                                class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted/50"
+                                class="flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-muted/50 md:py-1.5"
                             >
                                 <Monitor class="size-3.5 shrink-0 text-muted-foreground" />
                                 <span class="flex-1 truncate">{{ reg.name }}</span>
                                 <Badge :variant="reg.is_active ? 'secondary' : 'outline'" class="text-[0.65rem]">
                                     {{ reg.is_active ? 'Active' : 'Off' }}
                                 </Badge>
-                                <Button v-if="canManage" variant="ghost" size="sm" class="press h-6 px-1.5 text-xs" @click="openRegister(store, reg)">
+                                <Button
+                                    v-if="canManage"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="press touch-target h-6 shrink-0 px-1.5 text-xs"
+                                    @click="openRegister(store, reg)"
+                                >
                                     Edit
                                 </Button>
                             </li>

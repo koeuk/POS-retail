@@ -87,15 +87,15 @@ function confirmDelete() {
                 </template>
             </PageHeader>
 
-            <div class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 60ms">
+            <div class="list-panel animate-rise" style="animation-delay: 60ms">
                 <div class="border-b border-border p-3">
-                    <div class="relative max-w-sm">
+                    <div class="relative md:max-w-sm">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input v-model="search" placeholder="Search name, phone or email…" class="pl-9" autocomplete="off" />
                     </div>
                 </div>
 
-                <div v-if="customers.data.length" class="overflow-x-auto">
+                <div v-if="customers.data.length" class="hidden overflow-x-auto md:block">
                     <Table>
                         <TableHeader>
                             <TableRow class="hover:bg-transparent">
@@ -137,7 +137,7 @@ function confirmDelete() {
                                 </TableCell>
                                 <TableCell>
                                     <div
-                                        class="flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+                                        class="flex items-center gap-1 transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:opacity-0"
                                     >
                                         <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(c)">
                                             <Pencil class="size-4" />
@@ -157,6 +157,34 @@ function confirmDelete() {
                         </TransitionGroup>
                     </Table>
                 </div>
+
+                <ul v-if="customers.data.length" class="md:hidden">
+                    <li v-for="c in customers.data" :key="c.id" class="list-row">
+                        <button type="button" class="list-row-main" :aria-label="`Edit ${c.name}`" @click="openEdit(c)">
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate font-medium leading-tight">{{ c.name }}</p>
+                                <p class="truncate text-xs text-muted-foreground">
+                                    <span v-if="c.phone" class="tabular font-mono">{{ c.phone }}</span>
+                                    <span v-if="c.phone && c.email"> · </span>
+                                    <span v-if="c.email">{{ c.email }}</span>
+                                    <span v-if="!c.phone && !c.email">No contact details</span>
+                                </p>
+                            </div>
+
+                            <div class="shrink-0 text-right">
+                                <p class="font-medium leading-tight"><Money :value="c.spent_total ?? 0" /></p>
+                                <p class="tabular font-mono text-xs text-muted-foreground">
+                                    {{ c.orders_count ?? 0 }} order{{ c.orders_count === 1 ? '' : 's' }}
+                                    <span v-if="c.loyalty_points > 0" class="text-primary"> · {{ c.loyalty_points }} pts</span>
+                                </p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="list-row-action" :aria-label="`Delete ${c.name}`" @click="pendingDelete = c">
+                            <Trash2 class="size-4" />
+                        </button>
+                    </li>
+                </ul>
 
                 <EmptyState
                     v-else

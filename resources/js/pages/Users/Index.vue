@@ -131,14 +131,14 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                 </template>
             </PageHeader>
 
-            <div class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 60ms">
+            <div class="list-panel animate-rise" style="animation-delay: 60ms">
                 <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
-                    <div class="relative min-w-[14rem] flex-1">
+                    <div class="relative w-full md:min-w-[14rem] md:flex-1">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input v-model="search" placeholder="Search name or email…" class="pl-9" autocomplete="off" />
                     </div>
                     <Select v-model="roleFilter">
-                        <SelectTrigger class="w-[11rem]">
+                        <SelectTrigger class="w-full md:w-[11rem]">
                             <SelectValue placeholder="Role" />
                         </SelectTrigger>
                         <SelectContent>
@@ -150,7 +150,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                     </Select>
                 </div>
 
-                <div v-if="users.data.length" class="overflow-x-auto">
+                <div v-if="users.data.length" class="hidden overflow-x-auto md:block">
                     <Table>
                         <TableHeader>
                             <TableRow class="hover:bg-transparent">
@@ -191,7 +191,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                 </TableCell>
                                 <TableCell>
                                     <div
-                                        class="flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+                                        class="flex items-center gap-1 transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:opacity-0"
                                     >
                                         <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(u)">
                                             <Pencil class="size-4" />
@@ -213,6 +213,40 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                     </Table>
                 </div>
 
+                <ul v-if="users.data.length" class="md:hidden">
+                    <li v-for="u in users.data" :key="u.id" class="list-row">
+                        <button type="button" class="list-row-main" :aria-label="`Edit ${u.name}`" @click="openEdit(u)">
+                            <span
+                                class="mt-1 size-1.5 shrink-0 self-start rounded-full"
+                                :class="u.is_active ? 'bg-primary' : 'bg-muted-foreground/40'"
+                            />
+
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate font-medium leading-tight">
+                                    {{ u.name }}
+                                    <span v-if="u.id === currentUserId" class="text-xs font-normal text-muted-foreground">(you)</span>
+                                </p>
+                                <p class="truncate text-xs text-muted-foreground">{{ u.email }} · {{ u.store?.name ?? 'All stores' }}</p>
+                            </div>
+
+                            <Badge :variant="roleTone(u.role)" class="shrink-0 capitalize">{{ u.role }}</Badge>
+                        </button>
+
+                        <button
+                            v-if="u.id !== currentUserId"
+                            type="button"
+                            class="list-row-action"
+                            :aria-label="`Delete ${u.name}`"
+                            @click="pendingDelete = u"
+                        >
+                            <Trash2 class="size-4" />
+                        </button>
+                        <!-- Keeps the name column aligned across rows where the
+                             delete control is absent (you cannot delete yourself). -->
+                        <span v-else class="w-12 shrink-0" aria-hidden="true" />
+                    </li>
+                </ul>
+
                 <EmptyState v-else :icon="Users" title="No staff found" description="Try clearing the filters." />
 
                 <Pagination :links="users.links" :from="users.from" :to="users.to" :total="users.total" />
@@ -220,7 +254,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
         </div>
 
         <Dialog v-model:open="dialogOpen">
-            <DialogContent class="max-w-lg">
+            <DialogContent class="sm:max-w-lg">
                 <form @submit.prevent="submit">
                     <DialogHeader>
                         <DialogTitle>{{ editing ? 'Edit staff account' : 'New staff account' }}</DialogTitle>

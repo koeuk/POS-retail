@@ -92,16 +92,16 @@ function stockTone(qty: number | null | undefined) {
                 </template>
             </PageHeader>
 
-            <div class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 60ms">
+            <div class="list-panel animate-rise" style="animation-delay: 60ms">
                 <!-- Filters -->
-                <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
-                    <div class="relative min-w-[14rem] flex-1">
+                <div class="grid grid-cols-2 gap-2 border-b border-border p-3 md:flex md:flex-wrap md:items-center">
+                    <div class="relative col-span-2 md:min-w-[14rem] md:flex-1">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input v-model="search" placeholder="Search name, SKU or barcode…" class="pl-9" autocomplete="off" />
                     </div>
 
                     <Select v-model="categoryId">
-                        <SelectTrigger class="w-[11rem]">
+                        <SelectTrigger class="w-full md:w-[11rem]">
                             <SelectValue placeholder="Category" />
                         </SelectTrigger>
                         <SelectContent>
@@ -113,7 +113,7 @@ function stockTone(qty: number | null | undefined) {
                     </Select>
 
                     <Select v-model="status">
-                        <SelectTrigger class="w-[9rem]">
+                        <SelectTrigger class="w-full md:w-[9rem]">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -125,7 +125,7 @@ function stockTone(qty: number | null | undefined) {
                 </div>
 
                 <!-- Table -->
-                <div v-if="products.data.length" class="overflow-x-auto">
+                <div v-if="products.data.length" class="hidden overflow-x-auto md:block">
                     <Table>
                         <TableHeader>
                             <TableRow class="hover:bg-transparent">
@@ -185,7 +185,7 @@ function stockTone(qty: number | null | undefined) {
                                 </TableCell>
                                 <TableCell>
                                     <div
-                                        class="flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+                                        class="flex items-center gap-1 transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:opacity-0"
                                     >
                                         <Button as-child variant="ghost" size="icon" class="press size-8">
                                             <Link :href="route('products.edit', { product: p.id })" aria-label="Edit">
@@ -207,6 +207,38 @@ function stockTone(qty: number | null | undefined) {
                         </TransitionGroup>
                     </Table>
                 </div>
+
+                <!-- Phone list. Tap the row to edit; the trailing control deletes. -->
+                <ul v-if="products.data.length" class="md:hidden">
+                    <li v-for="p in products.data" :key="p.id" class="list-row">
+                        <Link :href="route('products.edit', { product: p.id })" class="list-row-main">
+                            <div
+                                class="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/50"
+                            >
+                                <img v-if="p.image" :src="`/storage/${p.image}`" :alt="p.name" class="size-full object-cover" />
+                                <Boxes v-else class="size-5 text-muted-foreground" />
+                            </div>
+
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate font-medium leading-tight">{{ p.name }}</p>
+                                <p class="truncate text-xs text-muted-foreground">
+                                    <span class="tabular font-mono">{{ p.sku }}</span>
+                                    <span v-if="p.category"> · {{ p.category.name }}</span>
+                                    <span v-if="!p.is_active" class="text-destructive"> · Inactive</span>
+                                </p>
+                            </div>
+
+                            <div class="shrink-0 text-right">
+                                <p class="font-medium leading-tight"><Money :value="p.sell_price" /></p>
+                                <p class="tabular font-mono text-xs" :class="stockTone(p.stock_qty)">{{ p.stock_qty ?? 0 }} {{ p.unit }}</p>
+                            </div>
+                        </Link>
+
+                        <button type="button" class="list-row-action" :aria-label="`Delete ${p.name}`" @click="pendingDelete = p">
+                            <Trash2 class="size-4" />
+                        </button>
+                    </li>
+                </ul>
 
                 <EmptyState
                     v-else

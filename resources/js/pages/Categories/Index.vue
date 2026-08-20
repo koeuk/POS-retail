@@ -82,7 +82,7 @@ function confirmDelete() {
                 </template>
             </PageHeader>
 
-            <div class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 60ms">
+            <div class="list-panel animate-rise" style="animation-delay: 60ms">
                 <div class="border-b border-border p-3">
                     <div class="relative max-w-sm">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -90,30 +90,27 @@ function confirmDelete() {
                     </div>
                 </div>
 
-                <ul v-if="categories.length" class="divide-y divide-border">
-                    <li v-for="c in categories" :key="c.id" class="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40">
-                        <Shapes class="size-4 shrink-0 text-primary" />
+                <ul v-if="categories.length">
+                    <li v-for="c in categories" :key="c.id" class="list-row group">
+                        <!-- The row itself is the edit affordance — on a phone a
+                             pencil hiding behind a hover state is unreachable. -->
+                        <button type="button" class="list-row-main md:px-4" :aria-label="`Edit ${c.name}`" @click="openEdit(c)">
+                            <Shapes class="size-4 shrink-0 text-primary" />
 
-                        <p class="min-w-0 flex-1 truncate font-medium leading-tight">{{ c.name }}</p>
+                            <p class="min-w-0 flex-1 truncate font-medium leading-tight">{{ c.name }}</p>
 
-                        <Badge variant="outline" class="tabular font-mono">
-                            {{ c.products_count ?? 0 }} product{{ c.products_count === 1 ? '' : 's' }}
-                        </Badge>
+                            <Badge variant="outline" class="tabular shrink-0 font-mono">
+                                {{ c.products_count ?? 0 }} product{{ c.products_count === 1 ? '' : 's' }}
+                            </Badge>
 
-                        <div class="flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-                            <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(c)">
-                                <Pencil class="size-4" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                class="press size-8 text-muted-foreground hover:text-destructive"
-                                aria-label="Delete"
-                                @click="pendingDelete = c"
-                            >
-                                <Trash2 class="size-4" />
-                            </Button>
-                        </div>
+                            <Pencil
+                                class="hidden size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 md:block"
+                            />
+                        </button>
+
+                        <button type="button" class="list-row-action" :aria-label="`Delete ${c.name}`" @click="pendingDelete = c">
+                            <Trash2 class="size-4" />
+                        </button>
                     </li>
                 </ul>
 

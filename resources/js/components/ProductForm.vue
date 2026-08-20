@@ -64,10 +64,10 @@ function submit() {
 </script>
 
 <template>
-    <form class="grid gap-5 lg:grid-cols-3" @submit.prevent="submit">
+    <form class="grid gap-5 pb-20 md:pb-0 lg:grid-cols-3" @submit.prevent="submit">
         <!-- Main -->
         <div class="stagger space-y-5 lg:col-span-2">
-            <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <section class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
                 <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Details</h2>
 
                 <div class="grid gap-4">
@@ -113,7 +113,7 @@ function submit() {
                 </div>
             </section>
 
-            <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <section class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
                 <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Pricing</h2>
 
                 <div class="grid gap-4 sm:grid-cols-3">
@@ -155,7 +155,7 @@ function submit() {
                 </p>
             </section>
 
-            <section v-if="!isEdit" class="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <section v-if="!isEdit" class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
                 <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Opening stock</h2>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
@@ -174,11 +174,11 @@ function submit() {
 
         <!-- Aside -->
         <div class="stagger space-y-5">
-            <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <section class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
                 <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Image</h2>
 
                 <label
-                    class="lift flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted/40"
+                    class="lift flex h-36 w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted/40 lg:aspect-square lg:h-auto"
                 >
                     <img v-if="preview" :src="preview" alt="" class="size-full object-cover" />
                     <div v-else class="flex flex-col items-center gap-2 text-muted-foreground">
@@ -190,7 +190,7 @@ function submit() {
                 <InputError class="mt-2" :message="form.errors.image" />
             </section>
 
-            <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <section class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
                 <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Options</h2>
 
                 <div class="grid gap-4">
@@ -218,13 +218,36 @@ function submit() {
                 </div>
             </section>
 
-            <div class="flex items-center gap-2">
+            <!-- Desktop: the action pair sits at the foot of the aside column. -->
+            <div class="hidden items-center gap-2 md:flex">
                 <Button type="submit" class="press flex-1" :disabled="form.processing">
                     <LoaderCircle v-if="form.processing" class="size-4 animate-spin" />
                     {{ isEdit ? 'Save changes' : 'Create product' }}
                 </Button>
                 <Button as-child type="button" variant="ghost" class="press">
                     <Link :href="route('products.index')">Cancel</Link>
+                </Button>
+            </div>
+        </div>
+
+        <!--
+            Phone: a docked action bar. This form is taller than the screen, so
+            a submit button at the end of the document means scrolling past the
+            image picker and both switches to commit an edit made at the top.
+            It sits directly above the tab bar and carries the home indicator's
+            inset itself.
+        -->
+        <div
+            class="fixed inset-x-0 z-30 border-t border-border bg-background/95 px-5 py-3 backdrop-blur-md md:hidden"
+            style="bottom: calc(var(--tabbar-h) + var(--safe-bottom))"
+        >
+            <div class="flex items-center gap-2">
+                <Button as-child type="button" variant="outline" class="press">
+                    <Link :href="route('products.index')">Cancel</Link>
+                </Button>
+                <Button type="submit" class="press flex-1" :disabled="form.processing">
+                    <LoaderCircle v-if="form.processing" class="size-4 animate-spin" />
+                    {{ isEdit ? 'Save changes' : 'Create product' }}
                 </Button>
             </div>
         </div>

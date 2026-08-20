@@ -4,6 +4,7 @@ import Cart from '@/Pos/components/Cart.vue';
 import Checkout from '@/Pos/components/Checkout.vue';
 import PaymentModal from '@/Pos/components/PaymentModal.vue';
 import ProductGrid from '@/Pos/components/ProductGrid.vue';
+import ReceiptDrawer from '@/Pos/components/ReceiptDrawer.vue';
 import SyncStatusBadge from '@/Pos/components/SyncStatusBadge.vue';
 import { useBarcode } from '@/Pos/composables/useBarcode';
 import { useCart } from '@/Pos/composables/useCart';
@@ -14,7 +15,7 @@ import { http } from '@/Pos/lib/http';
 import { toDecimalString } from '@/Pos/lib/money';
 import type { PaymentMethod, PosFeed, StoredOrder } from '@/Pos/types';
 import { Head } from '@inertiajs/vue3';
-import { CircleAlert, LoaderCircle } from 'lucide-vue-next';
+import { CircleAlert, LoaderCircle, ReceiptText } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 
 const props = defineProps<{
@@ -36,6 +37,8 @@ const loadError = ref<string | null>(null);
 const registerId = ref<number | null>(null);
 const paying = ref(false);
 const paymentOpen = ref(false);
+const receiptsOpen = ref(false);
+const lastSale = ref<StoredOrder | null>(null);
 const toast = ref<{ kind: 'ok' | 'warn'; text: string } | null>(null);
 
 const currency = computed(() => feed.value?.settings.currency_symbol ?? '$');
@@ -184,6 +187,7 @@ async function completeSale(payment: {
         return;
     }
 
+    lastSale.value = order;
     cart.clear();
     paymentOpen.value = false;
     paying.value = false;
@@ -218,39 +222,6 @@ onMounted(loadFeed);
              scroll internally so the page itself never does — a till that
              scrolls as a whole is miserable on a tablet. -->
         <div class="flex h-[calc(100dvh-9rem)] min-h-[28rem] flex-col md:h-[calc(100dvh-4rem)]">
-            <!-- POS toolbar -->
-            <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-2">
-                <div v-if="feed && feed.registers.length > 1" class="flex gap-1">
-                    <button
-                        v-for="r in feed.registers"
-                        :key="r.id"
-                        type="button"
-                        class="press h-8 rounded-md border px-2.5 text-xs font-medium"
-                        :class="
-                            registerId === r.id
-                                ? 'border-primary bg-primary text-primary-foreground'
-                                : 'border-border text-muted-foreground'
-                        "
-                        @click="chooseRegister(r.id)"
-                    >
-                        {{ r.name }}
-                    </button>
-                </div>
-                <p v-else-if="feed?.registers.length" class="font-mono text-xs text-muted-foreground">
-                    {{ feed.registers[0].name }}
-                </p>
-
-                <div class="ml-auto">
-                    <SyncStatusBadge
-                        :online="sync.online.value"
-                        :syncing="sync.syncing.value"
-                        :pending="sync.pending.value"
-                        :auth-expired="sync.authExpired.value"
-                        @retry="sync.flush()"
-                    />
-                </div>
-            </div>
-
             <div
                 v-if="sync.authExpired.value"
                 class="shrink-0 border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-center text-xs text-destructive"
@@ -291,6 +262,54 @@ onMounted(loadFeed);
                 <aside
                     class="flex min-h-0 w-full shrink-0 flex-col border-t border-border lg:w-[24rem] lg:border-t-0"
                 >
+                    <!-- Register and sync status live above the cart rather
+                         than in their own band, which duplicated the layout
+                         header running directly above it. -->
+                    <div class="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+                        <div v-if="feed && feed.registers.length > 1" class="flex gap-1">
+                            <button
+                                v-for="r in feed.registers"
+                                :key="r.id"
+                                type="button"
+                                class="press h-8 rounded-md border px-2.5 text-xs font-medium"
+                                :class="
+                                    registerId === r.id
+                                        ? 'border-primary bg-primary text-primary-foreground'
+                                        : 'border-border text-muted-foreground'
+                                "
+                                @click="chooseRegister(r.id)"
+                            >
+                                {{ r.name }}
+                            </button>
+                        </div>
+                        <p
+                            v-else-if="feed?.registers.length"
+                            class="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground"
+                        >
+                            {{ feed.registers[0].name }}
+                        </p>
+
+                        <div class="ml-auto flex items-center gap-1.5">
+                            <button
+                                type="button"
+                                class="press flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium text-muted-foreground"
+                                title="Receipts — works offline"
+                                @click="receiptsOpen = true"
+                            >
+                                <ReceiptText class="size-3.5" />
+                                <span class="hidden sm:inline">Receipts</span>
+                            </button>
+
+                            <SyncStatusBadge
+                                :online="sync.online.value"
+                                :syncing="sync.syncing.value"
+                                :pending="sync.pending.value"
+                                :auth-expired="sync.authExpired.value"
+                                @retry="sync.flush()"
+                            />
+                        </div>
+                    </div>
+
                     <Cart :currency="currency" />
                     <Checkout :currency="currency" @pay="paymentOpen = true" />
                 </aside>
@@ -304,6 +323,14 @@ onMounted(loadFeed);
             :busy="paying"
             @close="paymentOpen = false"
             @confirm="completeSale"
+        />
+
+        <ReceiptDrawer
+            v-if="feed"
+            :open="receiptsOpen"
+            :settings="feed.settings"
+            :focus="lastSale"
+            @close="receiptsOpen = false"
         />
 
         <Transition

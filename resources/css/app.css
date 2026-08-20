@@ -407,3 +407,43 @@
         scroll-behavior: auto !important;
     }
 }
+
+/*
+|--------------------------------------------------------------------------
+| Receipt printing
+|--------------------------------------------------------------------------
+| The receipt renders from local Dexie data, so printing works with no
+| network at all. When a print is requested the page hides everything except
+| the slip, which is sized for an 80mm thermal roll.
+|
+| `visibility` rather than `display` on the ancestors: display:none would
+| detach the receipt along with its parents, so the chain is kept in the
+| layout and only the ink is switched off.
+*/
+@media print {
+    body.printing-receipt * {
+        visibility: hidden;
+    }
+
+    body.printing-receipt .receipt-sheet,
+    body.printing-receipt .receipt-sheet * {
+        visibility: visible;
+    }
+
+    body.printing-receipt .receipt-sheet {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 80mm;
+        margin: 0;
+        padding: 4mm;
+        box-shadow: none;
+        color: #000;
+        background: #fff;
+    }
+
+    @page {
+        size: 80mm auto;
+        margin: 0;
+    }
+}
