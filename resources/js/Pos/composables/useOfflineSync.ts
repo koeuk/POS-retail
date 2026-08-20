@@ -66,10 +66,19 @@ export function useOfflineSync() {
                 const batch = queued.slice(i, i + BATCH_SIZE);
 
                 const { data } = await http.post<{ results: SyncResult[] }>('/orders/sync', {
-                    orders: batch.map(
-                        // Strip the local-only bookkeeping; send just the order.
-                        ({ state, order_no, attempts, last_error, receipt, total, ...order }) => order,
-                    ),
+                    // Send only the wire fields. The local bookkeeping —
+                    // state, attempts, last_error, the printed receipt — never
+                    // leaves the device.
+                    orders: batch.map((o) => ({
+                        client_uuid: o.client_uuid,
+                        store_id: o.store_id,
+                        register_id: o.register_id,
+                        customer_id: o.customer_id,
+                        created_offline_at: o.created_offline_at,
+                        discount_amount: o.discount_amount,
+                        items: o.items,
+                        payments: o.payments,
+                    })),
                 });
 
                 for (const result of data.results ?? []) {

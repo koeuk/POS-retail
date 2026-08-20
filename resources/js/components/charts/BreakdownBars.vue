@@ -30,8 +30,6 @@ const peak = computed(() => Math.max(1, ...props.rows.map((r) => r.value)));
 const width = (value: number) => `${Math.max(1.5, (value / peak.value) * 100)}%`;
 
 /** Fixed slot order, never cycled — colour follows the entity, not its rank. */
-const fill = (index: number) => (props.categorical ? `hsl(var(--series-${(index % 4) + 1}, var(--primary)))` : 'hsl(var(--primary))');
-
 const seriesVar = (index: number) => `var(--series-${(index % 4) + 1})`;
 
 const share = (value: number) => (total.value > 0 ? Math.round((value / total.value) * 100) : 0);
