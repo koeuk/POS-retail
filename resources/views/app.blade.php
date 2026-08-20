@@ -2,7 +2,14 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        {{-- viewport-fit=cover lets the layout paint under the notch and the
+             home indicator; the safe-area insets in app.css put padding back
+             where it is actually needed. --}}
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="theme-color" content="#fbf9f5" media="(prefers-color-scheme: light)">
+        <meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
@@ -18,6 +25,13 @@
             href="https://fonts.bunny.net/css?family=bricolage-grotesque:600,700|ibm-plex-sans:400,500,600|ibm-plex-mono:400,500"
             rel="stylesheet"
         />
+
+        {{-- Telegram Mini App bridge. Loaded eagerly (not deferred) so
+             window.Telegram exists before the Vue app mounts and asks it for
+             viewport height and safe-area insets. Outside Telegram this is a
+             ~10KB no-op: useTelegram() detects the missing initData and every
+             call becomes a stub. --}}
+        <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
         @routes
         @vite(['resources/js/app.ts'])

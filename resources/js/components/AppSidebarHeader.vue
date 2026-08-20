@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
 import type { BreadcrumbItemType } from '@/types';
+import type { HTMLAttributes } from 'vue';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         breadcrumbs?: BreadcrumbItemType[];
+        class?: HTMLAttributes['class'];
     }>(),
     { breadcrumbs: () => [] },
 );
@@ -13,7 +16,12 @@ withDefaults(
 
 <template>
     <header
-        class="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border/70 px-6 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 md:px-4"
+        :class="
+            cn(
+                'flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border/70 px-6 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 md:px-4',
+                props.class,
+            )
+        "
     >
         <div class="flex items-center gap-2">
             <SidebarTrigger class="-ml-1" />

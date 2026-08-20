@@ -63,6 +63,17 @@
         --dur-fast: 140ms;
         --dur-base: 220ms;
         --dur-slow: 360ms;
+
+        /* App-shell geometry. --app-vh is overwritten by useTelegram() with
+           Telegram's reported viewport height; everywhere else the dvh
+           fallback already tracks the collapsing mobile browser chrome. */
+        --app-vh: 100dvh;
+        --safe-top: env(safe-area-inset-top, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-left: env(safe-area-inset-left, 0px);
+        --safe-right: env(safe-area-inset-right, 0px);
+        --tabbar-h: 3.5rem;
+        --appbar-h: 3.5rem;
     }
 
     .dark {
@@ -113,6 +124,40 @@
         font-feature-settings:
             'cv05' 1,
             'ss01' 1;
+
+        /*
+         * Native-app manners on a touch device: no grey flash on tap, no
+         * rubber-band bounce dragging the whole page, and no iOS text
+         * inflation in landscape. Inside Telegram the bounce is the
+         * difference between "a website in a webview" and "an app".
+         */
+        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior-y: none;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+    }
+
+    /* Long-press-to-select belongs on content, not on chrome. */
+    @media (pointer: coarse) {
+        button,
+        a,
+        [role='button'],
+        [role='tab'] {
+            -webkit-touch-callout: none;
+        }
+    }
+
+    /*
+     * A 16px font is the threshold below which iOS Safari zooms the page on
+     * focus — which then leaves the layout scrolled sideways. The inputs are
+     * already text-base on mobile; this catches anything that is not.
+     */
+    @media (pointer: coarse) {
+        input,
+        select,
+        textarea {
+            font-size: max(16px, 1rem);
+        }
     }
 
     /* Money, SKUs and barcodes must not jitter as digits change. */
@@ -242,6 +287,81 @@
 
     .lift:hover {
         transform: translate3d(0, -2px, 0);
+    }
+
+    /*
+    |----------------------------------------------------------------------
+    | Mobile app shell
+    |----------------------------------------------------------------------
+    | The phone build is not a narrow desktop — it is a tab-bar app. These
+    | utilities are the vocabulary the shell is written in.
+    */
+
+    /* Safe areas. Used on the tab bar, the app bar and any fixed sheet. */
+    .pb-safe {
+        padding-bottom: var(--safe-bottom);
+    }
+
+    .pt-safe {
+        padding-top: var(--safe-top);
+    }
+
+    /* Content must clear the fixed tab bar, home indicator included. */
+    .pb-tabbar {
+        padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom));
+    }
+
+    .h-app {
+        height: var(--app-vh);
+    }
+
+    .min-h-app {
+        min-height: var(--app-vh);
+    }
+
+    /*
+     * Horizontal chip rails (filters, categories). Momentum scrolling with
+     * snap, and no scrollbar eating 8px of a 360px-wide screen.
+     */
+    .rail {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .rail::-webkit-scrollbar {
+        display: none;
+    }
+
+    .rail > * {
+        scroll-snap-align: start;
+        flex: none;
+    }
+
+    /*
+     * Touch target floor. A 32px icon button is fine with a mouse and a
+     * coin-toss with a thumb — 44px is the documented minimum on both
+     * platforms. Applied by media query so the desktop density survives.
+     */
+    @media (pointer: coarse) {
+        .touch-target {
+            min-height: 2.75rem;
+            min-width: 2.75rem;
+        }
+    }
+
+    /* A row that behaves like a native list item: full-bleed press feedback. */
+    .row-press {
+        transition:
+            background-color var(--dur-instant) var(--ease-out-quint),
+            transform var(--dur-instant) var(--ease-out-quint);
+    }
+
+    .row-press:active {
+        background-color: hsl(var(--muted));
+        transform: scale3d(0.995, 0.995, 1);
     }
 }
 

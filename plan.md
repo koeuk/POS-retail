@@ -10,8 +10,8 @@
 | 2 — Auth, Roles & Session Longevity | ✅ **Done** — 34 tests green, roles enforced, heartbeat live, `/` → login. |
 | 3 — Admin CRUD | ✅ **Done** — 47 tests green, all 5 CI checks pass, new theme + motion system. |
 | 4 — POS Sync Endpoints | ✅ **Done** — 19 tests: idempotent replay, oversell, per-line tax, proportional discount. |
-| 5 — POS UI (online) | ⏳ **In progress** |
-| 6 — Offline Layer | ⬜ Not started |
+| 5 — POS UI (online) | ✅ **Done** — real sale driven in a browser; all 5 tables verified. |
+| 6 — Offline Layer | ⏳ **In progress** |
 | 7 — Receipts | ⬜ Not started |
 | 8 — Dashboard & Reports | ⬜ Not started |
 | ➕ Public customer menu | ✅ **Done** — `/menu`, no login, 7 tests. Added outside the original 8 phases. |

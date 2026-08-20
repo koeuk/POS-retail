@@ -61,7 +61,7 @@ const isActive = (href: string) => currentPath.value === href || currentPath.val
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset">
+    <Sidebar collapsible="icon" variant="inset" class="hidden md:flex">
         <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>
