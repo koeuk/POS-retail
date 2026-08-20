@@ -88,7 +88,10 @@ const weekTotal = computed(() => props.trend.reduce((sum, row) => sum + Number(r
                 <StatTile label="Synced from offline" :value="String(offlineToday)" :icon="CloudOff" hint="Sales rung up without a connection" />
             </div>
 
-            <div class="mt-4 grid gap-4 lg:grid-cols-3">
+            <!-- items-start: panels size to their own content rather than
+                 stretching to the tallest column, which left the chart sitting
+                 above a block of dead space. -->
+            <div class="mt-4 grid items-start gap-4 lg:grid-cols-3">
                 <!-- One series, so no legend: the panel title names it. -->
                 <section class="animate-rise rounded-xl border border-border bg-card p-4 shadow-sm lg:col-span-2" style="animation-delay: 120ms">
                     <div class="mb-3 flex items-baseline justify-between">
@@ -119,7 +122,7 @@ const weekTotal = computed(() => props.trend.reduce((sum, row) => sum + Number(r
                 </section>
             </div>
 
-            <div class="mt-4 grid gap-4 lg:grid-cols-2">
+            <div class="mt-4 grid items-start gap-4 lg:grid-cols-2">
                 <!--
                     Oversold is the reconciliation list: stock driven below zero
                     by offline sales that synced after the shelf was empty. It is
