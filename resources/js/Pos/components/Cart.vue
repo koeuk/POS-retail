@@ -14,9 +14,7 @@ const cart = useCart();
             <h2 class="flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide">
                 <ShoppingCart class="size-4 text-primary" />
                 Cart
-                <span v-if="cart.count" class="tabular font-mono text-muted-foreground">
-                    ({{ cart.count }})
-                </span>
+                <span v-if="cart.count" class="tabular font-mono text-muted-foreground"> ({{ cart.count }}) </span>
             </h2>
             <button
                 v-if="!cart.isEmpty"
@@ -50,14 +48,9 @@ const cart = useCart();
                     <p class="tabular font-mono text-xs text-muted-foreground">
                         {{ formatMoney(line.unitPrice, currency) }}
                         <span v-if="line.taxRate > 0"> + {{ line.taxRate }}%</span>
-                        <span v-if="line.discount > 0" class="text-primary">
-                            − {{ formatMoney(line.discount, currency) }}
-                        </span>
+                        <span v-if="line.discount > 0" class="text-primary"> − {{ formatMoney(line.discount, currency) }} </span>
                     </p>
-                    <p
-                        v-if="line.trackStock && line.qty > line.stockHint"
-                        class="mt-0.5 text-[0.7rem] font-medium text-destructive"
-                    >
+                    <p v-if="line.trackStock && line.qty > line.stockHint" class="mt-0.5 text-[0.7rem] font-medium text-destructive">
                         Over available stock — the sale still goes through.
                     </p>
                 </div>

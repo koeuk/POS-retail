@@ -10,6 +10,7 @@ use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class PosSyncTest extends TestCase
@@ -75,14 +76,14 @@ class PosSyncTest extends TestCase
         ], $overrides);
     }
 
-    private function sync(array $orders): \Illuminate\Testing\TestResponse
+    private function sync(array $orders): TestResponse
     {
         return $this->actingAs($this->cashier)
             ->postJson(route('pos.data.orders.sync'), ['orders' => $orders]);
     }
 
     /* ================================================================== */
-    /* Idempotency — the reason this endpoint exists                       */
+    /* Idempotency — the reason this endpoint exists */
     /* ================================================================== */
 
     public function test_posting_the_same_client_uuid_twice_creates_exactly_one_order(): void
@@ -168,7 +169,7 @@ class PosSyncTest extends TestCase
     }
 
     /* ================================================================== */
-    /* Stock                                                               */
+    /* Stock */
     /* ================================================================== */
 
     public function test_stock_decrements_by_the_right_amount_exactly_once(): void
@@ -239,7 +240,7 @@ class PosSyncTest extends TestCase
     }
 
     /* ================================================================== */
-    /* Money                                                               */
+    /* Money */
     /* ================================================================== */
 
     public function test_tax_is_charged_per_line_on_top_of_the_price(): void
@@ -353,7 +354,7 @@ class PosSyncTest extends TestCase
     }
 
     /* ================================================================== */
-    /* Order numbering, payments, endpoints                                */
+    /* Order numbering, payments, endpoints */
     /* ================================================================== */
 
     public function test_order_numbers_are_sequential_per_store_per_business_day(): void

@@ -85,13 +85,7 @@ const isBlocked = (href: string) => navLock.locked && !isActive(href);
                                 <component :is="item.icon" />
                                 <span>{{ item.title }}</span>
                             </SidebarMenuButton>
-                            <SidebarMenuButton
-                                v-else
-                                as-child
-                                :is-active="isActive(item.href)"
-                                :tooltip="item.title"
-                                class="press"
-                            >
+                            <SidebarMenuButton v-else as-child :is-active="isActive(item.href)" :tooltip="item.title" class="press">
                                 <Link :href="item.href">
                                     <component :is="item.icon" />
                                     <span>{{ item.title }}</span>

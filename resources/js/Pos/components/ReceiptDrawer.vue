@@ -25,10 +25,13 @@ async function load() {
     selected.value = props.focus ?? orders.value[0] ?? null;
 }
 
-watch(() => props.open, (open) => open && load(), { immediate: true });
+watch(
+    () => props.open,
+    (open) => open && load(),
+    { immediate: true },
+);
 
-const soldAt = (iso: string) =>
-    new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+const soldAt = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
 </script>
 
 <template>
@@ -40,11 +43,7 @@ const soldAt = (iso: string) =>
             leave-active-class="transition-opacity duration-150"
         >
             <div v-if="open" class="fixed inset-0 z-50 flex justify-end bg-black/50">
-                <Transition
-                    appear
-                    enter-from-class="translate-x-4 opacity-0"
-                    enter-active-class="transition duration-200 ease-out-quint"
-                >
+                <Transition appear enter-from-class="translate-x-4 opacity-0" enter-active-class="transition duration-200 ease-out-quint">
                     <div class="flex h-full w-full max-w-3xl flex-col bg-card shadow-2xl sm:flex-row">
                         <!-- Sale list -->
                         <div class="flex min-h-0 w-full flex-col border-b border-border sm:w-64 sm:border-b-0 sm:border-r">
@@ -83,18 +82,13 @@ const soldAt = (iso: string) =>
                                             <p class="tabular font-mono text-xs font-semibold">
                                                 {{ formatMoney(Number(order.total), settings.currency_symbol) }}
                                             </p>
-                                            <CloudOff
-                                                v-if="order.state === 'pending_sync'"
-                                                class="ml-auto mt-0.5 size-3 text-primary"
-                                            />
+                                            <CloudOff v-if="order.state === 'pending_sync'" class="ml-auto mt-0.5 size-3 text-primary" />
                                         </div>
                                     </button>
                                 </li>
                             </ul>
 
-                            <p v-else class="flex-1 p-6 text-center text-sm text-muted-foreground">
-                                No sales on this device yet.
-                            </p>
+                            <p v-else class="flex-1 p-6 text-center text-sm text-muted-foreground">No sales on this device yet.</p>
                         </div>
 
                         <!-- Preview -->
@@ -124,9 +118,7 @@ const soldAt = (iso: string) =>
 
                             <div class="min-h-0 flex-1 overflow-y-auto bg-muted/30 p-4">
                                 <Receipt v-if="selected" :order="selected" :settings="settings" />
-                                <p v-else class="pt-10 text-center text-sm text-muted-foreground">
-                                    Pick a sale to see its receipt.
-                                </p>
+                                <p v-else class="pt-10 text-center text-sm text-muted-foreground">Pick a sale to see its receipt.</p>
                             </div>
 
                             <div class="shrink-0 border-t border-border p-3 sm:hidden">

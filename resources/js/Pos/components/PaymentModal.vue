@@ -108,9 +108,7 @@ function confirm() {
                         <!-- Amount due -->
                         <div class="shrink-0 border-b border-border p-5 text-center">
                             <div class="flex items-start justify-between">
-                                <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
-                                    Amount due
-                                </p>
+                                <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">Amount due</p>
                                 <button
                                     type="button"
                                     class="press -mt-1 rounded-md p-1 text-muted-foreground"
@@ -200,9 +198,7 @@ function confirm() {
 
                             <!-- Non-cash: a reference to reconcile against -->
                             <div v-else class="mt-4">
-                                <label for="pay-ref" class="text-xs font-medium text-muted-foreground">
-                                    Reference (optional)
-                                </label>
+                                <label for="pay-ref" class="text-xs font-medium text-muted-foreground"> Reference (optional) </label>
                                 <input
                                     id="pay-ref"
                                     v-model="reference"
@@ -210,9 +206,7 @@ function confirm() {
                                     placeholder="Terminal or transaction no."
                                     class="mt-1 h-12 w-full rounded-lg border border-input bg-background px-3 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 />
-                                <p class="mt-2 text-xs text-muted-foreground">
-                                    {{ formatMoney(total, currency) }} will be recorded as paid in full.
-                                </p>
+                                <p class="mt-2 text-xs text-muted-foreground">{{ formatMoney(total, currency) }} will be recorded as paid in full.</p>
                             </div>
                         </div>
 

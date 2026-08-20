@@ -16,11 +16,7 @@ const currency = computed(() => props.settings.currency_symbol ?? '$');
  * quotes if they come back before the queue has drained — and it is the same
  * key the server dedupes on, so it always resolves to the right sale.
  */
-const reference = computed(() =>
-    props.order.order_no
-        ? props.order.order_no
-        : `TMP-${props.order.client_uuid.slice(0, 8).toUpperCase()}`,
-);
+const reference = computed(() => (props.order.order_no ? props.order.order_no : `TMP-${props.order.client_uuid.slice(0, 8).toUpperCase()}`));
 
 const isProvisional = computed(() => !props.order.order_no);
 
@@ -31,9 +27,7 @@ const soldAt = computed(() =>
     }),
 );
 
-const paymentLabel = computed(() =>
-    props.order.payments.map((p) => p.method.toUpperCase()).join(' + '),
-);
+const paymentLabel = computed(() => props.order.payments.map((p) => p.method.toUpperCase()).join(' + '));
 
 const money = (value: string | number) => formatMoney(Number(value), currency.value);
 </script>
@@ -41,9 +35,7 @@ const money = (value: string | number) => formatMoney(Number(value), currency.va
 <template>
     <!-- 80mm thermal width. The print stylesheet in app.css hides everything
          except this block, so window.print() produces just the slip. -->
-    <article
-        class="receipt-sheet mx-auto w-[302px] bg-white p-4 font-mono text-[11px] leading-snug text-black"
-    >
+    <article class="receipt-sheet mx-auto w-[302px] bg-white p-4 font-mono text-[11px] leading-snug text-black">
         <header class="text-center">
             <h1 class="text-sm font-bold uppercase tracking-wide">{{ settings.receipt_header }}</h1>
             <p class="mt-0.5">{{ order.receipt.store }}</p>
@@ -113,9 +105,7 @@ const money = (value: string | number) => formatMoney(Number(value), currency.va
 
         <div class="my-2 border-t border-dashed border-black/40" />
 
-        <p v-if="isProvisional" class="text-center text-[10px]">
-            *** PROVISIONAL — not yet synced ***
-        </p>
+        <p v-if="isProvisional" class="text-center text-[10px]">*** PROVISIONAL — not yet synced ***</p>
 
         <footer class="mt-1 text-center">
             <p v-if="settings.receipt_footer">{{ settings.receipt_footer }}</p>

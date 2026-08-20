@@ -1,9 +1,4 @@
-import {
-    markAttemptFailed,
-    markSynced,
-    pendingCount,
-    pendingOrders,
-} from '@/Pos/db/dexie';
+import { markAttemptFailed, markSynced, pendingCount, pendingOrders } from '@/Pos/db/dexie';
 import { SessionExpired, http, isReallyOnline } from '@/Pos/lib/http';
 import { onBeforeUnmount, onMounted, readonly, ref } from 'vue';
 
@@ -81,10 +76,7 @@ export function useOfflineSync() {
                     if (result.status === 'failed') {
                         // Stays pending. A failure is a reason to retry, not
                         // a reason to lose the sale.
-                        await markAttemptFailed(
-                            result.client_uuid,
-                            result.message ?? 'Server rejected the order.',
-                        );
+                        await markAttemptFailed(result.client_uuid, result.message ?? 'Server rejected the order.');
                         continue;
                     }
 

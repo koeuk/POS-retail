@@ -30,15 +30,12 @@ export interface Totals {
     lineSubtotals: number[];
 }
 
-export const toCents = (value: number | string | null | undefined): number =>
-    Math.round(Number(value ?? 0) * 100);
+export const toCents = (value: number | string | null | undefined): number => Math.round(Number(value ?? 0) * 100);
 
 export const fromCents = (cents: number): number => cents / 100;
 
 export function computeTotals(lines: TotalsLine[], orderDiscount = 0): Totals {
-    const nets = lines.map((line) =>
-        Math.max(0, toCents(line.unitPrice) * line.qty - toCents(line.discount)),
-    );
+    const nets = lines.map((line) => Math.max(0, toCents(line.unitPrice) * line.qty - toCents(line.discount)));
 
     const subtotal = nets.reduce((sum, n) => sum + n, 0);
     const discount = Math.min(toCents(orderDiscount), subtotal);
@@ -64,10 +61,7 @@ export function computeTotals(lines: TotalsLine[], orderDiscount = 0): Totals {
         }
     }
 
-    const tax = lines.reduce(
-        (sum, line, i) => sum + Math.round((taxable[i] * line.taxRate) / 100),
-        0,
-    );
+    const tax = lines.reduce((sum, line, i) => sum + Math.round((taxable[i] * line.taxRate) / 100), 0);
 
     return {
         subtotal: fromCents(subtotal),

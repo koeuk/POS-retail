@@ -21,10 +21,7 @@ const discountInput = computed({
             <!-- Order-level discount. Flat amount, never a percentage —
                  the server spreads it across lines before tax. -->
             <div class="flex items-center gap-2">
-                <label
-                    for="order-discount"
-                    class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
-                >
+                <label for="order-discount" class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                     <Percent class="size-3.5" />
                     Discount
                 </label>

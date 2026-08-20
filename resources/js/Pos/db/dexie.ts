@@ -65,10 +65,7 @@ export async function cacheFeed(feed: {
 }
 
 export async function readCachedFeed() {
-    const [products, rows] = await Promise.all([
-        db.products.orderBy('name').toArray(),
-        db.meta.toArray(),
-    ]);
+    const [products, rows] = await Promise.all([db.products.orderBy('name').toArray(), db.meta.toArray()]);
 
     if (products.length === 0) return null;
 
@@ -111,11 +108,7 @@ export async function pendingCount(): Promise<number> {
  * Confirmed by the server. The row is kept — not deleted — so the cashier can
  * reprint the receipt, and the old tail is trimmed afterwards.
  */
-export async function markSynced(
-    clientUuid: string,
-    orderNo: string | null,
-    total: string | null,
-): Promise<void> {
+export async function markSynced(clientUuid: string, orderNo: string | null, total: string | null): Promise<void> {
     await db.orders.update(clientUuid, {
         state: 'synced',
         order_no: orderNo,

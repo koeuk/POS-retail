@@ -8,11 +8,9 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Stock;
 use App\Models\User;
-use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Read models for the dashboard and reports.
@@ -29,15 +27,22 @@ class SalesReporter
 {
     public function __construct(private readonly ?int $storeId = null) {}
 
-    /** COALESCE(created_offline_at, created_at) — when the sale actually happened. */
-    public static function businessDay(): Expression
+    /**
+     * COALESCE(created_offline_at, created_at) — when the sale actually
+     * happened.
+     *
+     * Returned as raw SQL text, not a DB::raw() Expression: Laravel 11 dropped
+     * Expression::__toString(), so an Expression cannot be concatenated into a
+     * whereRaw() clause the way these call sites need.
+     */
+    public static function businessDay(): string
     {
-        return DB::raw('DATE(COALESCE(orders.created_offline_at, orders.created_at))');
+        return 'DATE(COALESCE(orders.created_offline_at, orders.created_at))';
     }
 
-    public static function businessMoment(): Expression
+    public static function businessMoment(): string
     {
-        return DB::raw('COALESCE(orders.created_offline_at, orders.created_at)');
+        return 'COALESCE(orders.created_offline_at, orders.created_at)';
     }
 
     /** Admins see every store; everyone else is pinned to their own. */
@@ -54,7 +59,7 @@ class SalesReporter
     }
 
     /* ------------------------------------------------------------------ */
-    /* Dashboard                                                           */
+    /* Dashboard */
     /* ------------------------------------------------------------------ */
 
     /** @return array{sales: string, orders: int, basket: string, items: int} */
@@ -115,7 +120,7 @@ class SalesReporter
     {
         return $this->orders()
             ->with(['cashier:id,name', 'store:id,name'])
-            ->orderByDesc(self::businessMoment())
+            ->orderByRaw(self::businessMoment().' DESC')
             ->limit($limit)
             ->get(['id', 'order_no', 'total', 'created_at', 'created_offline_at', 'cashier_id', 'store_id']);
     }
@@ -130,7 +135,7 @@ class SalesReporter
     }
 
     /* ------------------------------------------------------------------ */
-    /* Reports                                                             */
+    /* Reports */
     /* ------------------------------------------------------------------ */
 
     /** @return Collection<int, object{day: string, orders: int, sales: string}> */

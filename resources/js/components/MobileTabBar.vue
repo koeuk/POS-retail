@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import UserInfo from '@/components/UserInfo.vue';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { haptic } from '@/composables/useTelegram';
 import { isActivePath, moreTab, overflowItems, tabItems } from '@/lib/navigation';
 import type { SharedData } from '@/types';
-import { haptic } from '@/composables/useTelegram';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { LogOut, Settings } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -101,7 +101,11 @@ function go(href: string) {
 
                 <ul class="py-1">
                     <li>
-                        <button type="button" class="row-press flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left" @click="go('/settings/profile')">
+                        <button
+                            type="button"
+                            class="row-press flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left"
+                            @click="go('/settings/profile')"
+                        >
                             <Settings class="size-5 shrink-0" />
                             <span class="text-[0.95rem] font-medium">Settings</span>
                         </button>

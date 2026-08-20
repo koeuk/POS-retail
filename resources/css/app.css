@@ -44,6 +44,15 @@
         --chart-4: 43 88% 48%;
         --chart-5: 200 45% 42%;
 
+        /* Categorical series for charts. Validated with the dataviz palette
+           validator against the card surface: all hard gates pass in both
+           modes. The two lighter hues fall under 3:1 in light mode, so every
+           chart using them carries visible labels rather than colour alone. */
+        --series-1: #2a78d6;
+        --series-2: #eb6834;
+        --series-3: #1baf7a;
+        --series-4: #eda100;
+
         --radius: 0.625rem;
 
         --sidebar-background: 36 24% 96%;
@@ -102,6 +111,12 @@
         --chart-3: 12 78% 60%;
         --chart-4: 43 92% 58%;
         --chart-5: 200 55% 55%;
+
+        /* Same four hues re-stepped for the dark surface — not an auto-flip. */
+        --series-1: #3987e5;
+        --series-2: #d95926;
+        --series-3: #199e70;
+        --series-4: #c98500;
 
         --sidebar-background: 28 10% 10%;
         --sidebar-foreground: 40 15% 88%;

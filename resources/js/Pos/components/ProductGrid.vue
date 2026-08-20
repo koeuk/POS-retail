@@ -21,11 +21,7 @@ const visible = computed(() => {
     return props.products.filter((p) => {
         if (activeCategory.value !== null && p.category_id !== activeCategory.value) return false;
         if (!q) return true;
-        return (
-            p.name.toLowerCase().includes(q) ||
-            p.sku.toLowerCase().includes(q) ||
-            (p.barcode ?? '').includes(q)
-        );
+        return p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || (p.barcode ?? '').includes(q);
     });
 });
 
@@ -65,11 +61,7 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                 <button
                     type="button"
                     class="press h-9 shrink-0 rounded-full border px-4 text-sm font-medium"
-                    :class="
-                        activeCategory === null
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-border text-muted-foreground'
-                    "
+                    :class="activeCategory === null ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'"
                     @click="activeCategory = null"
                 >
                     All
@@ -79,11 +71,7 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                     :key="c.id"
                     type="button"
                     class="press h-9 shrink-0 rounded-full border px-4 text-sm font-medium"
-                    :class="
-                        activeCategory === c.id
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-border text-muted-foreground'
-                    "
+                    :class="activeCategory === c.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'"
                     @click="activeCategory = c.id"
                 >
                     {{ c.name }}
@@ -94,10 +82,7 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
         <!-- Grid. No entrance animation: this re-renders on every keystroke,
              and a cashier tapping 60 items a minute needs it to feel instant. -->
         <div class="min-h-0 flex-1 overflow-y-auto p-3">
-            <div
-                v-if="visible.length"
-                class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-            >
+            <div v-if="visible.length" class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 <button
                     v-for="product in visible"
                     :key="product.id"

@@ -136,24 +136,37 @@ const year = new Date().getFullYear();
                     </span>
                 </div>
 
-                <ul class="stagger grid gap-3 sm:grid-cols-2">
-                    <li v-for="item in group.items" :key="item.id" class="lift flex items-center gap-4 rounded-xl border border-border bg-card p-3">
-                        <div class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40">
+                <!--
+                    Two cards per row on a phone. The photo leads: a customer
+                    scanning a menu recognises the product by sight long before
+                    they read the name, and the old side-by-side row could only
+                    afford a 64px thumbnail.
+                -->
+                <ul class="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    <li v-for="item in group.items" :key="item.id" class="lift flex flex-col overflow-hidden rounded-xl border border-border bg-card">
+                        <div class="flex aspect-square w-full items-center justify-center overflow-hidden bg-muted/40">
                             <img v-if="item.image" :src="`/storage/${item.image}`" :alt="item.name" loading="lazy" class="size-full object-cover" />
-                            <UtensilsCrossed v-else class="size-5 text-muted-foreground/60" />
+                            <UtensilsCrossed v-else class="size-7 text-muted-foreground/50" />
                         </div>
 
-                        <div class="min-w-0 flex-1">
-                            <h3 class="truncate font-medium leading-snug">{{ item.name }}</h3>
+                        <div class="flex flex-1 flex-col gap-0.5 p-3">
+                            <h3 class="line-clamp-2 text-sm font-medium leading-snug">{{ item.name }}</h3>
+
                             <p v-if="item.description" class="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
                                 {{ item.description }}
                             </p>
-                            <p v-else class="font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground/70">per {{ item.unit }}</p>
-                        </div>
 
-                        <p class="tabular shrink-0 font-mono text-base font-semibold text-primary">
-                            {{ money(item.price) }}
-                        </p>
+                            <!-- mt-auto pins the price to the bottom edge so it
+                                 lines up across cards of unequal title length. -->
+                            <div class="mt-auto flex items-baseline justify-between gap-2 pt-2">
+                                <p class="tabular font-mono text-base font-semibold text-primary">
+                                    {{ money(item.price) }}
+                                </p>
+                                <p class="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground/70">
+                                    {{ item.unit }}
+                                </p>
+                            </div>
+                        </div>
                     </li>
                 </ul>
             </section>

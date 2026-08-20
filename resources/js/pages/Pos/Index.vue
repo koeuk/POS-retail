@@ -83,8 +83,7 @@ async function loadFeed() {
         await cacheFeed(data);
     } catch {
         if (!cached) {
-            loadError.value =
-                'No catalogue yet, and the server is unreachable. Connect once to set this device up.';
+            loadError.value = 'No catalogue yet, and the server is unreachable. Connect once to set this device up.';
         }
     } finally {
         loading.value = false;
@@ -127,11 +126,7 @@ useBarcode({
  * the cart clears straight away; reaching the server is a separate, retryable
  * concern. A cashier must never wait on the network to serve the next person.
  */
-async function completeSale(payment: {
-    method: PaymentMethod;
-    amount: number;
-    reference: string | null;
-}) {
+async function completeSale(payment: { method: PaymentMethod; amount: number; reference: string | null }) {
     paying.value = true;
 
     const totals = cart.totals;
@@ -234,34 +229,20 @@ onMounted(loadFeed);
                 <LoaderCircle class="size-6 animate-spin text-muted-foreground" />
             </div>
 
-            <div
-                v-else-if="loadError"
-                class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center"
-            >
+            <div v-else-if="loadError" class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
                 <CircleAlert class="size-8 text-destructive" />
                 <p class="max-w-sm text-sm text-muted-foreground">{{ loadError }}</p>
-                <button
-                    type="button"
-                    class="press h-10 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground"
-                    @click="loadFeed"
-                >
+                <button type="button" class="press h-10 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground" @click="loadFeed">
                     Try again
                 </button>
             </div>
 
             <main v-else class="flex min-h-0 flex-1 flex-col lg:flex-row">
                 <section class="min-h-0 flex-1 lg:border-r lg:border-border">
-                    <ProductGrid
-                        :products="products"
-                        :categories="feed!.categories"
-                        :currency="currency"
-                        @add="cart.add($event)"
-                    />
+                    <ProductGrid :products="products" :categories="feed!.categories" :currency="currency" @add="cart.add($event)" />
                 </section>
 
-                <aside
-                    class="flex min-h-0 w-full shrink-0 flex-col border-t border-border lg:w-[24rem] lg:border-t-0"
-                >
+                <aside class="flex min-h-0 w-full shrink-0 flex-col border-t border-border lg:w-[24rem] lg:border-t-0">
                     <!-- Register and sync status live above the cart rather
                          than in their own band, which duplicated the layout
                          header running directly above it. -->
@@ -273,21 +254,15 @@ onMounted(loadFeed);
                                 type="button"
                                 class="press h-8 rounded-md border px-2.5 text-xs font-medium"
                                 :class="
-                                    registerId === r.id
-                                        ? 'border-primary bg-primary text-primary-foreground'
-                                        : 'border-border text-muted-foreground'
+                                    registerId === r.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'
                                 "
                                 @click="chooseRegister(r.id)"
                             >
                                 {{ r.name }}
                             </button>
                         </div>
-                        <p
-                            v-else-if="feed?.registers.length"
-                            class="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground"
-                        >
-                            {{ feed.registers[0].name }}
-                        </p>
+                        <!-- With a single register there is nothing to choose,
+                             so the label is just clutter above the cart. -->
 
                         <div class="ml-auto flex items-center gap-1.5">
                             <button
@@ -325,13 +300,7 @@ onMounted(loadFeed);
             @confirm="completeSale"
         />
 
-        <ReceiptDrawer
-            v-if="feed"
-            :open="receiptsOpen"
-            :settings="feed.settings"
-            :focus="lastSale"
-            @close="receiptsOpen = false"
-        />
+        <ReceiptDrawer v-if="feed" :open="receiptsOpen" :settings="feed.settings" :focus="lastSale" @close="receiptsOpen = false" />
 
         <Transition
             enter-from-class="opacity-0 translate-y-2"
@@ -342,11 +311,7 @@ onMounted(loadFeed);
             <div
                 v-if="toast"
                 class="pointer-events-none fixed bottom-5 left-1/2 z-[60] -translate-x-1/2 rounded-full px-5 py-2.5 text-sm font-medium shadow-lg"
-                :class="
-                    toast.kind === 'ok'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-destructive text-destructive-foreground'
-                "
+                :class="toast.kind === 'ok' ? 'bg-primary text-primary-foreground' : 'bg-destructive text-destructive-foreground'"
                 role="status"
             >
                 {{ toast.text }}
