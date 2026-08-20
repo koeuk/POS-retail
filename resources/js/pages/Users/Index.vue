@@ -74,7 +74,7 @@ const form = useForm({
     password_confirmation: '',
     role: 'cashier',
     store_id: NONE,
-    is_active: true,
+    is_active: true as boolean,
 });
 
 /** A cashier cannot open /pos without a store, so the field becomes required. */

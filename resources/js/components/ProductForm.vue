@@ -215,7 +215,7 @@ function submit() {
                             <p class="text-sm font-medium">Track stock</p>
                             <p class="text-xs text-muted-foreground">Decrement on every sale</p>
                         </div>
-                        <Switch v-model:checked="form.track_stock" />
+                        <Switch v-model="form.track_stock" />
                     </div>
 
                     <div class="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
@@ -223,7 +223,7 @@ function submit() {
                             <p class="text-sm font-medium">Active</p>
                             <p class="text-xs text-muted-foreground">Show on the POS grid</p>
                         </div>
-                        <Switch v-model:checked="form.is_active" />
+                        <Switch v-model="form.is_active" />
                     </div>
                 </div>
             </section>

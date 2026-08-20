@@ -1,0 +1,265 @@
+<script setup lang="ts">
+import EmptyState from '@/components/EmptyState.vue';
+import InputError from '@/components/InputError.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/AppLayout.vue';
+import type { Register, Store } from '@/types';
+import { Head, useForm } from '@inertiajs/vue3';
+import { MapPin, Monitor, Phone, Plus, Store as StoreIcon } from 'lucide-vue-next';
+import { ref } from 'vue';
+
+defineProps<{
+    stores: Store[];
+    canManage: boolean;
+}>();
+
+const storeDialog = ref(false);
+const editingStore = ref<Store | null>(null);
+const storeForm = useForm({ name: '', address: '', phone: '' });
+
+function openStore(store: Store | null) {
+    editingStore.value = store;
+    storeForm.clearErrors();
+    storeForm.name = store?.name ?? '';
+    storeForm.address = store?.address ?? '';
+    storeForm.phone = store?.phone ?? '';
+    storeDialog.value = true;
+}
+
+function submitStore() {
+    const opts = { onSuccess: () => (storeDialog.value = false), preserveScroll: true };
+
+    if (editingStore.value) {
+        storeForm.put(route('stores.update', { store: editingStore.value.id }), opts);
+    } else {
+        storeForm.post(route('stores.store'), opts);
+    }
+}
+
+const registerDialog = ref(false);
+const registerStore = ref<Store | null>(null);
+const editingRegister = ref<Register | null>(null);
+const registerForm = useForm({ name: '', is_active: true as boolean });
+
+function openRegister(store: Store, register: Register | null) {
+    registerStore.value = store;
+    editingRegister.value = register;
+    registerForm.clearErrors();
+    registerForm.name = register?.name ?? '';
+    registerForm.is_active = register?.is_active ?? true;
+    registerDialog.value = true;
+}
+
+function submitRegister() {
+    if (!registerStore.value) return;
+    const opts = { onSuccess: () => (registerDialog.value = false), preserveScroll: true };
+
+    if (editingRegister.value) {
+        registerForm.put(
+            route('stores.registers.update', {
+                store: registerStore.value.id,
+                register: editingRegister.value.id,
+            }),
+            opts,
+        );
+    } else {
+        registerForm.post(route('stores.registers.store', { store: registerStore.value.id }), opts);
+    }
+}
+</script>
+
+<template>
+    <Head title="Stores" />
+
+    <AppLayout :breadcrumbs="[{ title: 'Stores', href: '/stores' }]">
+        <div class="px-5 py-6 md:px-8">
+            <PageHeader
+                eyebrow="People"
+                title="Stores"
+                description="Each store holds its own stock. Registers identify which terminal rang up a sale."
+            >
+                <template #actions>
+                    <Button v-if="canManage" class="press" @click="openStore(null)">
+                        <Plus class="size-4" />
+                        New store
+                    </Button>
+                </template>
+            </PageHeader>
+
+            <div v-if="stores.length" class="stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <article
+                    v-for="store in stores"
+                    :key="store.id"
+                    class="lift rounded-xl border border-border bg-card p-5 shadow-sm"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <StoreIcon class="size-4" />
+                            </div>
+                            <div>
+                                <h2 class="font-display text-lg font-semibold leading-tight">{{ store.name }}</h2>
+                                <p class="tabular font-mono text-xs text-muted-foreground">
+                                    {{ store.orders_count ?? 0 }} orders · {{ store.users_count ?? 0 }} staff
+                                </p>
+                            </div>
+                        </div>
+                        <Button
+                            v-if="canManage"
+                            variant="ghost"
+                            size="sm"
+                            class="press"
+                            @click="openStore(store)"
+                        >
+                            Edit
+                        </Button>
+                    </div>
+
+                    <dl class="mt-4 space-y-1.5 text-sm text-muted-foreground">
+                        <div v-if="store.address" class="flex items-start gap-2">
+                            <MapPin class="mt-0.5 size-3.5 shrink-0" />
+                            <dd>{{ store.address }}</dd>
+                        </div>
+                        <div v-if="store.phone" class="flex items-center gap-2">
+                            <Phone class="size-3.5 shrink-0" />
+                            <dd class="tabular font-mono">{{ store.phone }}</dd>
+                        </div>
+                    </dl>
+
+                    <div class="mt-4 border-t border-border pt-4">
+                        <div class="mb-2 flex items-center justify-between">
+                            <h3 class="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
+                                Registers
+                            </h3>
+                            <Button
+                                v-if="canManage"
+                                variant="ghost"
+                                size="sm"
+                                class="press h-7 px-2 text-xs"
+                                @click="openRegister(store, null)"
+                            >
+                                <Plus class="size-3" />
+                                Add
+                            </Button>
+                        </div>
+
+                        <ul v-if="store.registers?.length" class="space-y-1">
+                            <li
+                                v-for="reg in store.registers"
+                                :key="reg.id"
+                                class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted/50"
+                            >
+                                <Monitor class="size-3.5 shrink-0 text-muted-foreground" />
+                                <span class="flex-1 truncate">{{ reg.name }}</span>
+                                <Badge :variant="reg.is_active ? 'secondary' : 'outline'" class="text-[0.65rem]">
+                                    {{ reg.is_active ? 'Active' : 'Off' }}
+                                </Badge>
+                                <Button
+                                    v-if="canManage"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="press h-6 px-1.5 text-xs"
+                                    @click="openRegister(store, reg)"
+                                >
+                                    Edit
+                                </Button>
+                            </li>
+                        </ul>
+                        <p v-else class="px-2 py-1.5 text-sm text-muted-foreground">No registers yet.</p>
+                    </div>
+                </article>
+            </div>
+
+            <EmptyState
+                v-else
+                :icon="StoreIcon"
+                title="No stores yet"
+                description="A store is required before anything can be sold — stock and orders both hang off it."
+            >
+                <Button v-if="canManage" variant="outline" class="press" @click="openStore(null)">
+                    Add a store
+                </Button>
+            </EmptyState>
+        </div>
+
+        <!-- Store dialog -->
+        <Dialog v-model:open="storeDialog">
+            <DialogContent>
+                <form @submit.prevent="submitStore">
+                    <DialogHeader>
+                        <DialogTitle>{{ editingStore ? 'Edit store' : 'New store' }}</DialogTitle>
+                        <DialogDescription>
+                            New stores start with no stock rows until a product is created.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div class="grid gap-4 py-5">
+                        <div class="grid gap-2">
+                            <Label for="s-name">Name</Label>
+                            <Input id="s-name" v-model="storeForm.name" required autofocus />
+                            <InputError :message="storeForm.errors.name" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="s-address">Address</Label>
+                            <Input id="s-address" v-model="storeForm.address" />
+                            <InputError :message="storeForm.errors.address" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="s-phone">Phone</Label>
+                            <Input id="s-phone" v-model="storeForm.phone" class="font-mono" />
+                            <InputError :message="storeForm.errors.phone" />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button type="button" variant="ghost" class="press" @click="storeDialog = false">Cancel</Button>
+                        <Button type="submit" class="press" :disabled="storeForm.processing">
+                            {{ editingStore ? 'Save' : 'Create' }}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Register dialog -->
+        <Dialog v-model:open="registerDialog">
+            <DialogContent>
+                <form @submit.prevent="submitRegister">
+                    <DialogHeader>
+                        <DialogTitle>{{ editingRegister ? 'Edit register' : 'New register' }}</DialogTitle>
+                        <DialogDescription>
+                            In {{ registerStore?.name }}. Registers label which terminal made a sale.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div class="grid gap-4 py-5">
+                        <div class="grid gap-2">
+                            <Label for="r-name">Name</Label>
+                            <Input id="r-name" v-model="registerForm.name" required autofocus placeholder="Register 2" />
+                            <InputError :message="registerForm.errors.name" />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button type="button" variant="ghost" class="press" @click="registerDialog = false">Cancel</Button>
+                        <Button type="submit" class="press" :disabled="registerForm.processing">
+                            {{ editingRegister ? 'Save' : 'Create' }}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    </AppLayout>
+</template>
