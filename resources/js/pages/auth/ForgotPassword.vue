@@ -22,7 +22,7 @@ const submit = () => {
 </script>
 
 <template>
-    <AuthLayout title="Forgot password" description="Enter your email to receive a password reset link">
+    <AuthLayout title="Forgot password" description="Enter your email and we'll send you a 6-digit code">
         <Head title="Forgot password" />
 
         <div v-if="status" class="mb-4 text-center text-sm font-medium text-green-600">
@@ -38,9 +38,9 @@ const submit = () => {
                 </div>
 
                 <div class="my-6 flex items-center justify-start">
-                    <Button class="w-full" :disabled="form.processing">
+                    <Button class="press w-full" :disabled="form.processing">
                         <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
-                        Email password reset link
+                        Send code
                     </Button>
                 </div>
             </form>

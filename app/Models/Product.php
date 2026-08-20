@@ -70,9 +70,23 @@ class Product extends Model
         return $query->where('is_active', true);
     }
 
-    /** Null tax_rate means 0%, not "inherit a default". */
+    /**
+     * The rate this product is actually taxed at.
+     *
+     * Tax is not edited per product — the form carries a single price field —
+     * so a null rate inherits `default_tax_rate` from settings. An explicit
+     * 0.00 still means zero-rated and is never overridden, which is how a
+     * product can opt out of tax entirely.
+     *
+     * Settings are cached forever and invalidated on save, so calling this in
+     * a loop over the whole catalogue costs one query, not one per product.
+     */
     public function effectiveTaxRate(): float
     {
-        return (float) ($this->tax_rate ?? 0);
+        if ($this->tax_rate !== null) {
+            return (float) $this->tax_rate;
+        }
+
+        return (float) (Setting::get('default_tax_rate') ?? 0);
     }
 }

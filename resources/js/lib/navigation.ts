@@ -1,5 +1,17 @@
 import type { NavGroup, NavItem } from '@/types';
-import { BookOpen, Boxes, ChartNoAxesColumn, LayoutGrid, MoreHorizontal, ScanBarcode, Shapes, Store, Users, UsersRound } from 'lucide-vue-next';
+import {
+    BookOpen,
+    Boxes,
+    ChartNoAxesColumn,
+    LayoutGrid,
+    MoreHorizontal,
+    ReceiptText,
+    ScanBarcode,
+    Shapes,
+    Store,
+    Users,
+    UsersRound,
+} from 'lucide-vue-next';
 
 /**
  * One nav definition, two chromes. The desktop sidebar renders the groups and
@@ -12,6 +24,7 @@ export const navGroups: NavGroup[] = [
         items: [
             { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
             { title: 'Point of Sale', href: '/pos', icon: ScanBarcode },
+            { title: 'Order History', href: '/orders', icon: ReceiptText, requires: 'manage' },
             { title: 'Reports', href: '/reports', icon: ChartNoAxesColumn, requires: 'manage' },
             // The public customer catalogue. No `requires`: a cashier may well
             // want to show someone the menu across the counter.

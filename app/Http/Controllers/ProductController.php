@@ -7,6 +7,7 @@ use App\Http\Requests\ProductRequest;
 use App\Models\Category;
 use App\Models\InventoryLog;
 use App\Models\Product;
+use App\Models\Setting;
 use App\Models\Stock;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
@@ -56,6 +57,8 @@ class ProductController extends Controller
 
         return Inertia::render('Products/Create', [
             'categories' => Category::orderBy('name')->get(['id', 'name']),
+            // Tax is no longer per product; the form shows which rate applies.
+            'defaultTaxRate' => (float) (Setting::get('default_tax_rate') ?? 0),
         ]);
     }
 
@@ -113,6 +116,7 @@ class ProductController extends Controller
         return Inertia::render('Products/Edit', [
             'product' => $product->load('category:id,name'),
             'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'defaultTaxRate' => $product->effectiveTaxRate(),
             'stocks' => $product->stocks()->with('store:id,name')->get(),
         ]);
     }

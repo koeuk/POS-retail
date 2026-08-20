@@ -4,6 +4,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\PosDataController;
 use App\Http\Controllers\ProductController;
@@ -64,6 +65,9 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
     | read) live in the policies, not here.
     */
     Route::middleware('role:admin,manager')->group(function () {
+        Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
 

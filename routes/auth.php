@@ -4,8 +4,9 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\NewPasswordController;
-use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\PasswordOtpController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
@@ -25,13 +26,31 @@ Route::middleware('guest')->group(function () {
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
-    Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
+    /*
+     * Password reset is a three-step code flow, not a emailed link: ask for the
+     * account, type the six digits that arrive, then choose a password. Which
+     * address is being reset lives in the session throughout, so the code is
+     * never carried in a URL where a proxy or a screenshot could keep it.
+     */
+    Route::get('forgot-password', [ForgotPasswordController::class, 'create'])
         ->name('password.request');
 
-    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
+    Route::post('forgot-password', [ForgotPasswordController::class, 'store'])
+        ->middleware('throttle:6,1')
         ->name('password.email');
 
-    Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
+    Route::get('verify-code', [PasswordOtpController::class, 'create'])
+        ->name('password.otp');
+
+    Route::post('verify-code', [PasswordOtpController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('password.otp.verify');
+
+    Route::post('verify-code/resend', [PasswordOtpController::class, 'resend'])
+        ->middleware('throttle:6,1')
+        ->name('password.otp.resend');
+
+    Route::get('reset-password', [NewPasswordController::class, 'create'])
         ->name('password.reset');
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])

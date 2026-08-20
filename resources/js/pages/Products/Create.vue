@@ -5,7 +5,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import type { Category } from '@/types';
 import { Head } from '@inertiajs/vue3';
 
-defineProps<{ categories: Category[] }>();
+defineProps<{ categories: Category[]; defaultTaxRate: number }>();
 </script>
 
 <template>
@@ -24,7 +24,7 @@ defineProps<{ categories: Category[] }>();
                 description="Add an item to the catalogue. It appears on the POS grid as soon as it is active."
             />
 
-            <ProductForm :categories="categories" />
+            <ProductForm :categories="categories" :default-tax-rate="defaultTaxRate" />
         </div>
     </AppLayout>
 </template>

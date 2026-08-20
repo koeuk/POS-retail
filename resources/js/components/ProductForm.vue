@@ -14,6 +14,8 @@ import { computed, ref } from 'vue';
 const props = defineProps<{
     categories: Category[];
     product?: Product;
+    /** The rate this product will actually be taxed at, from settings. */
+    defaultTaxRate: number;
 }>();
 
 const isEdit = computed(() => !!props.product);
@@ -24,9 +26,7 @@ const form = useForm({
     sku: props.product?.sku ?? '',
     barcode: props.product?.barcode ?? '',
     description: props.product?.description ?? '',
-    cost_price: props.product?.cost_price ?? '0.00',
     sell_price: props.product?.sell_price ?? '0.00',
-    tax_rate: props.product?.tax_rate ?? '',
     unit: props.product?.unit ?? 'pcs',
     track_stock: props.product?.track_stock ?? true,
     is_active: props.product?.is_active ?? true,
@@ -43,12 +43,10 @@ function onFile(event: Event) {
     preview.value = file ? URL.createObjectURL(file) : preview.value;
 }
 
-/** Retail margin is the number a buyer actually cares about while typing. */
-const margin = computed(() => {
-    const cost = Number(form.cost_price) || 0;
+/** What the customer will actually be charged, once tax is added. */
+const withTax = computed(() => {
     const sell = Number(form.sell_price) || 0;
-    if (sell <= 0) return null;
-    return ((sell - cost) / sell) * 100;
+    return sell * (1 + props.defaultTaxRate / 100);
 });
 
 function submit() {
@@ -116,42 +114,23 @@ function submit() {
             <section class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
                 <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Pricing</h2>
 
-                <div class="grid gap-4 sm:grid-cols-3">
-                    <div class="grid gap-2">
-                        <Label for="cost">Cost price</Label>
-                        <Input id="cost" v-model="form.cost_price" type="number" step="0.01" min="0" class="tabular font-mono" />
-                        <InputError :message="form.errors.cost_price" />
-                    </div>
-                    <div class="grid gap-2">
-                        <Label for="sell">Sell price</Label>
-                        <Input id="sell" v-model="form.sell_price" type="number" step="0.01" min="0" class="tabular font-mono" />
-                        <InputError :message="form.errors.sell_price" />
-                    </div>
-                    <div class="grid gap-2">
-                        <Label for="tax">Tax rate %</Label>
-                        <Input
-                            id="tax"
-                            v-model="form.tax_rate"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max="100"
-                            placeholder="0"
-                            class="tabular font-mono"
-                        />
-                        <InputError :message="form.errors.tax_rate" />
-                    </div>
+                <div class="grid gap-2 sm:max-w-xs">
+                    <Label for="sell">Sell price</Label>
+                    <Input id="sell" v-model="form.sell_price" type="number" step="0.01" min="0" class="tabular font-mono" />
+                    <InputError :message="form.errors.sell_price" />
                 </div>
 
+                <!--
+                    Tax is not set per product any more: it comes from the
+                    default rate in settings. Showing the tax-inclusive figure
+                    here matters because the price typed above is the NET one,
+                    and the number the customer sees is this one.
+                -->
                 <p class="mt-3 text-xs text-muted-foreground">
-                    Prices are <strong class="font-medium text-foreground">tax-exclusive</strong> — tax is added per line at checkout. Leave the rate
-                    blank for 0%.
-                    <span v-if="margin !== null" class="ml-1">
-                        Margin
-                        <span class="tabular font-mono font-medium" :class="margin < 0 ? 'text-destructive' : 'text-primary'">
-                            {{ margin.toFixed(1) }}%
-                        </span>
-                    </span>
+                    Tax-exclusive. At
+                    <strong class="font-medium text-foreground">{{ defaultTaxRate }}%</strong> tax the customer pays
+                    <strong class="tabular font-mono font-medium text-primary">{{ withTax.toFixed(2) }}</strong
+                    >.
                 </p>
             </section>
 

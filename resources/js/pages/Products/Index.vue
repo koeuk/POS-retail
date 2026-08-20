@@ -131,7 +131,6 @@ function stockTone(qty: number | null | undefined) {
                             <TableRow class="hover:bg-transparent">
                                 <TableHead class="w-[40%]">Product</TableHead>
                                 <TableHead>Category</TableHead>
-                                <TableHead data-numeric class="text-right">Cost</TableHead>
                                 <TableHead data-numeric class="text-right">Price</TableHead>
                                 <TableHead data-numeric class="text-right">Stock</TableHead>
                                 <TableHead>Status</TableHead>
@@ -165,9 +164,6 @@ function stockTone(qty: number | null | undefined) {
                                 </TableCell>
                                 <TableCell class="text-muted-foreground">
                                     {{ p.category?.name ?? '—' }}
-                                </TableCell>
-                                <TableCell data-numeric class="text-right text-muted-foreground">
-                                    <Money :value="p.cost_price" />
                                 </TableCell>
                                 <TableCell data-numeric class="text-right font-medium">
                                     <Money :value="p.sell_price" />

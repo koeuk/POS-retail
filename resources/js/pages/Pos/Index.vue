@@ -4,7 +4,6 @@ import Cart from '@/Pos/components/Cart.vue';
 import Checkout from '@/Pos/components/Checkout.vue';
 import PaymentModal from '@/Pos/components/PaymentModal.vue';
 import ProductGrid from '@/Pos/components/ProductGrid.vue';
-import ReceiptDrawer from '@/Pos/components/ReceiptDrawer.vue';
 import SyncStatusBadge from '@/Pos/components/SyncStatusBadge.vue';
 import { useBarcode } from '@/Pos/composables/useBarcode';
 import { useCart } from '@/Pos/composables/useCart';
@@ -15,7 +14,7 @@ import { http } from '@/Pos/lib/http';
 import { toDecimalString } from '@/Pos/lib/money';
 import type { PaymentMethod, PosFeed, StoredOrder } from '@/Pos/types';
 import { Head } from '@inertiajs/vue3';
-import { CircleAlert, LoaderCircle, ReceiptText } from 'lucide-vue-next';
+import { CircleAlert, LoaderCircle } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 
 const props = defineProps<{
@@ -37,8 +36,6 @@ const loadError = ref<string | null>(null);
 const registerId = ref<number | null>(null);
 const paying = ref(false);
 const paymentOpen = ref(false);
-const receiptsOpen = ref(false);
-const lastSale = ref<StoredOrder | null>(null);
 const toast = ref<{ kind: 'ok' | 'warn'; text: string } | null>(null);
 
 const currency = computed(() => feed.value?.settings.currency_symbol ?? '$');
@@ -182,7 +179,6 @@ async function completeSale(payment: { method: PaymentMethod; amount: number; re
         return;
     }
 
-    lastSale.value = order;
     cart.clear();
     paymentOpen.value = false;
     paying.value = false;
@@ -265,16 +261,6 @@ onMounted(loadFeed);
                              so the label is just clutter above the cart. -->
 
                         <div class="ml-auto flex items-center gap-1.5">
-                            <button
-                                type="button"
-                                class="press flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium text-muted-foreground"
-                                title="Receipts — works offline"
-                                @click="receiptsOpen = true"
-                            >
-                                <ReceiptText class="size-3.5" />
-                                <span class="hidden sm:inline">Receipts</span>
-                            </button>
-
                             <SyncStatusBadge
                                 :online="sync.online.value"
                                 :syncing="sync.syncing.value"
@@ -299,8 +285,6 @@ onMounted(loadFeed);
             @close="paymentOpen = false"
             @confirm="completeSale"
         />
-
-        <ReceiptDrawer v-if="feed" :open="receiptsOpen" :settings="feed.settings" :focus="lastSale" @close="receiptsOpen = false" />
 
         <Transition
             enter-from-class="opacity-0 translate-y-2"

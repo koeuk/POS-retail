@@ -1,0 +1,208 @@
+<script setup lang="ts">
+import EmptyState from '@/components/EmptyState.vue';
+import Money from '@/components/Money.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import Pagination from '@/components/Pagination.vue';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import AppLayout from '@/layouts/AppLayout.vue';
+import type { Paginated } from '@/types';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { CloudOff, Printer, ReceiptText, Search } from 'lucide-vue-next';
+import { ref, watch } from 'vue';
+
+interface OrderRow {
+    id: number;
+    order_no: string;
+    total: string;
+    status: string;
+    items_count: number;
+    created_at: string;
+    created_offline_at: string | null;
+    cashier: { id: number; name: string } | null;
+    store: { id: number; name: string } | null;
+    register: { id: number; name: string } | null;
+    customer: { id: number; name: string } | null;
+    payments: { id: number; method: string; amount: string }[];
+}
+
+const props = defineProps<{
+    orders: Paginated<OrderRow>;
+    filters: { search?: string; status?: string; method?: string; from?: string; to?: string };
+    statuses: { value: string; label: string }[];
+    methods: { value: string; label: string }[];
+}>();
+
+const ALL = 'all';
+
+const search = ref(props.filters.search ?? '');
+const status = ref(props.filters.status ?? ALL);
+const method = ref(props.filters.method ?? ALL);
+const from = ref(props.filters.from ?? '');
+const to = ref(props.filters.to ?? '');
+
+let debounce: ReturnType<typeof setTimeout>;
+
+function reload() {
+    router.get(
+        route('orders.index'),
+        {
+            search: search.value || undefined,
+            status: status.value === ALL ? undefined : status.value,
+            method: method.value === ALL ? undefined : method.value,
+            from: from.value || undefined,
+            to: to.value || undefined,
+        },
+        { preserveState: true, preserveScroll: true, replace: true },
+    );
+}
+
+watch(search, () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(reload, 300);
+});
+watch([status, method, from, to], reload);
+
+/* The moment the sale happened, which for an offline order is not the moment
+   the row was created here. */
+const soldAt = (row: OrderRow) =>
+    new Date(row.created_offline_at ?? row.created_at).toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    });
+
+const statusTone = (s: string) => (s === 'completed' ? 'secondary' : s === 'refunded' ? 'outline' : 'destructive');
+
+const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase() + m.slice(1));
+</script>
+
+<template>
+    <Head title="Order History" />
+
+    <AppLayout :breadcrumbs="[{ title: 'Order History', href: '/orders' }]">
+        <div class="px-5 py-6 md:px-8">
+            <PageHeader
+                eyebrow="Selling"
+                title="Order History"
+                description="Every sale on the server, from every till. Sales still queued on a tablet appear once they sync."
+            />
+
+            <div class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 60ms">
+                <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
+                    <div class="relative min-w-[14rem] flex-1">
+                        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input v-model="search" placeholder="Order no., cashier or customer…" class="pl-9" autocomplete="off" />
+                    </div>
+
+                    <Select v-model="status">
+                        <SelectTrigger class="w-[9.5rem]"><SelectValue placeholder="Status" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem :value="ALL">All status</SelectItem>
+                            <SelectItem v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <Select v-model="method">
+                        <SelectTrigger class="w-[9.5rem]"><SelectValue placeholder="Payment" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem :value="ALL">All payments</SelectItem>
+                            <SelectItem v-for="m in methods" :key="m.value" :value="m.value">{{ m.label }}</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <input
+                        v-model="from"
+                        type="date"
+                        aria-label="From date"
+                        class="tabular h-10 rounded-md border border-input bg-background px-2 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                    <input
+                        v-model="to"
+                        type="date"
+                        aria-label="To date"
+                        class="tabular h-10 rounded-md border border-input bg-background px-2 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                </div>
+
+                <div v-if="orders.data.length" class="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow class="hover:bg-transparent">
+                                <TableHead>Order</TableHead>
+                                <TableHead>When</TableHead>
+                                <TableHead>Cashier</TableHead>
+                                <TableHead>Payment</TableHead>
+                                <TableHead data-numeric class="text-right">Items</TableHead>
+                                <TableHead data-numeric class="text-right">Total</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead class="w-[1%]"></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <tbody class="[&_tr:last-child]:border-0">
+                            <TableRow v-for="order in orders.data" :key="order.id" class="group cursor-pointer">
+                                <TableCell>
+                                    <Link :href="route('orders.show', { order: order.id })" class="block">
+                                        <span class="tabular font-mono text-xs font-medium">{{ order.order_no }}</span>
+                                        <span v-if="order.customer" class="block text-[0.7rem] text-muted-foreground">
+                                            {{ order.customer.name }}
+                                        </span>
+                                    </Link>
+                                </TableCell>
+                                <TableCell class="whitespace-nowrap text-sm text-muted-foreground">
+                                    <span class="inline-flex items-center gap-1.5">
+                                        <!-- Marks a sale that was rung up with no connection. -->
+                                        <CloudOff v-if="order.created_offline_at" class="size-3 text-primary" />
+                                        {{ soldAt(order) }}
+                                    </span>
+                                </TableCell>
+                                <TableCell class="text-sm text-muted-foreground">
+                                    {{ order.cashier?.name ?? '—' }}
+                                    <span v-if="order.register" class="text-[0.7rem]">· {{ order.register.name }}</span>
+                                </TableCell>
+                                <TableCell class="text-sm text-muted-foreground">
+                                    {{ order.payments.map((p) => methodLabel(p.method)).join(' + ') || '—' }}
+                                </TableCell>
+                                <TableCell data-numeric class="tabular text-right font-mono text-sm">
+                                    {{ order.items_count }}
+                                </TableCell>
+                                <TableCell data-numeric class="text-right font-medium">
+                                    <Money :value="order.total" :muted="false" />
+                                </TableCell>
+                                <TableCell>
+                                    <Badge :variant="statusTone(order.status)" class="capitalize">{{ order.status }}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                    <!--
+                                        Opens the detail with ?print=1, which prints on
+                                        arrival. Printing from here directly would mean
+                                        duplicating the whole receipt template into a
+                                        list row that has not loaded the line items.
+                                    -->
+                                    <Link
+                                        :href="route('orders.show', { order: order.id, print: 1 })"
+                                        class="press flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                        :aria-label="`Print receipt for ${order.order_no}`"
+                                        title="Print receipt"
+                                    >
+                                        <Printer class="size-4" />
+                                    </Link>
+                                </TableCell>
+                            </TableRow>
+                        </tbody>
+                    </Table>
+                </div>
+
+                <EmptyState
+                    v-else
+                    :icon="ReceiptText"
+                    title="No orders found"
+                    description="Try clearing the filters. A sale queued offline only appears here once it has synced."
+                />
+
+                <Pagination :links="orders.links" :from="orders.from" :to="orders.to" :total="orders.total" />
+            </div>
+        </div>
+    </AppLayout>
+</template>

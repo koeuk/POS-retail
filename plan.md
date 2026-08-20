@@ -15,8 +15,23 @@
 | 7 — Receipts | ✅ **Done** — prints from Dexie with no network; provisional ref until synced. |
 | 8 — Dashboard & Reports | ✅ **Done** — 10 tests, validated chart palette, CSV export. |
 | ➕ Public customer menu | ✅ **Done** — `/menu`, no login, 7 tests. Added outside the original 8 phases. |
+| ➕ Order History | ✅ **Done** — `/orders`, store-wide, 8 tests. Added outside the original 8 phases. |
 
-**All 8 phases complete.** 86 tests · 376 assertions. Pint, Prettier, ESLint, vue-tsc and the production build all pass.
+### Added — Order History (`/orders`)
+
+Server-side sales history, and **not the same thing** as the receipt drawer inside `/pos`:
+
+| | Receipt drawer (in `/pos`) | Order History (`/orders`) |
+|---|---|---|
+| Source | that device's IndexedDB | the server |
+| Scope | sales rung up on **that device** | every till, every cashier |
+| Retention | last 50 synced sales | everything |
+| Offline | works | needs a connection |
+| Purpose | reprint at the counter | look up any sale |
+
+Searchable by order number, cashier or customer; filterable by status, payment method and date. Ordered by the **business moment**, so a sale synced late sorts to when it happened, not when the row landed. A manager is scoped to their own store — `show` scopes the *lookup*, so another store's order 404s rather than leaking its total. Detail view reprints the receipt through the same print stylesheet the till uses, marked `REPRINT`.
+
+**All 8 phases complete**, plus two additions. 94 tests · 498 assertions. Pint, Prettier, ESLint, vue-tsc and the production build all pass.
 
 ### Verified end-to-end in a browser, not just in tests
 

@@ -11,6 +11,7 @@ defineProps<{
     product: Product;
     categories: Category[];
     stocks: Stock[];
+    defaultTaxRate: number;
 }>();
 
 const tone = (s: Stock) => {
@@ -63,7 +64,7 @@ const tone = (s: Stock) => {
                 </div>
             </section>
 
-            <ProductForm :categories="categories" :product="product" />
+            <ProductForm :categories="categories" :product="product" :default-tax-rate="defaultTaxRate" />
         </div>
     </AppLayout>
 </template>

@@ -435,7 +435,29 @@
 | detach the receipt along with its parents, so the chain is kept in the
 | layout and only the ink is switched off.
 */
+/*
+ * A receipt that exists only to be printed — the back-office reprint on an
+ * order page. It must stay RENDERED: the print rules below work by switching
+ * `visibility`, and `display: none` would detach it from the printout
+ * entirely. So it is collapsed to a zero-size clipped box on screen instead.
+ */
+.print-only {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+
 @media print {
+    body.printing-receipt .print-only {
+        position: static;
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip-path: none;
+    }
+
     body.printing-receipt * {
         visibility: hidden;
     }
