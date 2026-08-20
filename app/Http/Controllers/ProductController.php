@@ -18,13 +18,10 @@ use Inertia\Response;
 
 class ProductController extends Controller
 {
-    public function __construct()
-    {
-        $this->authorizeResource(Product::class, 'product');
-    }
-
     public function index(Request $request): Response
     {
+        $this->authorize('viewAny', Product::class);
+
         $filters = $request->only('search', 'category_id', 'status');
 
         $products = Product::query()
@@ -55,6 +52,8 @@ class ProductController extends Controller
 
     public function create(): Response
     {
+        $this->authorize('create', Product::class);
+
         return Inertia::render('Products/Create', [
             'categories' => Category::orderBy('name')->get(['id', 'name']),
         ]);
@@ -62,6 +61,8 @@ class ProductController extends Controller
 
     public function store(ProductRequest $request): RedirectResponse
     {
+        $this->authorize('create', Product::class);
+
         $data = $request->validated();
         $openingQty = (int) ($data['opening_qty'] ?? 0);
         $threshold = $data['low_stock_threshold'] ?? null;
@@ -107,6 +108,8 @@ class ProductController extends Controller
 
     public function edit(Product $product): Response
     {
+        $this->authorize('update', $product);
+
         return Inertia::render('Products/Edit', [
             'product' => $product->load('category:id,name'),
             'categories' => Category::orderBy('name')->get(['id', 'name']),
@@ -116,6 +119,8 @@ class ProductController extends Controller
 
     public function update(ProductRequest $request, Product $product): RedirectResponse
     {
+        $this->authorize('update', $product);
+
         $data = $request->validated();
         unset($data['opening_qty'], $data['low_stock_threshold']);
 
@@ -136,6 +141,8 @@ class ProductController extends Controller
 
     public function destroy(Product $product): RedirectResponse
     {
+        $this->authorize('delete', $product);
+
         // Products that have been sold are restricted by a foreign key on
         // order_items. Deactivate rather than delete — the sales history
         // must keep pointing at a real row.

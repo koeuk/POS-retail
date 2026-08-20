@@ -11,13 +11,10 @@ use Inertia\Response;
 
 class CategoryController extends Controller
 {
-    public function __construct()
-    {
-        $this->authorizeResource(Category::class, 'category');
-    }
-
     public function index(Request $request): Response
     {
+        $this->authorize('viewAny', Category::class);
+
         return Inertia::render('Categories/Index', [
             'categories' => Category::query()
                 ->with('parent:id,name')
@@ -34,6 +31,8 @@ class CategoryController extends Controller
 
     public function store(CategoryRequest $request): RedirectResponse
     {
+        $this->authorize('create', Category::class);
+
         Category::create($request->validated());
 
         return back()->with('success', 'Category created.');
@@ -41,6 +40,8 @@ class CategoryController extends Controller
 
     public function update(CategoryRequest $request, Category $category): RedirectResponse
     {
+        $this->authorize('update', $category);
+
         $data = $request->validated();
 
         // Reparenting must not create a cycle — walking up from the proposed
@@ -58,6 +59,8 @@ class CategoryController extends Controller
 
     public function destroy(Category $category): RedirectResponse
     {
+        $this->authorize('delete', $category);
+
         if ($category->products()->exists()) {
             return back()->withErrors([
                 'category' => 'This category still has products. Move them first.',

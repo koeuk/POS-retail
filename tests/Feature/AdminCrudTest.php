@@ -28,7 +28,7 @@ class AdminCrudTest extends TestCase
     }
 
     /* ------------------------------------------------------------------ */
-    /* Products                                                            */
+    /* Products */
     /* ------------------------------------------------------------------ */
 
     public function test_admin_can_create_a_product_with_opening_stock(): void
@@ -108,7 +108,7 @@ class AdminCrudTest extends TestCase
     }
 
     /* ------------------------------------------------------------------ */
-    /* Categories                                                          */
+    /* Categories */
     /* ------------------------------------------------------------------ */
 
     public function test_category_cannot_be_its_own_parent(): void
@@ -164,7 +164,7 @@ class AdminCrudTest extends TestCase
     }
 
     /* ------------------------------------------------------------------ */
-    /* Customers                                                           */
+    /* Customers */
     /* ------------------------------------------------------------------ */
 
     public function test_admin_can_create_and_delete_a_customer(): void
@@ -183,7 +183,7 @@ class AdminCrudTest extends TestCase
     }
 
     /* ------------------------------------------------------------------ */
-    /* Staff                                                               */
+    /* Staff */
     /* ------------------------------------------------------------------ */
 
     /**
@@ -240,7 +240,7 @@ class AdminCrudTest extends TestCase
     }
 
     /* ------------------------------------------------------------------ */
-    /* Authorisation                                                       */
+    /* Authorisation */
     /* ------------------------------------------------------------------ */
 
     public function test_manager_can_reach_the_catalogue_but_not_staff(): void

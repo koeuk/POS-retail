@@ -11,13 +11,10 @@ use Inertia\Response;
 
 class CustomerController extends Controller
 {
-    public function __construct()
-    {
-        $this->authorizeResource(Customer::class, 'customer');
-    }
-
     public function index(Request $request): Response
     {
+        $this->authorize('viewAny', Customer::class);
+
         return Inertia::render('Customers/Index', [
             'customers' => Customer::query()
                 ->withCount('orders')
@@ -38,6 +35,8 @@ class CustomerController extends Controller
 
     public function store(CustomerRequest $request): RedirectResponse
     {
+        $this->authorize('create', Customer::class);
+
         Customer::create($request->validated());
 
         return back()->with('success', 'Customer added.');
@@ -45,6 +44,8 @@ class CustomerController extends Controller
 
     public function update(CustomerRequest $request, Customer $customer): RedirectResponse
     {
+        $this->authorize('update', $customer);
+
         $customer->update($request->validated());
 
         return back()->with('success', 'Customer updated.');
@@ -52,6 +53,8 @@ class CustomerController extends Controller
 
     public function destroy(Customer $customer): RedirectResponse
     {
+        $this->authorize('delete', $customer);
+
         if ($customer->orders()->exists()) {
             return back()->withErrors([
                 'customer' => 'This customer has order history and cannot be deleted.',

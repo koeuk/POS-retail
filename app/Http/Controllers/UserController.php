@@ -14,13 +14,10 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
-    public function __construct()
-    {
-        $this->authorizeResource(User::class, 'user');
-    }
-
     public function index(Request $request): Response
     {
+        $this->authorize('viewAny', User::class);
+
         return Inertia::render('Users/Index', [
             'users' => User::query()
                 ->with('store:id,name')
@@ -45,6 +42,8 @@ class UserController extends Controller
 
     public function store(UserRequest $request): RedirectResponse
     {
+        $this->authorize('create', User::class);
+
         $data = $request->validated();
         $data['password'] = Hash::make($data['password']);
         $data['email_verified_at'] = now(); // staff accounts are created by an admin
@@ -56,6 +55,8 @@ class UserController extends Controller
 
     public function update(UserRequest $request, User $user): RedirectResponse
     {
+        $this->authorize('update', $user);
+
         $data = $request->validated();
 
         if (! empty($data['password'])) {
@@ -78,6 +79,8 @@ class UserController extends Controller
 
     public function destroy(Request $request, User $user): RedirectResponse
     {
+        $this->authorize('delete', $user);
+
         if ($user->id === $request->user()->id) {
             return back()->withErrors(['user' => 'You cannot delete your own account.']);
         }

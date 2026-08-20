@@ -8,8 +8,8 @@
 |---|---|
 | 1 — Scaffold & Database | ✅ **Done** — 20 tables, 12 migrations clean, seeded, builds, serves. |
 | 2 — Auth, Roles & Session Longevity | ✅ **Done** — 34 tests green, roles enforced, heartbeat live, `/` → login. |
-| 3 — Admin CRUD | ⏳ **In progress** |
-| 4 — POS Sync Endpoints | ⬜ Not started |
+| 3 — Admin CRUD | ✅ **Done** — 47 tests green, all 5 CI checks pass, new theme + motion system. |
+| 4 — POS Sync Endpoints | ⏳ **Next** |
 | 5 — POS UI (online) | ⬜ Not started |
 | 6 — Offline Layer | ⬜ Not started |
 | 7 — Receipts | ⬜ Not started |
@@ -29,8 +29,23 @@ Table count still lands on **20** — the scaffold contributes `migrations` wher
 
 ### Environment notes
 
-- The project lives on an **NTFS** volume (`ntfs3`). Vite's `node_modules/.vite-temp` was created `root:root` and had to be deleted so it could be recreated as the running user. If a build ever fails with `EACCES` on `.vite-temp`, delete that directory.
+- The project lives on an **NTFS** volume (`ntfs3`), and files occasionally get created as `root:root` even though the mount maps to uid 1000. This bit twice: `node_modules/.vite-temp` (build failed with `EACCES`) and `storage/logs/laravel.log` (every test that logged an exception died with "could not be opened in append mode"). **Fix in both cases: delete the file/directory** — the parent is writable, so the app recreates it correctly.
 - `/tmp` filled to 0 bytes mid-build and blocked every shell command. If it recurs: `rm -rf /tmp/claude-1000/*`, or relocate with `CLAUDE_CODE_TMPDIR=/media/koeuk/Drive/tmp claude`.
+- Tests run against **`pos_retail_test`** on MySQL, not sqlite `:memory:` — `pdo_sqlite` is not installed, and the Phase 4 sync tests want the real engine anyway.
+
+### Laravel 11+ base-controller gotcha
+
+The bare `Controller` class no longer includes `AuthorizesRequests`, and `$this->middleware()` is gone entirely. `authorizeResource()` therefore fails twice over. This build adds the trait back in `app/Http/Controllers/Controller.php` and calls **`$this->authorize()` explicitly** in every action rather than relying on `authorizeResource()`.
+
+### CI
+
+`.github/workflows/lint.yml` runs Pint, Prettier and ESLint; `tests.yml` runs the suite. Before pushing, run all five locally:
+
+```bash
+vendor/bin/pint --test && npm run format:check && npx eslint . && npx vue-tsc --noEmit && npm run build
+```
+
+`eslint . --fix` cannot auto-fix unused imports, so it exits non-zero and fails the job — that is what broke the first push.
 
 ### Phase 1 verified results
 
