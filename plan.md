@@ -11,10 +11,28 @@
 | 3 — Admin CRUD | ✅ **Done** — 47 tests green, all 5 CI checks pass, new theme + motion system. |
 | 4 — POS Sync Endpoints | ✅ **Done** — 19 tests: idempotent replay, oversell, per-line tax, proportional discount. |
 | 5 — POS UI (online) | ✅ **Done** — real sale driven in a browser; all 5 tables verified. |
-| 6 — Offline Layer | ⏳ **In progress** |
-| 7 — Receipts | ⬜ Not started |
-| 8 — Dashboard & Reports | ⬜ Not started |
+| 6 — Offline Layer | ✅ **Done** — 3 offline sales → flushed to exactly 3, twice, in a real browser. |
+| 7 — Receipts | ✅ **Done** — prints from Dexie with no network; provisional ref until synced. |
+| 8 — Dashboard & Reports | ✅ **Done** — 10 tests, validated chart palette, CSV export. |
 | ➕ Public customer menu | ✅ **Done** — `/menu`, no login, 7 tests. Added outside the original 8 phases. |
+
+**All 8 phases complete.** 86 tests · 376 assertions. Pint, Prettier, ESLint, vue-tsc and the production build all pass.
+
+### Verified end-to-end in a browser, not just in tests
+
+| Gate | Evidence |
+|---|---|
+| Phase 5 — a real sale | 3 items rung up online; `orders`, `order_items`, `payments`, `inventory_logs` and `stocks` all correct (6.60 + 0.66 tax = 7.26, change 12.74) |
+| Phase 6 — offline queue | Network cut → 3 sales queued in IndexedDB, server still at 0 → reconnect → exactly 3 orders → flushed again → still exactly 3 |
+| Phase 8 — reports | 78 seeded sales across 14 days render with correct totals, per-day bars, and payment split |
+
+### Chart palette — validated, not eyeballed
+
+The theme's own `--chart-*` tokens **failed** the categorical validator (gold too light at L 0.77 and under 3:1 contrast; teal below the chroma floor, reading grey). The four `--series-*` slots now come from the dataviz skill's validated palette, re-checked against this project's card surfaces:
+
+- Light and dark both pass lightness, chroma, CVD separation and normal-vision floors.
+- Light mode WARNs on contrast for two hues, which obliges **visible labels** — so every payment bar carries its name and amount as text, and a full table sits below the charts.
+- Payment colours are pinned per tender type, never by rank, so a change in takings never repaints the bars.
 
 ### ⚠️ Concurrent session warning
 
