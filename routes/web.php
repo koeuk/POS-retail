@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PosDataController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StoreController;
@@ -20,6 +21,12 @@ Route::get('/', function () {
 
     return redirect()->route('dashboard');
 })->name('home');
+
+/*
+ * Public customer menu — the one route in this app with no auth. Read-only
+ * catalogue: names, photos and prices, nothing about stock or staff.
+ */
+Route::get('menu', [MenuController::class, 'index'])->name('menu');
 
 /*
 |--------------------------------------------------------------------------
