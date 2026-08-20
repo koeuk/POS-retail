@@ -64,7 +64,7 @@ function submit() {
         // Multipart cannot be sent as a real PUT, so spoof the method.
         form
             .transform((data) => ({ ...data, _method: 'put' }))
-            .post(route('products.update', props.product!.id), { forceFormData: true });
+            .post(route('products.update', { product: props.product!.id }), { forceFormData: true });
     } else {
         form.post(route('products.store'), { forceFormData: true });
     }

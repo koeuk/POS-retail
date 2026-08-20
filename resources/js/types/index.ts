@@ -31,6 +31,9 @@ export interface NavGroup {
 }
 
 export interface SharedData {
+    /* Inertia's usePage<T>() constrains T to PageProps, which requires an
+       index signature. Without it every usePage<SharedData>() call fails. */
+    [key: string]: unknown;
     name: string;
     quote: { message: string; author: string };
     auth: Auth;

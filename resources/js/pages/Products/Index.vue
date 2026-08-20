@@ -66,7 +66,7 @@ const pendingDelete = ref<Product | null>(null);
 
 function confirmDelete() {
     if (!pendingDelete.value) return;
-    router.delete(route('products.destroy', pendingDelete.value.id), {
+    router.delete(route('products.destroy', { product: pendingDelete.value.id }), {
         preserveScroll: true,
         onFinish: () => (pendingDelete.value = null),
     });
@@ -214,7 +214,7 @@ function stockTone(qty: number | null | undefined) {
                                         class="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
                                     >
                                         <Button as-child variant="ghost" size="icon" class="press size-8">
-                                            <Link :href="route('products.edit', p.id)" aria-label="Edit">
+                                            <Link :href="route('products.edit', { product: p.id })" aria-label="Edit">
                                                 <Pencil class="size-4" />
                                             </Link>
                                         </Button>

@@ -7,20 +7,7 @@ import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import { initializeTheme } from './composables/useAppearance';
 
-// Extend ImportMeta interface for Vite...
-declare module 'vite/client' {
-    interface ImportMetaEnv {
-        readonly VITE_APP_NAME: string;
-        [key: string]: string | boolean | undefined;
-    }
-
-    interface ImportMeta {
-        readonly env: ImportMetaEnv;
-        readonly glob: <T>(pattern: string) => Record<string, () => Promise<T>>;
-    }
-}
-
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'POS Retail';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
@@ -32,7 +19,8 @@ createInertiaApp({
             .mount(el);
     },
     progress: {
-        color: '#4B5563',
+        // Matches --primary so the loading bar reads as part of the theme.
+        color: '#e08307',
     },
 });
 
