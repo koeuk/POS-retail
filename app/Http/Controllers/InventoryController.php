@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -151,7 +152,7 @@ class InventoryController extends Controller
         return back()->with('success', 'Low-stock alert updated.');
     }
 
-    private function recentMovements(User $user): \Illuminate\Support\Collection
+    private function recentMovements(User $user): Collection
     {
         return InventoryLog::query()
             ->with(['product:id,name,unit', 'store:id,name', 'creator:id,name'])

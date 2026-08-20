@@ -5,6 +5,7 @@ import {
     ChartNoAxesColumn,
     LayoutGrid,
     MoreHorizontal,
+    PackageSearch,
     ReceiptText,
     ScanBarcode,
     Shapes,

@@ -83,7 +83,7 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
         Route::post('inventory/movements', [InventoryController::class, 'store'])->name('inventory.store');
         Route::put('inventory/threshold', [InventoryController::class, 'updateThreshold'])->name('inventory.threshold');
 
-        Route::resource('products', ProductController::class)->except('show');
+        Route::resource('products', ProductController::class);
 
         Route::resource('categories', CategoryController::class)
             ->only(['index', 'store', 'update', 'destroy']);

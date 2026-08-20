@@ -181,7 +181,7 @@ function stockTone(qty: number | null | undefined) {
                                 </TableCell>
                                 <TableCell>
                                     <div
-                                        class="flex items-center gap-1 transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:opacity-0"
+                                        class="flex items-center gap-1"
                                     >
                                         <Button as-child variant="ghost" size="icon" class="press size-8">
                                             <Link :href="route('products.edit', { product: p.id })" aria-label="Edit">

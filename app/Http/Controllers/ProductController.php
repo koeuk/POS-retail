@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\InventoryLogType;
+use App\Enums\OrderStatus;
 use App\Http\Requests\ProductRequest;
 use App\Models\Category;
 use App\Models\InventoryLog;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Models\Stock;
@@ -107,6 +109,34 @@ class ProductController extends Controller
 
         return to_route('products.index')
             ->with('success', "“{$product->name}” was created.");
+    }
+
+    /**
+     * Read-only view. Everything about one product in one place: what it is,
+     * where the stock sits, how it has moved and how it has sold. Editing
+     * stays on its own screen so a glance can never become an accident.
+     */
+    public function show(Product $product): Response
+    {
+        $this->authorize('view', $product);
+
+        return Inertia::render('Products/Show', [
+            'product' => $product->load('category:id,name'),
+            'taxRate' => $product->effectiveTaxRate(),
+            'stocks' => $product->stocks()->with('store:id,name')->get(),
+            'movements' => $product->inventoryLogs()
+                ->with(['store:id,name', 'creator:id,name'])
+                ->latest('id')
+                ->limit(10)
+                ->get(),
+            // How it has actually sold, from the snapshotted line items.
+            'sales' => OrderItem::query()
+                ->where('order_items.product_id', $product->id)
+                ->join('orders', 'orders.id', '=', 'order_items.order_id')
+                ->where('orders.status', OrderStatus::Completed)
+                ->selectRaw('COALESCE(SUM(order_items.qty), 0) as qty, COALESCE(SUM(order_items.subtotal), 0) as revenue')
+                ->first(),
+        ]);
     }
 
     public function edit(Product $product): Response

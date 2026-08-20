@@ -137,7 +137,7 @@ function confirmDelete() {
                                 </TableCell>
                                 <TableCell>
                                     <div
-                                        class="flex items-center gap-1 transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:opacity-0"
+                                        class="flex items-center gap-1"
                                     >
                                         <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(c)">
                                             <Pencil class="size-4" />

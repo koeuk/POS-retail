@@ -1,0 +1,207 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\InventoryLog;
+use App\Models\Product;
+use App\Models\Stock;
+use App\Models\Store;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
+use Tests\TestCase;
+
+class InventoryTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Store $store;
+
+    private User $admin;
+
+    private Product $product;
+
+    private Stock $stock;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->store = Store::factory()->create();
+        $this->admin = User::factory()->admin()->create();
+        $this->product = Product::factory()->create(['unit' => 'pcs']);
+        $this->stock = Stock::create([
+            'product_id' => $this->product->id,
+            'store_id' => $this->store->id,
+            'qty' => 10,
+            'low_stock_threshold' => 5,
+        ]);
+    }
+
+    private function move(array $payload)
+    {
+        return $this->actingAs($this->admin)
+            ->post(route('inventory.store'), array_merge(['stock_id' => $this->stock->id], $payload));
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Movements */
+    /* ------------------------------------------------------------------ */
+
+    public function test_receiving_stock_adds_to_it_and_logs_a_restock(): void
+    {
+        $this->move(['mode' => 'receive', 'quantity' => 15, 'note' => 'Supplier delivery'])->assertRedirect();
+
+        $this->assertSame(25, $this->stock->fresh()->qty);
+        $this->assertDatabaseHas('inventory_logs', [
+            'product_id' => $this->product->id,
+            'store_id' => $this->store->id,
+            'type' => 'restock',
+            'qty_change' => 15,
+            'note' => 'Supplier delivery',
+            'created_by' => $this->admin->id,
+        ]);
+    }
+
+    public function test_removing_stock_subtracts_and_logs_an_adjustment(): void
+    {
+        $this->move(['mode' => 'remove', 'quantity' => 4, 'note' => 'Damaged'])->assertRedirect();
+
+        $this->assertSame(6, $this->stock->fresh()->qty);
+        $this->assertDatabaseHas('inventory_logs', ['type' => 'adjustment', 'qty_change' => -4]);
+    }
+
+    /**
+     * A count is absolute, not a delta — the operator types what is on the
+     * shelf and the ledger records whatever reconciles the books to it.
+     */
+    public function test_a_count_records_the_difference_not_the_number_typed(): void
+    {
+        $this->move(['mode' => 'count', 'quantity' => 7])->assertRedirect();
+
+        $this->assertSame(7, $this->stock->fresh()->qty);
+        $this->assertDatabaseHas('inventory_logs', ['type' => 'adjustment', 'qty_change' => -3]);
+    }
+
+    public function test_a_count_can_correct_upwards_too(): void
+    {
+        $this->move(['mode' => 'count', 'quantity' => 18])->assertRedirect();
+
+        $this->assertSame(18, $this->stock->fresh()->qty);
+        $this->assertDatabaseHas('inventory_logs', ['qty_change' => 8]);
+    }
+
+    /** A count that matches the books is not a movement and must not log one. */
+    public function test_a_count_that_changes_nothing_writes_no_movement(): void
+    {
+        $this->move(['mode' => 'count', 'quantity' => 10])->assertRedirect();
+
+        $this->assertSame(10, $this->stock->fresh()->qty);
+        $this->assertSame(0, InventoryLog::count());
+    }
+
+    /** A count is how an oversold row gets reconciled back to reality. */
+    public function test_a_count_reconciles_an_oversold_row(): void
+    {
+        $this->stock->update(['qty' => -6]);
+
+        $this->move(['mode' => 'count', 'quantity' => 0])->assertRedirect();
+
+        $this->assertSame(0, $this->stock->fresh()->qty);
+        $this->assertDatabaseHas('inventory_logs', ['qty_change' => 6]);
+    }
+
+    public function test_a_customer_return_adds_stock_back(): void
+    {
+        $this->move(['mode' => 'return', 'quantity' => 2])->assertRedirect();
+
+        $this->assertSame(12, $this->stock->fresh()->qty);
+        $this->assertDatabaseHas('inventory_logs', ['type' => 'return', 'qty_change' => 2]);
+    }
+
+    public function test_an_unknown_mode_is_rejected(): void
+    {
+        $this->move(['mode' => 'teleport', 'quantity' => 5])->assertSessionHasErrors('mode');
+
+        $this->assertSame(10, $this->stock->fresh()->qty);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Threshold */
+    /* ------------------------------------------------------------------ */
+
+    public function test_the_threshold_can_be_set_and_cleared_without_a_movement(): void
+    {
+        $this->actingAs($this->admin)
+            ->put(route('inventory.threshold'), ['stock_id' => $this->stock->id, 'low_stock_threshold' => 20])
+            ->assertRedirect();
+
+        $this->assertSame(20, $this->stock->fresh()->low_stock_threshold);
+
+        $this->actingAs($this->admin)
+            ->put(route('inventory.threshold'), ['stock_id' => $this->stock->id, 'low_stock_threshold' => null])
+            ->assertRedirect();
+
+        $this->assertNull($this->stock->fresh()->low_stock_threshold);
+
+        // Changing an alert level is a setting, not stock moving.
+        $this->assertSame(0, InventoryLog::count());
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Access */
+    /* ------------------------------------------------------------------ */
+
+    /** A manager must not be able to move another store's stock by id. */
+    public function test_a_manager_cannot_move_another_stores_stock(): void
+    {
+        $other = Store::factory()->create();
+        $manager = User::factory()->manager($other)->create();
+
+        $this->actingAs($manager)
+            ->post(route('inventory.store'), ['stock_id' => $this->stock->id, 'mode' => 'receive', 'quantity' => 99])
+            ->assertNotFound();
+
+        $this->assertSame(10, $this->stock->fresh()->qty);
+    }
+
+    public function test_a_cashier_cannot_reach_inventory(): void
+    {
+        $cashier = User::factory()->cashier($this->store)->create();
+
+        $this->actingAs($cashier)->get(route('inventory.index'))->assertForbidden();
+        $this->actingAs($cashier)
+            ->post(route('inventory.store'), ['stock_id' => $this->stock->id, 'mode' => 'receive', 'quantity' => 1])
+            ->assertForbidden();
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Listing */
+    /* ------------------------------------------------------------------ */
+
+    public function test_the_index_summarises_and_filters_by_state(): void
+    {
+        $low = Stock::create(['product_id' => Product::factory()->create()->id, 'store_id' => $this->store->id, 'qty' => 2, 'low_stock_threshold' => 5]);
+        $oversold = Stock::create(['product_id' => Product::factory()->create()->id, 'store_id' => $this->store->id, 'qty' => -3]);
+        Stock::create(['product_id' => Product::factory()->create()->id, 'store_id' => $this->store->id, 'qty' => 0]);
+
+        $this->actingAs($this->admin)
+            ->get(route('inventory.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Inventory/Index')
+                ->where('summary.tracked', 4)
+                ->where('summary.low', 1)
+                ->where('summary.out', 1)
+                ->where('summary.oversold', 1)
+            );
+
+        $this->actingAs($this->admin)
+            ->get(route('inventory.index', ['state' => 'oversold']))
+            ->assertInertia(fn (AssertableInertia $p) => $p->has('stocks.data', 1)->where('stocks.data.0.id', $oversold->id));
+
+        $this->actingAs($this->admin)
+            ->get(route('inventory.index', ['state' => 'low']))
+            ->assertInertia(fn (AssertableInertia $p) => $p->has('stocks.data', 1)->where('stocks.data.0.id', $low->id));
+    }
+}

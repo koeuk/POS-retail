@@ -104,7 +104,7 @@ function confirmDelete() {
                             </Badge>
 
                             <Pencil
-                                class="hidden size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 md:block"
+                                class="hidden size-4 shrink-0 text-muted-foreground md:block"
                             />
                         </button>
 
