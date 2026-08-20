@@ -28,8 +28,14 @@ class ProductFactory extends Factory
         ];
     }
 
-    /** Null tax_rate means 0%, exercised by the per-line tax calculation. */
+    /** Explicitly zero-rated. An explicit 0.00 is never overridden by the default. */
     public function taxFree(): static
+    {
+        return $this->state(fn () => ['tax_rate' => '0.00']);
+    }
+
+    /** No rate of its own, so it inherits default_tax_rate from settings. */
+    public function inheritsTax(): static
     {
         return $this->state(fn () => ['tax_rate' => null]);
     }

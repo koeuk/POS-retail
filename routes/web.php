@@ -3,6 +3,7 @@
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PosController;
@@ -74,6 +75,13 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
         Route::get('admin/ping', function () {
             return response()->json(['ok' => true, 'area' => 'admin']);
         })->name('admin.ping');
+
+        /*
+        | Inventory. Movements, not raw edits — see InventoryController.
+        */
+        Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
+        Route::post('inventory/movements', [InventoryController::class, 'store'])->name('inventory.store');
+        Route::put('inventory/threshold', [InventoryController::class, 'updateThreshold'])->name('inventory.threshold');
 
         Route::resource('products', ProductController::class)->except('show');
 

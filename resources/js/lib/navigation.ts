@@ -36,6 +36,7 @@ export const navGroups: NavGroup[] = [
         items: [
             { title: 'Products', href: '/products', icon: Boxes, requires: 'manage' },
             { title: 'Categories', href: '/categories', icon: Shapes, requires: 'manage' },
+            { title: 'Inventory', href: '/inventory', icon: PackageSearch, requires: 'manage' },
         ],
     },
     {
