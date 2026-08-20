@@ -2,6 +2,45 @@
 
 **8 phases.** Each phase has a verification gate. Do not start the next phase until the current gate passes.
 
+## Progress
+
+| Phase | Status |
+|---|---|
+| 1 — Scaffold & Database | ⏳ **In progress** — scaffold installed, MySQL connected, 8 baseline tables migrated. Domain migrations not yet written. |
+| 2 — Auth, Roles & Session Longevity | ⬜ Not started |
+| 3 — Admin CRUD | ⬜ Not started |
+| 4 — POS Sync Endpoints | ⬜ Not started |
+| 5 — POS UI (online) | ⬜ Not started |
+| 6 — Offline Layer | ⬜ Not started |
+| 7 — Receipts | ⬜ Not started |
+| 8 — Dashboard & Reports | ⬜ Not started |
+
+### 🚑 Blocker — `/tmp` filesystem is full (0 bytes free)
+
+All shell commands fail with `ENOSPC`. Nothing can proceed until this is cleared. Run in a terminal:
+
+```bash
+df -h /tmp                 # confirm
+rm -rf /tmp/claude-1000/*  # or clear whatever is largest
+sudo rm -rf /tmp/*         # nuclear option, safe on a reboot-clean /tmp
+```
+
+If `/tmp` is a small tmpfs, restart Claude Code with more room instead:
+
+```bash
+CLAUDE_CODE_TMPDIR=/media/koeuk/Drive/tmp claude
+```
+
+### Open decision — Laravel 12 vs 13
+
+`composer create-project laravel/vue-starter-kit` installs **Laravel 12 + Inertia 2 + Ziggy** — Packagist's tags (`v1.0.2`) lag the GitHub repo. The Laravel 13 + Inertia 3 + Fortify + Wayfinder stack this plan describes lives on `dev-main`, which is what the official `laravel new` installer actually clones.
+
+Currently installed: **Laravel 12**. The `dev-main` reinstall was attempted and died on the `/tmp` blocker above.
+
+Both work fine for this build — every POS requirement is version-neutral. Laravel 12 is stable and supported into 2027. Decide once `/tmp` is fixed:
+- **Stay on 12** — zero risk, already working and migrated.
+- **Switch to 13** — matches "Laravel (latest)", needs a clean reinstall over the existing tree.
+
 **Architecture in one line:** Inertia SPA, no separate API. One route file, one auth, one middleware stack — the POS sync endpoints are ordinary `web.php` routes that happen to return JSON.
 
 ---
@@ -49,6 +88,38 @@ Everything is one Inertia SPA. Two halves differ only in how they talk to the se
 An Inertia response is a page — props plus a component name — and a POST returns a redirect. Neither can be queued in Dexie and replayed hours later. The offline queue needs endpoints that accept a payload and return a plain data result, idempotently. Those are ordinary `web.php` routes; they simply return JSON rather than `Inertia::render()`. No second API layer, no second auth system.
 
 **axios config:** set `withXSRFToken: true` and `withCredentials: true`. Axios 1.x will not attach the `X-XSRF-TOKEN` header without it, and every `web.php` route enforces CSRF.
+
+---
+
+## UI & Motion
+
+Modern layout with smooth animation throughout — applied to pages, layout, and cards. Two distinct motion budgets, because the admin side and the POS side have opposite needs.
+
+### Admin pages — expressive
+
+- **Page transitions:** fade + 8px rise on Inertia navigation, keyed on the page component so it re-runs per route
+- **Cards:** staggered entrance (~40ms apart), settling into place rather than popping
+- **Lists & tables:** row fade-in on load; `<TransitionGroup>` for insert/remove so deleting a row slides the rest up instead of snapping
+- **Hover/press:** subtle lift on cards, scale-down press feedback on buttons
+- **Modals/sheets:** scale from 0.96 + backdrop fade
+- **Skeletons** rather than spinners for loading states
+
+### POS checkout — restrained, deliberately
+
+Heavy animation on a touch POS actively hurts. A cashier tapping 60 items a minute needs the UI to feel *instant*, not choreographed.
+
+- Tap feedback under **100ms**, never longer
+- Product grid tiles: press-scale only, no entrance animation on re-render
+- Cart line insert: fast 120ms slide, no stagger
+- No page transitions at all inside `/pos` — it never navigates
+- The only expressive motion allowed: the sync status badge and payment-success confirmation
+
+### Non-negotiable rules
+
+- **Animate only `transform` and `opacity`.** Never `width`, `height`, `top`, `left`, or `margin` — those trigger layout on every frame and will visibly stutter on a tablet.
+- **Respect `prefers-reduced-motion`** — a global media query that reduces all durations to near-zero. Accessibility requirement, not optional.
+- **No animation on the critical sale path.** Nothing between "tap Complete Sale" and the order landing in Dexie may be gated behind a transition finishing.
+- Avoid animating `filter: blur()` on large surfaces — it is expensive to composite.
 
 ---
 
@@ -150,11 +221,12 @@ In `order_items`, **always** snapshot `product_name` and `unit_price` at time of
 - Controllers + form requests + policies for **products, categories, customers, users, stores**
 - Inertia pages: `Products/{Index,Create,Edit}.vue`, `Categories/Index.vue`, `Customers/Index.vue`, plus Users and Stores
 - shadcn-vue Table, Dialog, Input, Button, Badge, Card throughout
-- App shell: sidebar nav + topbar, clean and minimal
+- App shell: modern sidebar nav + topbar, responsive, collapsible
+- Motion per the **UI & Motion** section — page transitions, staggered card entrance, `<TransitionGroup>` on tables, skeleton loaders
 - Product image upload; category tree respects `parent_id`
 - Cashier form request enforces non-null `store_id`
 
-**Gate:** Create, read, update, and delete works for each resource. Validation errors render. Role restrictions hold in the UI.
+**Gate:** Create, read, update, and delete works for each resource. Validation errors render. Role restrictions hold in the UI. Transitions run at 60fps with no layout thrash (verify in DevTools Performance), and collapse correctly under `prefers-reduced-motion`.
 
 ---
 
