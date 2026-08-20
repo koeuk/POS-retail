@@ -64,7 +64,7 @@ function submit() {
 </script>
 
 <template>
-    <form class="grid gap-5 pb-20 md:pb-0 lg:grid-cols-3" @submit.prevent="submit">
+    <form class="grid gap-5 lg:grid-cols-3" @submit.prevent="submit">
         <!-- Main -->
         <div class="stagger space-y-5 lg:col-span-2">
             <section class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
@@ -234,11 +234,16 @@ function submit() {
             Phone: a docked action bar. This form is taller than the screen, so
             a submit button at the end of the document means scrolling past the
             image picker and both switches to commit an edit made at the top.
-            It sits directly above the tab bar and carries the home indicator's
-            inset itself.
+            It rests just above the tab bar.
+
+            Sticky, not fixed: AppLayout's entrance animation uses fill-mode
+            `both`, so its wrapper keeps a transform after the animation ends —
+            and a transformed ancestor becomes the containing block for any
+            fixed child, which would anchor this bar to the foot of the page
+            instead of the screen.
         -->
         <div
-            class="fixed inset-x-0 z-30 border-t border-border bg-background/95 px-5 py-3 backdrop-blur-md md:hidden"
+            class="sticky z-30 -mx-5 border-t border-border bg-background/95 px-5 py-3 backdrop-blur-md md:hidden"
             style="bottom: calc(var(--tabbar-h) + var(--safe-bottom))"
         >
             <div class="flex items-center gap-2">

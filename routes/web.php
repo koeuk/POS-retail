@@ -2,14 +2,15 @@
 
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\PosDataController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 /*
  * This is staff software, not a marketing site — there is no landing page.
@@ -39,9 +40,7 @@ Route::get('menu', [MenuController::class, 'index'])->name('menu');
 */
 Route::middleware(['auth', 'verified', 'role'])->group(function () {
 
-    Route::get('dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     /*
     | POS data endpoints — JSON, not Inertia. See PosDataController.
@@ -65,6 +64,9 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
     | read) live in the policies, not here.
     */
     Route::middleware('role:admin,manager')->group(function () {
+        Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
+
         Route::get('admin/ping', function () {
             return response()->json(['ok' => true, 'area' => 'admin']);
         })->name('admin.ping');
