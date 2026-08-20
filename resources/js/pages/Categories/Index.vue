@@ -136,7 +136,8 @@ const parentOptions = computed(() => props.categories.filter((c) => c.id !== edi
                             <p class="truncate font-medium leading-tight" :class="c.depth ? 'text-sm' : ''">
                                 {{ c.name }}
                             </p>
-                            <p v-if="c.parent" class="truncate text-xs text-muted-foreground">in {{ c.parent.name }}</p>
+                            <!-- Only when the parent row isn't right above it — i.e. a search left this child orphaned. -->
+                            <p v-if="c.parent && !c.depth" class="truncate text-xs text-muted-foreground">in {{ c.parent.name }}</p>
                         </div>
 
                         <Badge variant="outline" class="tabular font-mono">
