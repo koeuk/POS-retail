@@ -7,8 +7,8 @@
 | Phase | Status |
 |---|---|
 | 1 — Scaffold & Database | ✅ **Done** — 20 tables, 12 migrations clean, seeded, builds, serves. |
-| 2 — Auth, Roles & Session Longevity | ⏳ **In progress** |
-| 3 — Admin CRUD | ⬜ Not started |
+| 2 — Auth, Roles & Session Longevity | ✅ **Done** — 34 tests green, roles enforced, heartbeat live, `/` → login. |
+| 3 — Admin CRUD | ⏳ **In progress** |
 | 4 — POS Sync Endpoints | ⬜ Not started |
 | 5 — POS UI (online) | ⬜ Not started |
 | 6 — Offline Layer | ⬜ Not started |

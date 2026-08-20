@@ -43,7 +43,21 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user()?->only([
+                    'id', 'name', 'email', 'role', 'store_id', 'is_active',
+                ]),
+                'can' => [
+                    'accessAdmin' => (bool) $request->user()?->role?->canAccessAdmin(),
+                    'manage' => (bool) $request->user()?->hasRole(
+                        \App\Enums\Role::Admin,
+                        \App\Enums\Role::Manager,
+                    ),
+                    'isAdmin' => (bool) $request->user()?->isAdmin(),
+                ],
+            ],
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
             ],
         ]);
     }

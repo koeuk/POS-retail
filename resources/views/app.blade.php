@@ -6,8 +6,18 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
+        {{-- Paint the theme ground before first paint so a dark-mode reload
+             never flashes white. --}}
+        <style>
+            html { background-color: hsl(40 33% 98%); }
+            html.dark { background-color: hsl(28 9% 8%); }
+        </style>
+
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
+        <link
+            href="https://fonts.bunny.net/css?family=bricolage-grotesque:600,700|ibm-plex-sans:400,500,600|ibm-plex-mono:400,500"
+            rel="stylesheet"
+        />
 
         @routes
         @vite(['resources/js/app.ts'])

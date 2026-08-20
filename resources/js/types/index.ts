@@ -1,7 +1,14 @@
 import type { LucideIcon } from 'lucide-vue-next';
 
+export type Role = 'admin' | 'manager' | 'cashier';
+
 export interface Auth {
-    user: User;
+    user: User | null;
+    can: {
+        accessAdmin: boolean;
+        manage: boolean;
+        isAdmin: boolean;
+    };
 }
 
 export interface BreadcrumbItem {
@@ -14,12 +21,20 @@ export interface NavItem {
     href: string;
     icon?: LucideIcon;
     isActive?: boolean;
+    /** Hide from users without this capability. */
+    requires?: 'manage' | 'isAdmin';
+}
+
+export interface NavGroup {
+    label: string;
+    items: NavItem[];
 }
 
 export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
+    flash: { success: string | null; error: string | null };
     ziggy: {
         location: string;
         url: string;
@@ -34,9 +49,101 @@ export interface User {
     name: string;
     email: string;
     avatar?: string;
-    email_verified_at: string | null;
-    created_at: string;
-    updated_at: string;
+    role: Role;
+    store_id: number | null;
+    is_active: boolean;
+    email_verified_at?: string | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Domain                                                                      */
+/* -------------------------------------------------------------------------- */
+
+export interface Store {
+    id: number;
+    name: string;
+    address: string | null;
+    phone: string | null;
+    registers?: Register[];
+    users_count?: number;
+    orders_count?: number;
+}
+
+export interface Register {
+    id: number;
+    store_id: number;
+    name: string;
+    is_active: boolean;
+}
+
+export interface Category {
+    id: number;
+    name: string;
+    parent_id: number | null;
+    parent?: Pick<Category, 'id' | 'name'> | null;
+    products_count?: number;
+    children_count?: number;
+}
+
+export interface Product {
+    id: number;
+    category_id: number;
+    category?: Pick<Category, 'id' | 'name'>;
+    name: string;
+    sku: string;
+    barcode: string | null;
+    description: string | null;
+    cost_price: string;
+    sell_price: string;
+    tax_rate: string | null;
+    image: string | null;
+    unit: string;
+    track_stock: boolean;
+    is_active: boolean;
+    /** Summed across stores by the index query. */
+    stock_qty?: number | null;
+}
+
+export interface Stock {
+    id: number;
+    product_id: number;
+    store_id: number;
+    qty: number;
+    low_stock_threshold: number | null;
+    store?: Pick<Store, 'id' | 'name'>;
+}
+
+export interface Customer {
+    id: number;
+    name: string;
+    phone: string | null;
+    email: string | null;
+    loyalty_points: number;
+    orders_count?: number;
+    spent_total?: string | null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Pagination                                                                  */
+/* -------------------------------------------------------------------------- */
+
+export interface PaginationLink {
+    url: string | null;
+    label: string;
+    active: boolean;
+}
+
+export interface Paginated<T> {
+    data: T[];
+    links: PaginationLink[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    from: number | null;
+    to: number | null;
+    total: number;
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;

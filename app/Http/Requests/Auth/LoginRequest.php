@@ -49,6 +49,18 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // Deactivated staff get a specific message rather than "credentials
+        // do not match" — they know the password is right, and a vague error
+        // just generates support calls. The account is real either way, so
+        // this leaks nothing a correct password had not already confirmed.
+        if (! Auth::user()->is_active) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'This account has been deactivated. Contact your administrator.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

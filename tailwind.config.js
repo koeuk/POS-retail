@@ -12,12 +12,18 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Instrument Sans', ...defaultTheme.fontFamily.sans],
+                sans: ['IBM Plex Sans', ...defaultTheme.fontFamily.sans],
+                display: ['Bricolage Grotesque', 'IBM Plex Sans', ...defaultTheme.fontFamily.sans],
+                mono: ['IBM Plex Mono', ...defaultTheme.fontFamily.mono],
             },
             borderRadius: {
                 lg: 'var(--radius)',
                 md: 'calc(var(--radius) - 2px)',
                 sm: 'calc(var(--radius) - 4px)',
+            },
+            transitionTimingFunction: {
+                'out-quint': 'cubic-bezier(0.22, 1, 0.36, 1)',
+                spring: 'cubic-bezier(0.34, 1.46, 0.64, 1)',
             },
             colors: {
                 background: 'hsl(var(--background))',
