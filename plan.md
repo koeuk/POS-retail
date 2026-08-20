@@ -14,6 +14,24 @@
 | 6 — Offline Layer | ⬜ Not started |
 | 7 — Receipts | ⬜ Not started |
 | 8 — Dashboard & Reports | ⬜ Not started |
+| ➕ Public customer menu | ✅ **Done** — `/menu`, no login, 7 tests. Added outside the original 8 phases. |
+
+### ⚠️ Concurrent session warning
+
+A second Claude session (`pos-retail-e5`) is editing this repository at the same time. It flattened the category tree — see below — and has been committing to `main`. **Two agents on one working tree will eventually clobber each other.** Before resuming multi-session work, either stop one session or split the work by directory.
+
+### Added — public customer menu (`/menu`)
+
+Browse-only catalogue, the **only unauthenticated route in the app**. No cart, no checkout, no ratings.
+
+- `MenuController` returns a hand-built payload — `id`, `name`, `description`, `image`, `unit`, `category`, `price` — so cost price, SKU, barcode and stock can never leak. A test asserts those keys are absent.
+- **Prices are shown tax-inclusive.** Everything else in this build is tax-exclusive, but quoting the net figure on a customer-facing menu would understate what they actually pay at the till.
+- Only categories that contain a visible product are listed; inactive products are hidden.
+- Filtering is client-side — a menu is a small, fully-loaded list, so a round-trip per keystroke would only make it feel slower.
+
+### Categories are now flat
+
+The `parent_id` self-reference was dropped by the concurrent session (`2026_08_20_140000_drop_parent_id_from_categories_table`). Categories are a single flat list with unique names; the two-level tree was more structure than the POS grid needed. This supersedes the `categories` row in the schema table below.
 
 ### Resolved — running on Laravel 12
 

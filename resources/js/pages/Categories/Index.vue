@@ -73,11 +73,7 @@ function confirmDelete() {
 
     <AppLayout :breadcrumbs="[{ title: 'Categories', href: '/categories' }]">
         <div class="px-5 py-6 md:px-8">
-            <PageHeader
-                eyebrow="Catalogue"
-                title="Categories"
-                description="Used to group products and filter the POS grid."
-            >
+            <PageHeader eyebrow="Catalogue" title="Categories" description="Used to group products and filter the POS grid.">
                 <template #actions>
                     <Button class="press" @click="openCreate">
                         <Plus class="size-4" />
@@ -95,11 +91,7 @@ function confirmDelete() {
                 </div>
 
                 <ul v-if="categories.length" class="divide-y divide-border">
-                    <li
-                        v-for="c in categories"
-                        :key="c.id"
-                        class="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40"
-                    >
+                    <li v-for="c in categories" :key="c.id" class="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40">
                         <Shapes class="size-4 shrink-0 text-primary" />
 
                         <p class="min-w-0 flex-1 truncate font-medium leading-tight">{{ c.name }}</p>
@@ -168,9 +160,7 @@ function confirmDelete() {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Delete “{{ pendingDelete?.name }}”?</DialogTitle>
-                    <DialogDescription>
-                        A category that still holds products cannot be deleted.
-                    </DialogDescription>
+                    <DialogDescription> A category that still holds products cannot be deleted. </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                     <Button variant="ghost" class="press" @click="pendingDelete = null">Cancel</Button>
