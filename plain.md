@@ -6,8 +6,8 @@
 
 | Phase | Status |
 |---|---|
-| 1 — Scaffold & Database | ⏳ **In progress** — scaffold installed, MySQL connected, 8 baseline tables migrated. Domain migrations not yet written. |
-| 2 — Auth, Roles & Session Longevity | ⬜ Not started |
+| 1 — Scaffold & Database | ✅ **Done** — 20 tables, 12 migrations clean, seeded, builds, serves. |
+| 2 — Auth, Roles & Session Longevity | ⏳ **In progress** |
 | 3 — Admin CRUD | ⬜ Not started |
 | 4 — POS Sync Endpoints | ⬜ Not started |
 | 5 — POS UI (online) | ⬜ Not started |
@@ -15,31 +15,34 @@
 | 7 — Receipts | ⬜ Not started |
 | 8 — Dashboard & Reports | ⬜ Not started |
 
-### 🚑 Blocker — `/tmp` filesystem is full (0 bytes free)
+### Resolved — running on Laravel 12
 
-All shell commands fail with `ENOSPC`. Nothing can proceed until this is cleared. Run in a terminal:
+`composer create-project laravel/vue-starter-kit` installs **Laravel 12.67 + Inertia 2.0.25 + Ziggy 2.6** — Packagist's tags (`v1.0.2`) lag the GitHub repo, where `dev-main` carries Laravel 13 + Inertia 3 + Fortify + Wayfinder.
 
-```bash
-df -h /tmp                 # confirm
-rm -rf /tmp/claude-1000/*  # or clear whatever is largest
-sudo rm -rf /tmp/*         # nuclear option, safe on a reboot-clean /tmp
-```
+**Decision: stay on Laravel 12.** It is installed, migrated, seeded and building. Every requirement in this build is version-neutral, and Laravel 12 is supported into 2027. Switching would mean discarding a passing gate for no functional gain.
 
-If `/tmp` is a small tmpfs, restart Claude Code with more room instead:
+Two consequences worth recording:
+- Auth is the kit's own controllers in `routes/auth.php`, **not Fortify**. Simpler to extend with role checks, and there is no passkeys/2FA table.
+- Route helpers are **Ziggy** (`route()` in JS), not Wayfinder.
 
-```bash
-CLAUDE_CODE_TMPDIR=/media/koeuk/Drive/tmp claude
-```
+Table count still lands on **20** — the scaffold contributes `migrations` where the Laravel 13 kit would have contributed `passkeys`.
 
-### Open decision — Laravel 12 vs 13
+### Environment notes
 
-`composer create-project laravel/vue-starter-kit` installs **Laravel 12 + Inertia 2 + Ziggy** — Packagist's tags (`v1.0.2`) lag the GitHub repo. The Laravel 13 + Inertia 3 + Fortify + Wayfinder stack this plan describes lives on `dev-main`, which is what the official `laravel new` installer actually clones.
+- The project lives on an **NTFS** volume (`ntfs3`). Vite's `node_modules/.vite-temp` was created `root:root` and had to be deleted so it could be recreated as the running user. If a build ever fails with `EACCES` on `.vite-temp`, delete that directory.
+- `/tmp` filled to 0 bytes mid-build and blocked every shell command. If it recurs: `rm -rf /tmp/claude-1000/*`, or relocate with `CLAUDE_CODE_TMPDIR=/media/koeuk/Drive/tmp claude`.
 
-Currently installed: **Laravel 12**. The `dev-main` reinstall was attempted and died on the `/tmp` blocker above.
+### Phase 1 verified results
 
-Both work fine for this build — every POS requirement is version-neutral. Laravel 12 is stable and supported into 2027. Decide once `/tmp` is fixed:
-- **Stay on 12** — zero risk, already working and migrated.
-- **Switch to 13** — matches "Laravel (latest)", needs a clean reinstall over the existing tree.
+| Check | Result |
+|---|---|
+| Tables in `pos_retail` | **20** |
+| Migrations run | 15 (3 baseline + 12 domain) |
+| Seed | 1 store · 1 register · 3 users · 11 categories · 22 products · 22 stock rows · 5 settings |
+| `npm run build` | ✅ built in 15.47s |
+| `/` · `/login` · `/dashboard` | 200 · 200 · 302 (correctly gated) |
+
+Login credentials — all password `password`: `admin@pos.test` · `manager@pos.test` · `cashier@pos.test`
 
 **Architecture in one line:** Inertia SPA, no separate API. One route file, one auth, one middleware stack — the POS sync endpoints are ordinary `web.php` routes that happen to return JSON.
 
