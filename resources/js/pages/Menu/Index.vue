@@ -37,10 +37,7 @@ const visible = computed(() => {
             return false;
         }
         if (!q) return true;
-        return (
-            p.name.toLowerCase().includes(q) ||
-            (p.description ?? '').toLowerCase().includes(q)
-        );
+        return p.name.toLowerCase().includes(q) || (p.description ?? '').toLowerCase().includes(q);
     });
 });
 
@@ -77,19 +74,11 @@ const year = new Date().getFullYear();
         <!-- Masthead -->
         <header class="border-b border-border">
             <div class="mx-auto max-w-5xl px-5 py-12 text-center md:py-16">
-                <p class="animate-fade font-mono text-[0.7rem] uppercase tracking-[0.28em] text-primary">
-                    Our menu
-                </p>
-                <h1
-                    class="animate-rise mt-3 font-display text-4xl font-bold tracking-tight md:text-6xl"
-                    style="animation-delay: 60ms"
-                >
+                <p class="animate-fade font-mono text-[0.7rem] uppercase tracking-[0.28em] text-primary">Our menu</p>
+                <h1 class="animate-rise mt-3 font-display text-4xl font-bold tracking-tight md:text-6xl" style="animation-delay: 60ms">
                     {{ shop.name }}
                 </h1>
-                <p
-                    class="animate-rise mx-auto mt-3 max-w-md text-sm text-muted-foreground"
-                    style="animation-delay: 120ms"
-                >
+                <p class="animate-rise mx-auto mt-3 max-w-md text-sm text-muted-foreground" style="animation-delay: 120ms">
                     Everything we stock, with current prices. All prices include tax.
                 </p>
             </div>
@@ -99,16 +88,8 @@ const year = new Date().getFullYear();
         <div class="sticky top-0 z-20 border-b border-border bg-background/85 backdrop-blur">
             <div class="mx-auto max-w-5xl px-5 py-3">
                 <div class="relative">
-                    <Search
-                        class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                    />
-                    <Input
-                        v-model="search"
-                        type="search"
-                        placeholder="Search the menu…"
-                        class="pl-9"
-                        aria-label="Search the menu"
-                    />
+                    <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input v-model="search" type="search" placeholder="Search the menu…" class="pl-9" aria-label="Search the menu" />
                 </div>
 
                 <nav v-if="categories.length" class="mt-3 flex gap-1.5 overflow-x-auto pb-1">
@@ -156,35 +137,18 @@ const year = new Date().getFullYear();
                 </div>
 
                 <ul class="stagger grid gap-3 sm:grid-cols-2">
-                    <li
-                        v-for="item in group.items"
-                        :key="item.id"
-                        class="lift flex items-center gap-4 rounded-xl border border-border bg-card p-3"
-                    >
-                        <div
-                            class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40"
-                        >
-                            <img
-                                v-if="item.image"
-                                :src="`/storage/${item.image}`"
-                                :alt="item.name"
-                                loading="lazy"
-                                class="size-full object-cover"
-                            />
+                    <li v-for="item in group.items" :key="item.id" class="lift flex items-center gap-4 rounded-xl border border-border bg-card p-3">
+                        <div class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40">
+                            <img v-if="item.image" :src="`/storage/${item.image}`" :alt="item.name" loading="lazy" class="size-full object-cover" />
                             <UtensilsCrossed v-else class="size-5 text-muted-foreground/60" />
                         </div>
 
                         <div class="min-w-0 flex-1">
                             <h3 class="truncate font-medium leading-snug">{{ item.name }}</h3>
-                            <p
-                                v-if="item.description"
-                                class="line-clamp-2 text-xs leading-relaxed text-muted-foreground"
-                            >
+                            <p v-if="item.description" class="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
                                 {{ item.description }}
                             </p>
-                            <p v-else class="font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground/70">
-                                per {{ item.unit }}
-                            </p>
+                            <p v-else class="font-mono text-[0.7rem] uppercase tracking-wider text-muted-foreground/70">per {{ item.unit }}</p>
                         </div>
 
                         <p class="tabular shrink-0 font-mono text-base font-semibold text-primary">
@@ -195,15 +159,11 @@ const year = new Date().getFullYear();
             </section>
 
             <div v-if="!grouped.length" class="animate-scale py-20 text-center">
-                <div
-                    class="mx-auto flex size-12 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground"
-                >
+                <div class="mx-auto flex size-12 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground">
                     <Search class="size-5" />
                 </div>
                 <p class="mt-3 font-display text-lg font-semibold">Nothing matches that</p>
-                <p class="mt-1 text-sm text-muted-foreground">
-                    Try a different word, or browse everything.
-                </p>
+                <p class="mt-1 text-sm text-muted-foreground">Try a different word, or browse everything.</p>
                 <button
                     type="button"
                     class="press mt-4 rounded-full border border-border px-4 py-2 text-sm transition-colors hover:bg-accent"
@@ -217,9 +177,7 @@ const year = new Date().getFullYear();
         <footer class="border-t border-border">
             <div class="mx-auto max-w-5xl px-5 py-8 text-center">
                 <p v-if="shop.footer" class="text-sm text-muted-foreground">{{ shop.footer }}</p>
-                <p class="mt-1 font-mono text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground/60">
-                    {{ shop.name }} · {{ year }}
-                </p>
+                <p class="mt-1 font-mono text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground/60">{{ shop.name }} · {{ year }}</p>
             </div>
         </footer>
     </div>
