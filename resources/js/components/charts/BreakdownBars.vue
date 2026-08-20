@@ -6,6 +6,13 @@ interface Row {
     value: number;
     /** Secondary figure shown as recessive text, e.g. a transaction count. */
     meta?: string;
+    /**
+     * Fixed categorical slot (0-3) for this entity. Supply it whenever rows
+     * can be reordered — colour must follow the thing, never its rank, or a
+     * change in takings repaints every bar and the reader has to relearn
+     * the legend.
+     */
+    slot?: number;
 }
 
 const props = withDefaults(
@@ -30,7 +37,7 @@ const peak = computed(() => Math.max(1, ...props.rows.map((r) => r.value)));
 const width = (value: number) => `${Math.max(1.5, (value / peak.value) * 100)}%`;
 
 /** Fixed slot order, never cycled — colour follows the entity, not its rank. */
-const seriesVar = (index: number) => `var(--series-${(index % 4) + 1})`;
+const seriesVar = (row: Row, index: number) => `var(--series-${((row.slot ?? index) % 4) + 1})`;
 
 const share = (value: number) => (total.value > 0 ? Math.round((value / total.value) * 100) : 0);
 
@@ -42,8 +49,10 @@ const money = (n: number) => `${props.currency}${n.toLocaleString(undefined, { m
         <li v-for="(row, i) in rows" :key="row.label" class="space-y-1">
             <div class="flex items-baseline justify-between gap-3 text-sm">
                 <span class="flex min-w-0 items-center gap-2">
-                    <span class="size-2.5 shrink-0 rounded-[3px]" :style="{ background: categorical ? seriesVar(i) : 'hsl(var(--primary))' }" />
-                    <span class="truncate capitalize">{{ row.label }}</span>
+                    <span class="size-2.5 shrink-0 rounded-[3px]" :style="{ background: categorical ? seriesVar(row, i) : 'hsl(var(--primary))' }" />
+                    <!-- No capitalize transform: labels arrive presentation-ready,
+                         and it would mangle product names and initialisms. -->
+                    <span class="truncate">{{ row.label }}</span>
                 </span>
                 <span class="tabular shrink-0 font-mono font-medium">{{ money(row.value) }}</span>
             </div>
@@ -55,7 +64,7 @@ const money = (n: number) => `${props.currency}${n.toLocaleString(undefined, { m
                         class="h-full rounded-full transition-[width] duration-300 ease-out-quint"
                         :style="{
                             width: width(row.value),
-                            background: categorical ? seriesVar(i) : 'hsl(var(--primary))',
+                            background: categorical ? seriesVar(row, i) : 'hsl(var(--primary))',
                         }"
                     />
                 </div>

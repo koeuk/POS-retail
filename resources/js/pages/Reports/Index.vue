@@ -37,11 +37,25 @@ function preset(days: number) {
 
 const money = (v: string | number) => `$${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+/*
+ * Fixed slot per tender type, so cash is always slot 0 no matter how the
+ * takings rank on any given day. `capitalize` would render "qr" as "Qr",
+ * which is wrong for an initialism.
+ */
+const METHOD_SLOT: Record<string, number> = { cash: 0, card: 1, qr: 2, credit: 3 };
+const METHOD_LABEL: Record<string, string> = {
+    cash: 'Cash',
+    card: 'Card',
+    qr: 'QR',
+    credit: 'Credit',
+};
+
 const paymentRows = computed(() =>
     props.byPayment.map((row) => ({
-        label: row.method,
+        label: METHOD_LABEL[row.method] ?? row.method,
         value: Number(row.amount),
         meta: `${row.count}×`,
+        slot: METHOD_SLOT[row.method] ?? 0,
     })),
 );
 
