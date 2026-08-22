@@ -41,8 +41,16 @@ withDefaults(defineProps<Props>(), {
                 <template #actions><slot name="actions" /></template>
             </MobileAppBar>
 
-            <!-- Content clears the fixed tab bar; the desktop has no tab bar to clear. -->
-            <div class="pb-tabbar md:pb-0">
+            <!--
+                On a phone the ground goes a shade grey so the white cards read
+                as floating above it rather than as panels welded to the page.
+                The desktop keeps the bone background, where the sidebar
+                already supplies that separation.
+
+                Content clears the fixed tab bar; the desktop has no tab bar
+                to clear.
+            -->
+            <div class="pb-tabbar bg-muted/40 md:bg-transparent md:pb-0">
                 <slot />
             </div>
         </AppContent>

@@ -2,6 +2,7 @@
 import BreakdownBars from '@/components/charts/BreakdownBars.vue';
 import SalesBarChart from '@/components/charts/SalesBarChart.vue';
 import StatTile from '@/components/charts/StatTile.vue';
+import DateRangePicker from '@/components/DateRangePicker.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -92,19 +93,7 @@ const exportUrl = computed(() => route('reports.export', { from: from.value, to:
 
             <!-- Filters: one row, above the charts. -->
             <div class="animate-rise mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3 shadow-sm">
-                <input
-                    v-model="from"
-                    type="date"
-                    aria-label="From date"
-                    class="tabular h-9 rounded-md border border-input bg-background px-2 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-                <span class="text-muted-foreground">→</span>
-                <input
-                    v-model="to"
-                    type="date"
-                    aria-label="To date"
-                    class="tabular h-9 rounded-md border border-input bg-background px-2 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
+                <DateRangePicker v-model:from="from" v-model:to="to" placeholder="Pick a period" class="w-full sm:w-[16rem]" />
 
                 <div class="ml-auto flex gap-1">
                     <button

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 interface Row {
     day: string;
@@ -69,6 +69,18 @@ const labelIndexes = computed(() => {
 
 const hovered = ref<number | null>(null);
 
+/*
+ * Scrolling away from a chart must dismiss its tooltip. On a phone the tap
+ * that opened it is long over, and a label left floating over the next panel
+ * reads as part of that panel.
+ */
+onMounted(() => window.addEventListener('scroll', clearHover, { passive: true, capture: true }));
+onBeforeUnmount(() => window.removeEventListener('scroll', clearHover, { capture: true }));
+
+function clearHover() {
+    hovered.value = null;
+}
+
 const shortDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
 const money = (n: number) => `${props.currency}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -95,7 +107,9 @@ const tooltip = computed(() => {
             :style="{ height: `${height}px` }"
             role="img"
             :aria-label="`Sales for the last ${rows.length} days`"
-            @mouseleave="hovered = null"
+            @pointerleave="hovered = null"
+            @pointercancel="hovered = null"
+            @touchend="hovered = null"
         >
             <!-- Recessive grid: it orients, it does not compete. -->
             <g>
@@ -132,7 +146,15 @@ const tooltip = computed(() => {
                 />
             </g>
 
-            <!-- Invisible hit targets, wider than the marks so hovering is easy. -->
+            <!--
+                Invisible hit targets, wider than the marks so hovering is easy.
+
+                pointermove, not pointerenter: the pointer stays wherever it
+                was last used, so after an Inertia navigation a bar can mount
+                directly underneath it and `enter` fires with nobody touching
+                anything — which pinned a tooltip open over the panel heading.
+                Movement is the only honest signal that someone is looking.
+            -->
             <g>
                 <rect
                     v-for="(row, i) in rows"
@@ -142,7 +164,7 @@ const tooltip = computed(() => {
                     :width="slot"
                     :height="plotH"
                     fill="transparent"
-                    @mouseenter="hovered = i"
+                    @pointermove="hovered = i"
                 />
             </g>
 

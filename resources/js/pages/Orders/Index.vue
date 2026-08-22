@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DateRangePicker from '@/components/DateRangePicker.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import Money from '@/components/Money.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -112,18 +113,7 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                         </SelectContent>
                     </Select>
 
-                    <input
-                        v-model="from"
-                        type="date"
-                        aria-label="From date"
-                        class="tabular h-10 rounded-md border border-input bg-background px-2 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                    <input
-                        v-model="to"
-                        type="date"
-                        aria-label="To date"
-                        class="tabular h-10 rounded-md border border-input bg-background px-2 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
+                    <DateRangePicker v-model:from="from" v-model:to="to" placeholder="Any date" class="w-full sm:w-[16rem]" />
                 </div>
 
                 <div v-if="orders.data.length" class="overflow-x-auto">

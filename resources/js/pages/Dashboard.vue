@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { Boxes, CloudOff, Receipt, ScanBarcode, TrendingUp, TriangleAlert } from 'lucide-vue-next';
+import { Boxes, ChartNoAxesColumn, ChevronRight, CloudOff, PackageSearch, Receipt, ScanBarcode, TrendingUp, TriangleAlert } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 interface Summary {
@@ -58,6 +58,28 @@ const money = (v: string | number) => `$${Number(v).toLocaleString(undefined, { 
 const time = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '—');
 
 const weekTotal = computed(() => props.trend.reduce((sum, row) => sum + Number(row.sales), 0));
+
+/** Change against yesterday, for the hero chip. Null when there is no base. */
+const salesDelta = computed(() => {
+    const now = Number(props.today.sales);
+    const before = Number(props.yesterday.sales);
+    if (!Number.isFinite(before) || before === 0) return null;
+    return ((now - before) / before) * 100;
+});
+
+/*
+ * The four places a shopkeeper actually goes from here. Rendered as a row of
+ * round buttons inside the hero on a phone — a thumb reaches them without
+ * scrolling, which a list of full-width cards never manages.
+ */
+const quickActions = computed(() =>
+    [
+        { title: 'Sell', href: '/pos', icon: ScanBarcode, always: true },
+        { title: 'Orders', href: '/orders', icon: Receipt, always: props.canSeeReports },
+        { title: 'Stock', href: '/inventory', icon: PackageSearch, always: props.canSeeReports },
+        { title: 'Reports', href: '/reports', icon: ChartNoAxesColumn, always: props.canSeeReports },
+    ].filter((a) => a.always),
+);
 </script>
 
 <template>
@@ -67,7 +89,9 @@ const weekTotal = computed(() => props.trend.reduce((sum, row) => sum + Number(r
         <div class="px-5 py-6 md:px-8">
             <PageHeader :eyebrow="greeting" :title="user?.name ?? 'Dashboard'" description="Today across the shop floor.">
                 <template #actions>
-                    <Button as-child class="press">
+                    <!-- Hidden on a phone: the hero's Sell button is the same
+                         destination, and closer to the thumb. -->
+                    <Button as-child class="press hidden md:inline-flex">
                         <Link href="/pos">
                             <ScanBarcode class="size-4" />
                             Open POS
@@ -76,7 +100,47 @@ const weekTotal = computed(() => props.trend.reduce((sum, row) => sum + Number(r
                 </template>
             </PageHeader>
 
-            <div class="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <!--
+                Phone hero. One dark card carrying the only number that matters
+                before lunch, with the day's routes out of it underneath. The
+                four separate full-width tiles this replaces pushed everything
+                else below the fold on a 390px screen.
+            -->
+            <section class="animate-rise mb-4 rounded-3xl bg-foreground p-5 text-background shadow-lg md:hidden">
+                <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] opacity-60">Today's sales</p>
+
+                <div class="mt-1 flex items-end gap-2">
+                    <p class="tabular font-mono text-4xl font-bold leading-none">{{ money(today.sales) }}</p>
+                    <span
+                        v-if="salesDelta !== null"
+                        class="mb-0.5 rounded-full px-2 py-0.5 text-[0.7rem] font-semibold"
+                        :class="salesDelta >= 0 ? 'bg-primary text-primary-foreground' : 'bg-background/15'"
+                    >
+                        {{ salesDelta >= 0 ? '+' : '' }}{{ salesDelta.toFixed(0) }}%
+                    </span>
+                </div>
+
+                <p class="tabular mt-1 font-mono text-xs opacity-60">
+                    {{ today.orders }} order{{ today.orders === 1 ? '' : 's' }} · {{ today.items }} item{{ today.items === 1 ? '' : 's' }}
+                    <span v-if="offlineToday > 0"> · {{ offlineToday }} synced offline</span>
+                </p>
+
+                <div class="mt-5 flex items-start justify-around gap-2">
+                    <Link
+                        v-for="action in quickActions"
+                        :key="action.href"
+                        :href="action.href"
+                        class="press flex flex-1 flex-col items-center gap-1.5"
+                    >
+                        <span class="flex size-12 items-center justify-center rounded-full bg-background/15">
+                            <component :is="action.icon" class="size-5" />
+                        </span>
+                        <span class="text-[0.7rem] font-medium opacity-80">{{ action.title }}</span>
+                    </Link>
+                </div>
+            </section>
+
+            <div class="stagger hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-4">
                 <StatTile label="Today's sales" :value="money(today.sales)" :icon="TrendingUp" :previous="yesterday.sales" />
                 <StatTile label="Orders" :value="String(today.orders)" :icon="Receipt" :previous="yesterday.orders" />
                 <StatTile
@@ -93,7 +157,7 @@ const weekTotal = computed(() => props.trend.reduce((sum, row) => sum + Number(r
                  above a block of dead space. -->
             <div class="mt-4 grid items-start gap-4 lg:grid-cols-3">
                 <!-- One series, so no legend: the panel title names it. -->
-                <section class="animate-rise rounded-xl border border-border bg-card p-4 shadow-sm lg:col-span-2" style="animation-delay: 120ms">
+                <section class="animate-rise rounded-2xl border border-border bg-card p-4 shadow-sm lg:col-span-2" style="animation-delay: 120ms">
                     <div class="mb-3 flex items-baseline justify-between">
                         <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Sales · last 7 days</h2>
                         <p class="tabular font-mono text-sm font-semibold">{{ money(weekTotal) }}</p>
@@ -102,10 +166,18 @@ const weekTotal = computed(() => props.trend.reduce((sum, row) => sum + Number(r
                     <SalesBarChart :rows="trend" :height="200" />
                 </section>
 
-                <section class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 160ms">
-                    <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                        Latest sales
-                    </h2>
+                <section class="animate-rise rounded-2xl border border-border bg-card shadow-sm" style="animation-delay: 160ms">
+                    <div class="flex items-center justify-between border-b border-border px-4 py-3">
+                        <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Latest sales</h2>
+                        <Link
+                            v-if="canSeeReports"
+                            :href="route('orders.index')"
+                            class="press flex items-center gap-0.5 text-xs font-medium text-primary"
+                        >
+                            View all
+                            <ChevronRight class="size-3.5" />
+                        </Link>
+                    </div>
 
                     <ul v-if="recentOrders.length" class="divide-y divide-border">
                         <li v-for="order in recentOrders" :key="order.id" class="flex items-center gap-3 px-4 py-2.5">
@@ -130,7 +202,7 @@ const weekTotal = computed(() => props.trend.reduce((sum, row) => sum + Number(r
                 -->
                 <section
                     v-if="oversold.length"
-                    class="animate-rise rounded-xl border border-destructive/40 bg-card shadow-sm"
+                    class="animate-rise rounded-2xl border border-destructive/40 bg-card shadow-sm"
                     style="animation-delay: 200ms"
                 >
                     <h2
@@ -150,7 +222,7 @@ const weekTotal = computed(() => props.trend.reduce((sum, row) => sum + Number(r
                     </ul>
                 </section>
 
-                <section class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 240ms">
+                <section class="animate-rise rounded-2xl border border-border bg-card shadow-sm" style="animation-delay: 240ms">
                     <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                         Low stock
                     </h2>
