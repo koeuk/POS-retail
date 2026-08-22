@@ -206,6 +206,36 @@ function submitThreshold() {
 
 /* ------------------------------------------------------------------ */
 
+const anyFilter = computed(() => !!search.value || storeId.value !== ALL || state.value !== ALL);
+
+/*
+ * An empty table after a filter is usually an answer, not a failure. Saying
+ * "nothing to show" for a Low stock filter reads as a broken screen when what
+ * it actually means is that nothing has fallen to its alert level yet.
+ */
+const emptyCopy = computed(() => {
+    if (search.value) {
+        return { title: 'Nothing matches that search', description: 'Check the spelling, or clear the filters below.' };
+    }
+
+    switch (state.value) {
+        case 'low':
+            return { title: 'Nothing is low on stock', description: 'Every tracked product is above its alert level.' };
+        case 'out':
+            return { title: 'Nothing is out of stock', description: 'No tracked product has hit zero.' };
+        case 'oversold':
+            return { title: 'Nothing is oversold', description: 'No product has been sold past what the books said was there.' };
+        default:
+            return { title: 'Nothing to show', description: 'Only active products with a stock row appear here.' };
+    }
+});
+
+function clearFilters() {
+    search.value = '';
+    storeId.value = ALL;
+    state.value = ALL;
+}
+
 function tone(stock: StockRow) {
     if (stock.qty < 0) return 'text-destructive font-semibold';
     if (stock.qty === 0) return 'text-muted-foreground';
@@ -315,12 +345,9 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                     </Table>
                 </div>
 
-                <EmptyState
-                    v-else
-                    :icon="PackageSearch"
-                    title="Nothing to show"
-                    description="Try clearing the filters. Only active products appear here."
-                />
+                <EmptyState v-else :icon="PackageSearch" :title="emptyCopy.title" :description="emptyCopy.description">
+                    <Button v-if="anyFilter" variant="outline" class="press" @click="clearFilters">Show everything</Button>
+                </EmptyState>
 
                 <Pagination :links="stocks.links" :from="stocks.from" :to="stocks.to" :total="stocks.total" />
             </div>

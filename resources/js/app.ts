@@ -24,7 +24,7 @@ createInertiaApp({
     },
     progress: {
         // Matches --primary so the loading bar reads as part of the theme.
-        color: '#e08307',
+        color: '#1c6949',
     },
 });
 
