@@ -146,7 +146,9 @@ class OrderSyncService
             ]);
 
             if ($product?->track_stock) {
-                $this->moveStock($product, $storeId, (int) $item['qty'], $order, $cashier);
+                // A pack sells in base units: one case of 24 takes 24 off the
+                // can's shelf, not one off a shelf of cases.
+                $this->moveStock($product, $storeId, $product->baseUnits((int) $item['qty']), $order, $cashier);
             }
         }
 
@@ -162,21 +164,25 @@ class OrderSyncService
     }
 
     /**
-     * Decrement stock and record why. The decrement is a single SQL statement
-     * so two concurrent syncs cannot read-modify-write over each other, and
-     * qty is allowed to go negative — see rule 2 in the class docblock.
+     * Decrement stock and record why. `$qty` is in **base units**, already
+     * multiplied out by the caller. The decrement is a single SQL statement so
+     * two concurrent syncs cannot read-modify-write over each other, and qty is
+     * allowed to go negative — see rule 2 in the class docblock.
      */
     private function moveStock(Product $product, int $storeId, int $qty, Order $order, User $cashier): void
     {
+        // Stock hangs off the base product; a pack has no shelf of its own.
+        $stockProductId = $product->stockProductId();
+
         $stock = Stock::firstOrCreate(
-            ['product_id' => $product->id, 'store_id' => $storeId],
+            ['product_id' => $stockProductId, 'store_id' => $storeId],
             ['qty' => 0],
         );
 
         $stock->decrement('qty', $qty);
 
         $order->store->inventoryLogs()->create([
-            'product_id' => $product->id,
+            'product_id' => $stockProductId,
             'type' => InventoryLogType::Sale,
             'qty_change' => -$qty,
             'reference_type' => Order::class,

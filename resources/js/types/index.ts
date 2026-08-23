@@ -92,6 +92,12 @@ export interface Category {
 export interface Product {
     id: number;
     category_id: number;
+    /** Set when this row is a pack of another product — a case of the base unit. */
+    parent_product_id?: number | null;
+    parent?: Pick<Product, 'id' | 'name'> | null;
+    /** Base units one of these contains. 1 for a base product. */
+    units_per_pack?: number;
+    packs_count?: number;
     category?: Pick<Category, 'id' | 'name'>;
     name: string;
     sku: string;

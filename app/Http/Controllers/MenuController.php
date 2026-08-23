@@ -25,7 +25,11 @@ class MenuController extends Controller
 
         $products = Product::query()
             ->active()
+            // Base products only. A case and a can are one item on a menu with
+            // two prices, not two entries a customer has to reconcile.
+            ->base()
             ->with('category:id,name')
+            ->with(['packs' => fn ($q) => $q->active()->orderBy('units_per_pack')])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -43,6 +47,19 @@ class MenuController extends Controller
                 'unit' => $p->unit,
                 'category_id' => $p->category_id,
                 'category_name' => $p->category?->name,
+
+                /*
+                 * Every way this item can be bought, cheapest first. The base
+                 * product is always the first entry — it is the single unit.
+                 */
+                'packs' => $p->packs
+                    ->map(fn (Product $pack) => [
+                        'id' => $pack->id,
+                        'name' => $pack->name,
+                        'units' => $pack->units_per_pack,
+                        'price' => round((float) $pack->sell_price * (1 + $pack->effectiveTaxRate() / 100), 2),
+                    ])
+                    ->values(),
 
                 /*
                  * Prices are stored tax-exclusive, but a customer-facing menu

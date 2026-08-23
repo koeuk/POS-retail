@@ -1,6 +1,10 @@
 export interface PosProduct {
     id: number;
     name: string;
+    /** Set when this row is a pack of another product — a case of the base unit. */
+    parent_product_id: number | null;
+    /** Base units one of these contains. 1 for a base product. */
+    units_per_pack: number;
     sku: string;
     barcode: string | null;
     category_id: number;
@@ -10,7 +14,11 @@ export interface PosProduct {
     unit: string;
     image: string | null;
     track_stock: boolean;
-    /** A hint for the cashier. Stock is only ever decided server-side at sync. */
+    /**
+     * A hint for the cashier, in units of THIS row: for a case of 24 it is how
+     * many whole cases the loose count covers. Stock is only ever decided
+     * server-side at sync.
+     */
     stock_qty: number;
 }
 

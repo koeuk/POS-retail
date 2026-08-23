@@ -15,6 +15,7 @@ class Product extends Model
 
     protected $fillable = [
         'category_id',
+        'parent_product_id',
         'name',
         'sku',
         'barcode',
@@ -24,6 +25,7 @@ class Product extends Model
         'tax_rate',
         'image',
         'unit',
+        'units_per_pack',
         'track_stock',
         'is_active',
     ];
@@ -34,6 +36,7 @@ class Product extends Model
             'cost_price' => 'decimal:2',
             'sell_price' => 'decimal:2',
             'tax_rate' => 'decimal:2',
+            'units_per_pack' => 'integer',
             'track_stock' => 'boolean',
             'is_active' => 'boolean',
         ];
@@ -47,6 +50,18 @@ class Product extends Model
     public function stocks(): HasMany
     {
         return $this->hasMany(Stock::class);
+    }
+
+    /** The product this one is a pack of, if any. */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'parent_product_id');
+    }
+
+    /** The pack sizes sold against this product — case, six-pack, single. */
+    public function packs(): HasMany
+    {
+        return $this->hasMany(Product::class, 'parent_product_id');
     }
 
     public function orderItems(): HasMany
@@ -68,6 +83,35 @@ class Product extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
+    }
+
+    /** Only products that hold stock in their own right. */
+    public function scopeBase(Builder $query): Builder
+    {
+        return $query->whereNull('parent_product_id');
+    }
+
+    public function isPack(): bool
+    {
+        return $this->parent_product_id !== null;
+    }
+
+    /**
+     * The row whose stock this product moves.
+     *
+     * A case of beer has no shelf of its own — selling one takes 24 cans off
+     * the base product. Everything to do with stock goes through here rather
+     * than reaching for `$product->id` directly.
+     */
+    public function stockProductId(): int
+    {
+        return $this->parent_product_id ?? $this->id;
+    }
+
+    /** Base units consumed by selling `$qty` of this product. */
+    public function baseUnits(int $qty = 1): int
+    {
+        return $qty * max(1, $this->units_per_pack);
     }
 
     /**

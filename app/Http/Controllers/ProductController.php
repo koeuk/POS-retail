@@ -14,6 +14,7 @@ use App\Models\Stock;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -28,8 +29,9 @@ class ProductController extends Controller
         $filters = $request->only('search', 'category_id', 'status');
 
         $products = Product::query()
-            ->with('category:id,name')
+            ->with(['category:id,name', 'parent:id,name'])
             ->withSum('stocks as stock_qty', 'qty')
+            ->withCount('packs')
             ->when($filters['search'] ?? null, function ($query, string $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -59,6 +61,7 @@ class ProductController extends Controller
 
         return Inertia::render('Products/Create', [
             'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'baseProducts' => $this->baseProductOptions(),
             // Tax is no longer per product; the form shows which rate applies.
             'defaultTaxRate' => (float) (Setting::get('default_tax_rate') ?? 0),
         ]);
@@ -79,6 +82,13 @@ class ProductController extends Controller
 
         $product = DB::transaction(function () use ($data, $openingQty, $threshold, $request) {
             $product = Product::create($data);
+
+            // A pack draws stock from its parent, so it must not own rows of
+            // its own — two shelves for one physical crate is the exact
+            // disagreement this feature exists to avoid.
+            if ($product->isPack()) {
+                return $product;
+            }
 
             // Seed a stock row per store so the POS product feed always has
             // one to read, even when opening quantity is zero.
@@ -144,8 +154,10 @@ class ProductController extends Controller
         $this->authorize('update', $product);
 
         return Inertia::render('Products/Edit', [
-            'product' => $product->load('category:id,name'),
+            'product' => $product->load('category:id,name', 'parent:id,name'),
             'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'baseProducts' => $this->baseProductOptions($product),
+            'packs' => $product->packs()->orderBy('units_per_pack')->get(['id', 'name', 'units_per_pack', 'sell_price', 'is_active']),
             'defaultTaxRate' => $product->effectiveTaxRate(),
             'stocks' => $product->stocks()->with('store:id,name')->get(),
         ]);
@@ -173,6 +185,21 @@ class ProductController extends Controller
             ->with('success', "“{$product->name}” was updated.");
     }
 
+    /**
+     * Products a pack may belong to: base products only, and never the one
+     * being edited — packs are deliberately one level deep.
+     *
+     * @return Collection<int, Product>
+     */
+    private function baseProductOptions(?Product $exclude = null)
+    {
+        return Product::query()
+            ->base()
+            ->when($exclude, fn ($q, Product $p) => $q->whereKeyNot($p->id))
+            ->orderBy('name')
+            ->get(['id', 'name', 'unit']);
+    }
+
     public function destroy(Product $product): RedirectResponse
     {
         $this->authorize('delete', $product);
@@ -180,6 +207,14 @@ class ProductController extends Controller
         // Products that have been sold are restricted by a foreign key on
         // order_items. Deactivate rather than delete — the sales history
         // must keep pointing at a real row.
+        // The foreign key would refuse this anyway; saying so plainly beats a
+        // 500 from the database.
+        if ($product->packs()->exists()) {
+            return back()->withErrors([
+                'product' => 'This product has pack sizes. Delete those first.',
+            ]);
+        }
+
         if ($product->orderItems()->exists()) {
             $product->update(['is_active' => false]);
 

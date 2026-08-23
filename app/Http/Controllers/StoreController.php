@@ -52,6 +52,9 @@ class StoreController extends Controller
              * through an inventory movement, not by creating a store.
              */
             $rows = Product::query()
+                // Packs draw stock from their parent, so they get no row here
+                // either — see the products table's parent_product_id.
+                ->base()
                 ->pluck('id')
                 ->map(fn (int $productId) => [
                     'product_id' => $productId,

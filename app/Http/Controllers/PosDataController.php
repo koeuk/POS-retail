@@ -58,14 +58,19 @@ class PosDataController extends Controller
             ->active()
             ->with('category:id,name')
             ->with(['stocks' => fn ($q) => $q->where('store_id', $storeId)])
+            // A pack reads its shelf from the parent, so the parent's stock row
+            // has to travel with it or the grid would show every case as zero.
+            ->with(['parent' => fn ($q) => $q->with(['stocks' => fn ($s) => $s->where('store_id', $storeId)])])
             ->orderBy('name')
             ->get()
             ->map(function (Product $product) {
-                $stock = $product->stocks->first();
+                $stock = ($product->parent ?? $product)->stocks->first();
 
                 return [
                     'id' => $product->id,
                     'name' => $product->name,
+                    'parent_product_id' => $product->parent_product_id,
+                    'units_per_pack' => $product->units_per_pack,
                     'sku' => $product->sku,
                     'barcode' => $product->barcode,
                     'category_id' => $product->category_id,
@@ -76,9 +81,13 @@ class PosDataController extends Controller
                     'image' => $product->image,
                     'track_stock' => $product->track_stock,
 
-                    // A hint for the cashier, never the source of truth —
-                    // stock is only ever decided server-side at sync time.
-                    'stock_qty' => $stock?->qty ?? 0,
+                    /*
+                     * A hint for the cashier, never the source of truth — stock
+                     * is only ever decided server-side at sync time. For a pack
+                     * this is how many whole packs the loose count covers: 99
+                     * cans is 4 cases, not 99.
+                     */
+                    'stock_qty' => intdiv($stock?->qty ?? 0, max(1, $product->units_per_pack)),
                 ];
             });
 

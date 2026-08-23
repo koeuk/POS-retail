@@ -4,9 +4,17 @@ import { Head } from '@inertiajs/vue3';
 import { Search, UtensilsCrossed } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
+interface MenuPack {
+    id: number;
+    name: string;
+    units: number;
+    price: number;
+}
+
 interface MenuProduct {
     id: number;
     name: string;
+    packs: MenuPack[];
     description: string | null;
     image: string | null;
     unit: string;
@@ -156,15 +164,30 @@ const year = new Date().getFullYear();
                                 {{ item.description }}
                             </p>
 
-                            <!-- mt-auto pins the price to the bottom edge so it
-                                 lines up across cards of unequal title length. -->
-                            <div class="mt-auto flex items-baseline justify-between gap-2 pt-2">
-                                <p class="tabular font-mono text-base font-semibold text-primary">
-                                    {{ money(item.price) }}
-                                </p>
-                                <p class="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground/70">
-                                    {{ item.unit }}
-                                </p>
+                            <!-- mt-auto pins the prices to the bottom edge so they
+                                 line up across cards of unequal title length. -->
+                            <div class="mt-auto pt-2">
+                                <div class="flex items-baseline justify-between gap-2">
+                                    <p class="tabular font-mono text-base font-semibold text-primary">
+                                        {{ money(item.price) }}
+                                    </p>
+                                    <p class="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground/70">
+                                        {{ item.unit }}
+                                    </p>
+                                </div>
+
+                                <!--
+                                    Larger sizes, cheapest per unit last. Kept on
+                                    the same card because a case and a can are one
+                                    item bought two ways, not two things to choose
+                                    between.
+                                -->
+                                <dl v-if="item.packs.length" class="mt-1.5 space-y-0.5 border-t border-border pt-1.5">
+                                    <div v-for="pack in item.packs" :key="pack.id" class="flex items-baseline justify-between gap-2">
+                                        <dt class="truncate text-xs text-muted-foreground">{{ pack.name }}</dt>
+                                        <dd class="tabular shrink-0 font-mono text-xs font-medium">{{ money(pack.price) }}</dd>
+                                    </div>
+                                </dl>
                             </div>
                         </div>
                     </li>
