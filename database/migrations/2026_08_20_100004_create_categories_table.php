@@ -10,11 +10,11 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
+            // Flat on purpose: a category is just a category. The two-level
+            // tree this table once carried was more structure than the POS
+            // grid ever needed.
             $table->string('name');
-            $table->foreignId('parent_id')->nullable()->constrained('categories')->nullOnDelete();
             $table->timestamps();
-
-            $table->index('parent_id');
         });
     }
 
