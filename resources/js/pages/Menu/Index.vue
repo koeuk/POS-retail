@@ -95,14 +95,14 @@ const isStaff = computed(() => !!page.props.auth?.user);
             green makes it read as one, and gives the sticky filter bar below
             an edge to sit against instead of both dissolving into the page.
 
-            Colours are taken from the primary token pair, so the band follows
-            the theme rather than pinning a hex that would drift from it.
+            Colours come from the --brand pair, not --primary: painted signage
+            should not lighten just because the screen went dark.
         -->
-        <header class="relative bg-primary text-primary-foreground">
+        <header class="relative bg-brand text-brand-foreground">
             <Link
                 v-if="isStaff"
                 :href="route('dashboard')"
-                class="press absolute left-4 top-4 flex h-10 items-center gap-2 rounded-full border border-primary-foreground/25 bg-primary-foreground/10 px-3 text-sm font-medium text-primary-foreground/90 transition-colors hover:bg-primary-foreground/20 hover:text-primary-foreground md:left-6 md:top-6"
+                class="press absolute left-4 top-4 flex h-10 items-center gap-2 rounded-full border border-brand-foreground/25 bg-brand-foreground/10 px-3 text-sm font-medium text-brand-foreground/90 transition-colors hover:bg-brand-foreground/20 hover:text-brand-foreground md:left-6 md:top-6"
             >
                 <ArrowLeft class="size-4" />
                 <span class="hidden sm:inline">Dashboard</span>
@@ -111,7 +111,7 @@ const isStaff = computed(() => !!page.props.auth?.user);
             <!-- Everyone gets this one: which theme a screen is comfortable in
                  is the viewer's business, not the shop's. -->
             <ThemeToggle
-                class="absolute right-4 top-4 border border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground/90 hover:bg-primary-foreground/20 hover:text-primary-foreground md:right-6 md:top-6"
+                class="absolute right-4 top-4 border border-brand-foreground/25 bg-brand-foreground/10 text-brand-foreground/90 hover:bg-brand-foreground/20 hover:text-brand-foreground md:right-6 md:top-6"
             />
 
             <div class="mx-auto max-w-5xl px-5 py-12 text-center md:py-16">
@@ -121,11 +121,11 @@ const isStaff = computed(() => !!page.props.auth?.user);
                     below 4.5:1 against the green — the faded look is not worth
                     small text nobody can read in daylight.
                 -->
-                <p class="animate-fade font-mono text-[0.7rem] uppercase tracking-[0.28em] text-primary-foreground/85">Our menu</p>
+                <p class="animate-fade font-mono text-[0.7rem] uppercase tracking-[0.28em] text-brand-foreground/85">Our menu</p>
                 <h1 class="animate-rise mt-3 font-display text-4xl font-bold tracking-tight md:text-6xl" style="animation-delay: 60ms">
                     {{ shop.name }}
                 </h1>
-                <p class="animate-rise mx-auto mt-3 max-w-md text-sm text-primary-foreground/85" style="animation-delay: 120ms">
+                <p class="animate-rise mx-auto mt-3 max-w-md text-sm text-brand-foreground/85" style="animation-delay: 120ms">
                     Everything we stock, with current prices. All prices include tax.
                 </p>
             </div>

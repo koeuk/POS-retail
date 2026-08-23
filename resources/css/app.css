@@ -27,6 +27,15 @@
         --popover-foreground: 25 12% 13%;
         --primary: 155 58% 26%;
         --primary-foreground: 150 30% 98%;
+
+        /*
+         * Brand band. Deliberately NOT --primary: the primary token has to
+         * lighten in dark mode so buttons stay legible on a near-black page,
+         * but the shop's name board is a painted surface — it should look like
+         * the same paint whatever the screen is doing.
+         */
+        --brand: 155 58% 26%;
+        --brand-foreground: 150 30% 98%;
         --secondary: 36 22% 93%;
         --secondary-foreground: 25 12% 20%;
         --muted: 36 20% 95%;
@@ -95,6 +104,11 @@
         --popover-foreground: 40 20% 93%;
         --primary: 152 48% 46%;
         --primary-foreground: 155 40% 7%;
+
+        /* Deeper still on a dark page: the same green at full lightness would
+           glow against near-black instead of sitting behind the type. */
+        --brand: 155 55% 17%;
+        --brand-foreground: 150 25% 96%;
         --secondary: 28 7% 17%;
         --secondary-foreground: 40 20% 93%;
         --muted: 28 7% 15%;
