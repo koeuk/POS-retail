@@ -140,4 +140,22 @@ class PublicMenuTest extends TestCase
             ->get(route('menu'))
             ->assertOk();
     }
+
+    /**
+     * The way back into the admin must exist for staff and not for customers —
+     * this route is the one an anonymous QR scan lands on.
+     */
+    public function test_the_dashboard_link_is_only_rendered_for_signed_in_staff(): void
+    {
+        $this->get(route('menu'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('auth.user', null));
+
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get(route('menu'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('auth.user.id', $admin->id));
+    }
 }
