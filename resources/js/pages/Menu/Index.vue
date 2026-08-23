@@ -89,30 +89,43 @@ const isStaff = computed(() => !!page.props.auth?.user);
     <Head :title="`Menu — ${shop.name}`" />
 
     <div class="min-h-dvh bg-background text-foreground">
-        <!-- Masthead -->
-        <header class="relative border-b border-border">
+        <!--
+            The masthead is the shop's name board. Painting it in the brand
+            green makes it read as one, and gives the sticky filter bar below
+            an edge to sit against instead of both dissolving into the page.
+
+            Colours are taken from the primary token pair, so the band follows
+            the theme rather than pinning a hex that would drift from it.
+        -->
+        <header class="relative bg-primary text-primary-foreground">
             <Link
                 v-if="isStaff"
                 :href="route('dashboard')"
-                class="press absolute left-4 top-4 flex h-10 items-center gap-2 rounded-full border border-border bg-card px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground md:left-6 md:top-6"
+                class="press absolute left-4 top-4 flex h-10 items-center gap-2 rounded-full border border-primary-foreground/25 bg-primary-foreground/10 px-3 text-sm font-medium text-primary-foreground/90 transition-colors hover:bg-primary-foreground/20 hover:text-primary-foreground md:left-6 md:top-6"
             >
                 <ArrowLeft class="size-4" />
                 <span class="hidden sm:inline">Dashboard</span>
             </Link>
 
             <div class="mx-auto max-w-5xl px-5 py-12 text-center md:py-16">
-                <p class="animate-fade font-mono text-[0.7rem] uppercase tracking-[0.28em] text-primary">Our menu</p>
+                <!--
+                    Opacity rather than a second colour: one ink, three weights.
+                    Held at /85 because anything lighter drops this 11px line
+                    below 4.5:1 against the green — the faded look is not worth
+                    small text nobody can read in daylight.
+                -->
+                <p class="animate-fade font-mono text-[0.7rem] uppercase tracking-[0.28em] text-primary-foreground/85">Our menu</p>
                 <h1 class="animate-rise mt-3 font-display text-4xl font-bold tracking-tight md:text-6xl" style="animation-delay: 60ms">
                     {{ shop.name }}
                 </h1>
-                <p class="animate-rise mx-auto mt-3 max-w-md text-sm text-muted-foreground" style="animation-delay: 120ms">
+                <p class="animate-rise mx-auto mt-3 max-w-md text-sm text-primary-foreground/85" style="animation-delay: 120ms">
                     Everything we stock, with current prices. All prices include tax.
                 </p>
             </div>
         </header>
 
         <!-- Sticky filter bar -->
-        <div class="sticky top-0 z-20 border-b border-border bg-background/85 backdrop-blur">
+        <div class="sticky top-0 z-20 border-b border-border bg-card/95 shadow-sm backdrop-blur">
             <div class="mx-auto max-w-5xl px-5 py-3">
                 <div class="relative">
                     <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
