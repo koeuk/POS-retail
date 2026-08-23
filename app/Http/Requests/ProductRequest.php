@@ -24,6 +24,9 @@ class ProductRequest extends FormRequest
              * Pack sizes are one level deep on purpose. A pack of a pack would
              * need the base units multiplied down a chain, and no shop counts
              * stock that way — a case is 24 cans, full stop.
+             *
+             * Set directly only when something creates a pack row on its own;
+             * the form builds packs through the `packs` array below instead.
              */
             'parent_product_id' => [
                 'nullable', 'integer',
@@ -31,6 +34,20 @@ class ProductRequest extends FormRequest
                 Rule::notIn(array_filter([$productId])),
             ],
             'units_per_pack' => ['required_with:parent_product_id', 'integer', 'min:1', 'max:100000'],
+
+            /*
+             * Optional larger sizes of this same product, entered inline: a
+             * beer bought 264 cans at a time and sold by the twelve, the six
+             * and the single is one product with three extra prices, and
+             * making the shopkeeper create three more products by hand is how
+             * the stock figures end up disagreeing.
+             */
+            'packs' => ['array', 'max:20'],
+            'packs.*.id' => ['nullable', 'integer', Rule::exists('products', 'id')],
+            'packs.*.name' => ['required', 'string', 'max:255'],
+            'packs.*.units_per_pack' => ['required', 'integer', 'min:2', 'max:100000'],
+            'packs.*.sell_price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'packs.*.barcode' => ['nullable', 'string', 'max:64'],
             'name' => ['required', 'string', 'max:255'],
             'sku' => [
                 'required', 'string', 'max:64',
@@ -68,6 +85,10 @@ class ProductRequest extends FormRequest
             'parent_product_id.exists' => 'A pack must belong to a product that is not itself a pack.',
             'parent_product_id.not_in' => 'A product cannot be a pack of itself.',
             'units_per_pack.required_with' => 'Say how many units this pack contains.',
+            'packs.*.name.required' => 'Give each pack size a name.',
+            'packs.*.units_per_pack.required' => 'Say how many units the pack contains.',
+            'packs.*.units_per_pack.min' => 'A pack has to hold at least two — one of something is the product itself.',
+            'packs.*.sell_price.required' => 'Give each pack size a price.',
         ];
     }
 

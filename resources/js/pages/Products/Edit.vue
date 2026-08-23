@@ -10,7 +10,6 @@ import { Head } from '@inertiajs/vue3';
 defineProps<{
     product: Product;
     categories: Category[];
-    baseProducts: Array<{ id: number; name: string; unit: string }>;
     packs: Array<{ id: number; name: string; units_per_pack: number; sell_price: string; is_active: boolean }>;
     stocks: Stock[];
     defaultTaxRate: number;
@@ -66,7 +65,7 @@ const tone = (s: Stock) => {
                 </div>
             </section>
 
-            <ProductForm :categories="categories" :product="product" :base-products="baseProducts" :default-tax-rate="defaultTaxRate" />
+            <ProductForm :categories="categories" :product="product" :packs="packs" :default-tax-rate="defaultTaxRate" />
         </div>
     </AppLayout>
 </template>

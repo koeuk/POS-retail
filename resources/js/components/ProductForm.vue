@@ -8,8 +8,18 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import type { Category, Product } from '@/types';
 import { Link, useForm } from '@inertiajs/vue3';
-import { ImageUp, LoaderCircle } from 'lucide-vue-next';
+import { ImageUp, LoaderCircle, Plus, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+
+interface PackRow {
+    /* Inertia's useForm only accepts FormDataConvertible values, and an array
+       of plain objects needs this index signature to qualify. */
+    [key: string]: string | number | null;
+    id: number | null;
+    name: string;
+    units_per_pack: number | string;
+    sell_price: string;
+}
 
 const props = withDefaults(
     defineProps<{
@@ -17,20 +27,17 @@ const props = withDefaults(
         product?: Product;
         /** The rate this product will actually be taxed at, from settings. */
         defaultTaxRate: number;
-        /** Products a pack may belong to — base products only. */
-        baseProducts?: Array<{ id: number; name: string; unit: string }>;
+        /** Larger sizes already saved against this product. */
+        packs?: Array<{ id: number; name: string; units_per_pack: number; sell_price: string }>;
     }>(),
-    { baseProducts: () => [] },
+    { packs: () => [] },
 );
 
 const isEdit = computed(() => !!props.product);
 
-const NONE = 'none';
-
 const form = useForm({
     category_id: props.product ? String(props.product.category_id) : '',
-    parent_product_id: props.product?.parent_product_id ? String(props.product.parent_product_id) : NONE,
-    units_per_pack: props.product?.units_per_pack ?? 1,
+    packs: props.packs.map((p): PackRow => ({ id: p.id, name: p.name, units_per_pack: p.units_per_pack, sell_price: p.sell_price })),
     name: props.product?.name ?? '',
     sku: props.product?.sku ?? '',
     barcode: props.product?.barcode ?? '',
@@ -45,14 +52,28 @@ const form = useForm({
 });
 
 /*
- * A pack draws its stock from the product it belongs to, so it has no opening
- * quantity and no alert level of its own — those belong to the base product's
- * single shelf. The form hides them rather than collecting numbers the server
- * would throw away.
+ * Larger sizes of this same product. Stock is always counted in the base unit,
+ * so a pack needs only a name, how many it holds, and a price — no stock of
+ * its own, and no SKU to invent: the server derives one.
  */
-const isPack = computed(() => form.parent_product_id !== NONE);
+function addPack() {
+    form.packs.push({ id: null, name: '', units_per_pack: 6, sell_price: form.sell_price });
+}
 
-const parentUnit = computed(() => props.baseProducts.find((p) => String(p.id) === form.parent_product_id)?.unit ?? 'units');
+function removePack(index: number) {
+    form.packs.splice(index, 1);
+}
+
+/** What one unit inside the pack works out at — the number that decides whether the bulk price makes sense. */
+function perUnit(pack: PackRow): number | null {
+    const units = Number(pack.units_per_pack) || 0;
+    const price = Number(pack.sell_price) || 0;
+    if (units <= 0 || price <= 0) return null;
+
+    return price / units;
+}
+
+const packError = (index: number, field: string) => (form.errors as Record<string, string | undefined>)[`packs.${index}.${field}`];
 
 const preview = ref<string | null>(props.product?.image ? `/storage/${props.product.image}` : null);
 
@@ -69,11 +90,6 @@ const withTax = computed(() => {
 });
 
 function submit() {
-    form.transform((data) => ({
-        ...data,
-        parent_product_id: data.parent_product_id === NONE ? null : data.parent_product_id,
-    }));
-
     if (isEdit.value) {
         // Multipart cannot be sent as a real PUT, so spoof the method.
         form.transform((data) => ({ ...data, _method: 'put' })).post(route('products.update', { product: props.product!.id }), {
@@ -136,34 +152,68 @@ function submit() {
             </section>
 
             <section class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
-                <h2 class="mb-1 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Pack size</h2>
+                <div class="mb-1 flex items-center justify-between gap-3">
+                    <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Also sold in packs</h2>
+                    <span class="text-xs text-muted-foreground">Optional</span>
+                </div>
                 <p class="mb-4 text-xs text-muted-foreground">
-                    Selling the same thing by the case and by the single? Make the single unit the product, then add a pack for each larger size.
-                    Stock is only ever counted in single units.
+                    Selling the same thing by the twelve, the six and the single? Add a row for each larger size. Stock stays counted in
+                    {{ form.unit || 'single units' }} — selling one pack takes its whole contents off the same shelf.
                 </p>
 
-                <div class="grid gap-4">
-                    <div class="grid gap-2">
-                        <Label for="parent">This is</Label>
-                        <Select v-model="form.parent_product_id">
-                            <SelectTrigger id="parent">
-                                <SelectValue placeholder="A product in its own right" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem :value="NONE">A product in its own right</SelectItem>
-                                <SelectItem v-for="b in baseProducts" :key="b.id" :value="String(b.id)"> A pack of {{ b.name }} </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <InputError :message="form.errors.parent_product_id" />
-                    </div>
+                <div v-if="form.packs.length" class="mb-3 space-y-3">
+                    <div v-for="(pack, index) in form.packs" :key="index" class="rounded-lg border border-border p-3">
+                        <div class="grid gap-3 sm:grid-cols-[1fr_6rem_7rem_auto] sm:items-start">
+                            <div class="grid gap-1.5">
+                                <Label :for="`pack-name-${index}`" class="text-xs text-muted-foreground">Name</Label>
+                                <Input :id="`pack-name-${index}`" v-model="pack.name" placeholder="Half case" />
+                                <InputError :message="packError(index, 'name')" />
+                            </div>
 
-                    <div v-if="isPack" class="grid gap-2">
-                        <Label for="units">How many {{ parentUnit }} in one?</Label>
-                        <Input id="units" v-model="form.units_per_pack" type="number" min="1" class="tabular font-mono" />
-                        <p class="text-xs text-muted-foreground">Selling one takes this many off the base product's stock.</p>
-                        <InputError :message="form.errors.units_per_pack" />
+                            <div class="grid gap-1.5">
+                                <Label :for="`pack-units-${index}`" class="text-xs text-muted-foreground">Holds</Label>
+                                <Input :id="`pack-units-${index}`" v-model="pack.units_per_pack" type="number" min="2" class="tabular font-mono" />
+                                <InputError :message="packError(index, 'units_per_pack')" />
+                            </div>
+
+                            <div class="grid gap-1.5">
+                                <Label :for="`pack-price-${index}`" class="text-xs text-muted-foreground">Price</Label>
+                                <Input
+                                    :id="`pack-price-${index}`"
+                                    v-model="pack.sell_price"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    class="tabular font-mono"
+                                />
+                                <InputError :message="packError(index, 'sell_price')" />
+                            </div>
+
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                class="press touch-target mt-0 self-start text-muted-foreground hover:text-destructive sm:mt-[1.6rem]"
+                                :aria-label="`Remove ${pack.name || 'pack'}`"
+                                @click="removePack(index)"
+                            >
+                                <Trash2 class="size-4" />
+                            </Button>
+                        </div>
+
+                        <!-- The per-unit figure is what tells you whether the bulk
+                             price is actually a discount. -->
+                        <p v-if="perUnit(pack) !== null" class="mt-2 text-xs text-muted-foreground">
+                            <span class="tabular font-mono">{{ perUnit(pack)!.toFixed(3) }}</span>
+                            each
+                        </p>
                     </div>
                 </div>
+
+                <Button type="button" variant="outline" class="press w-full sm:w-auto" @click="addPack">
+                    <Plus class="size-4" />
+                    Add a pack size
+                </Button>
             </section>
 
             <section class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
@@ -189,7 +239,7 @@ function submit() {
                 </p>
             </section>
 
-            <section v-if="!isEdit && !isPack" class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
+            <section v-if="!isEdit" class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
                 <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Opening stock</h2>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">

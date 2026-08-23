@@ -14,7 +14,6 @@ use App\Models\Stock;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -61,7 +60,6 @@ class ProductController extends Controller
 
         return Inertia::render('Products/Create', [
             'categories' => Category::orderBy('name')->get(['id', 'name']),
-            'baseProducts' => $this->baseProductOptions(),
             // Tax is no longer per product; the form shows which rate applies.
             'defaultTaxRate' => (float) (Setting::get('default_tax_rate') ?? 0),
         ]);
@@ -74,14 +72,17 @@ class ProductController extends Controller
         $data = $request->validated();
         $openingQty = (int) ($data['opening_qty'] ?? 0);
         $threshold = $data['low_stock_threshold'] ?? null;
-        unset($data['opening_qty'], $data['low_stock_threshold']);
+        $packs = $data['packs'] ?? [];
+        unset($data['opening_qty'], $data['low_stock_threshold'], $data['packs']);
 
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store('products', 'public');
         }
 
-        $product = DB::transaction(function () use ($data, $openingQty, $threshold, $request) {
+        $product = DB::transaction(function () use ($data, $openingQty, $threshold, $packs, $request) {
             $product = Product::create($data);
+
+            $this->syncPacks($product, $packs);
 
             // A pack draws stock from its parent, so it must not own rows of
             // its own — two shelves for one physical crate is the exact
@@ -156,7 +157,6 @@ class ProductController extends Controller
         return Inertia::render('Products/Edit', [
             'product' => $product->load('category:id,name', 'parent:id,name'),
             'categories' => Category::orderBy('name')->get(['id', 'name']),
-            'baseProducts' => $this->baseProductOptions($product),
             'packs' => $product->packs()->orderBy('units_per_pack')->get(['id', 'name', 'units_per_pack', 'sell_price', 'is_active']),
             'defaultTaxRate' => $product->effectiveTaxRate(),
             'stocks' => $product->stocks()->with('store:id,name')->get(),
@@ -168,7 +168,8 @@ class ProductController extends Controller
         $this->authorize('update', $product);
 
         $data = $request->validated();
-        unset($data['opening_qty'], $data['low_stock_threshold']);
+        $packs = $data['packs'] ?? [];
+        unset($data['opening_qty'], $data['low_stock_threshold'], $data['packs']);
 
         if ($request->hasFile('image')) {
             if ($product->image) {
@@ -179,25 +180,90 @@ class ProductController extends Controller
             unset($data['image']);
         }
 
-        $product->update($data);
+        DB::transaction(function () use ($product, $data, $packs, $request) {
+            $product->update($data);
+
+            // A pack has no packs of its own, so the list is only meaningful on
+            // a base product and is ignored entirely on a pack.
+            if (! $product->isPack() && $request->has('packs')) {
+                $this->syncPacks($product, $packs);
+            }
+        });
 
         return to_route('products.index')
             ->with('success', "“{$product->name}” was updated.");
     }
 
     /**
-     * Products a pack may belong to: base products only, and never the one
-     * being edited — packs are deliberately one level deep.
+     * Bring a base product's pack sizes in line with what was submitted.
      *
-     * @return Collection<int, Product>
+     * Rows carrying an id are updated, new rows are created, and anything the
+     * form dropped is removed — except a pack that has already been sold,
+     * which is deactivated instead so its order history keeps pointing at a
+     * real row.
+     *
+     * @param  array<int, array<string, mixed>>  $packs
      */
-    private function baseProductOptions(?Product $exclude = null)
+    private function syncPacks(Product $product, array $packs): void
     {
-        return Product::query()
-            ->base()
-            ->when($exclude, fn ($q, Product $p) => $q->whereKeyNot($p->id))
-            ->orderBy('name')
-            ->get(['id', 'name', 'unit']);
+        $keptIds = [];
+
+        foreach ($packs as $pack) {
+            $attributes = [
+                'category_id' => $product->category_id,
+                'parent_product_id' => $product->id,
+                'name' => $pack['name'],
+                'units_per_pack' => (int) $pack['units_per_pack'],
+                'sell_price' => $pack['sell_price'],
+                'barcode' => ($pack['barcode'] ?? null) ?: null,
+                'unit' => $product->unit,
+                'track_stock' => $product->track_stock,
+                'is_active' => true,
+            ];
+
+            $existing = isset($pack['id'])
+                ? $product->packs()->whereKey($pack['id'])->first()
+                : null;
+
+            if ($existing) {
+                $existing->update($attributes);
+                $keptIds[] = $existing->id;
+
+                continue;
+            }
+
+            $keptIds[] = Product::create($attributes + [
+                'sku' => $this->packSku($product, (int) $pack['units_per_pack']),
+            ])->id;
+        }
+
+        foreach ($product->packs()->whereKeyNot($keptIds)->get() as $removed) {
+            if ($removed->orderItems()->exists()) {
+                $removed->update(['is_active' => false]);
+
+                continue;
+            }
+
+            $removed->delete();
+        }
+    }
+
+    /**
+     * A pack's SKU is derived, not typed: the shopkeeper is entering a name
+     * and a price, and inventing a unique code per size is exactly the chore
+     * this form exists to remove.
+     */
+    private function packSku(Product $product, int $units): string
+    {
+        $base = mb_substr($product->sku, 0, 50).'-'.$units;
+        $sku = $base;
+        $suffix = 1;
+
+        while (Product::where('sku', $sku)->exists()) {
+            $sku = $base.'-'.$suffix++;
+        }
+
+        return $sku;
     }
 
     public function destroy(Product $product): RedirectResponse

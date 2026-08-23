@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\InventoryLogType;
+use App\Models\Category;
 use App\Models\InventoryLog;
 use App\Models\Product;
 use App\Models\Register;
@@ -156,6 +157,107 @@ class ProductPackTest extends TestCase
         $this->assertSame($can->id, $case->parent_product_id);
         $this->assertSame(24, $case->units_per_pack);
         $this->assertDatabaseMissing('stocks', ['product_id' => $case->id]);
+    }
+
+    /**
+     * The whole point of the inline list: one form, one submit, and the shop
+     * ends up with a can that holds the stock and three prices beside it.
+     */
+    public function test_a_product_and_its_pack_sizes_are_created_in_one_submit(): void
+    {
+        $category = Category::factory()->create();
+
+        $this->actingAs($this->admin)->post(route('products.store'), [
+            'category_id' => $category->id,
+            'name' => 'Angkor Beer 330ml',
+            'sku' => 'BEER-CAN',
+            'sell_price' => '0.75',
+            'unit' => 'can',
+            'track_stock' => true,
+            'is_active' => true,
+            'opening_qty' => 264,
+            'packs' => [
+                ['name' => 'Half case', 'units_per_pack' => 12, 'sell_price' => '8.40'],
+                ['name' => 'Six-pack', 'units_per_pack' => 6, 'sell_price' => '4.32'],
+            ],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $can = Product::where('sku', 'BEER-CAN')->firstOrFail();
+
+        $this->assertSame(2, $can->packs()->count());
+        $this->assertSame(264, (int) Stock::where('product_id', $can->id)->sum('qty'));
+
+        // Derived, so nobody has to invent a code per size.
+        $this->assertSame(['BEER-CAN-12', 'BEER-CAN-6'], $can->packs()->orderBy('sku')->pluck('sku')->sort()->values()->all());
+
+        // And the stock still lives in one place.
+        $this->assertSame(0, Stock::whereIn('product_id', $can->packs()->pluck('id'))->count());
+    }
+
+    public function test_editing_adds_updates_and_removes_pack_sizes(): void
+    {
+        $can = $this->can(264);
+        $six = $this->packOf($can, 6, 'Six-pack', '4.32');
+        $half = $this->packOf($can, 12, 'Half case', '8.40');
+
+        $this->actingAs($this->admin)->put(route('products.update', $can), [
+            'category_id' => $can->category_id,
+            'name' => $can->name,
+            'sku' => $can->sku,
+            'sell_price' => $can->sell_price,
+            'unit' => $can->unit,
+            'track_stock' => true,
+            'is_active' => true,
+            'packs' => [
+                // Kept, with a new price.
+                ['id' => $six->id, 'name' => 'Six-pack', 'units_per_pack' => 6, 'sell_price' => '4.50'],
+                // Added.
+                ['name' => 'Full case', 'units_per_pack' => 24, 'sell_price' => '16.00'],
+                // $half is absent, so it goes.
+            ],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame('4.50', $six->fresh()->sell_price);
+        $this->assertDatabaseMissing('products', ['id' => $half->id]);
+        $this->assertSame(2, $can->packs()->count());
+    }
+
+    /** Removing a pack that has already been sold must not orphan the receipt. */
+    public function test_a_pack_with_sales_is_deactivated_rather_than_deleted(): void
+    {
+        $can = $this->can(264);
+        $case = $this->packOf($can, 24, 'Case of 24', '16.00');
+
+        $this->sell($case, 1);
+
+        $this->actingAs($this->admin)->put(route('products.update', $can), [
+            'category_id' => $can->category_id,
+            'name' => $can->name,
+            'sku' => $can->sku,
+            'sell_price' => $can->sell_price,
+            'unit' => $can->unit,
+            'track_stock' => true,
+            'is_active' => true,
+            'packs' => [],
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('products', ['id' => $case->id, 'is_active' => false]);
+    }
+
+    public function test_a_pack_row_must_hold_more_than_one(): void
+    {
+        $can = $this->can();
+
+        $this->actingAs($this->admin)->put(route('products.update', $can), [
+            'category_id' => $can->category_id,
+            'name' => $can->name,
+            'sku' => $can->sku,
+            'sell_price' => $can->sell_price,
+            'unit' => $can->unit,
+            'track_stock' => true,
+            'is_active' => true,
+            'packs' => [['name' => 'Single', 'units_per_pack' => 1, 'sell_price' => '0.75']],
+        ])->assertSessionHasErrors('packs.0.units_per_pack');
     }
 
     /** One level only: the base-unit maths stops making sense beyond it. */
