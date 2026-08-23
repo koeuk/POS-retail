@@ -26,7 +26,13 @@ withDefaults(defineProps<Props>(), {
         -->
         <AppSidebar />
 
-        <AppContent variant="sidebar">
+        <!--
+            min-w-0 is load-bearing. SidebarInset is a flex child, and a flex
+            child's default min-width:auto makes it grow to its widest
+            descendant — which silently defeats every overflow-x-auto inside
+            and stretches the whole page instead of scrolling one table.
+        -->
+        <AppContent variant="sidebar" class="min-w-0">
             <!-- One header per breakpoint: breadcrumbs on desktop, app bar on phone. -->
             <!--
                 The actions slot is rendered into both headers. Only one is

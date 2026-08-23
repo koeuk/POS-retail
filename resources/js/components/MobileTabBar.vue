@@ -44,29 +44,29 @@ function go(href: string) {
         aria-label="Primary"
     >
         <ul class="flex items-stretch" :style="{ height: 'var(--tabbar-h)' }">
-            <li v-for="tab in tabs" :key="tab.href" class="flex-1">
+            <li v-for="tab in tabs" :key="tab.href" class="min-w-0 flex-1">
                 <Link
                     :href="tab.href"
-                    class="flex h-full flex-col items-center justify-center gap-0.5 transition-colors"
+                    class="flex h-full w-full min-w-0 flex-col items-center justify-center gap-0.5 transition-colors"
                     :class="isActivePath(tab.href, path) ? 'text-primary' : 'text-muted-foreground'"
                     :aria-current="isActivePath(tab.href, path) ? 'page' : undefined"
                     @click="haptic()"
                 >
-                    <component :is="tab.icon" class="size-5" :stroke-width="isActivePath(tab.href, path) ? 2.4 : 1.8" />
-                    <span class="text-[0.65rem] font-medium leading-none">{{ tab.title }}</span>
+                    <component :is="tab.icon" class="size-5 shrink-0" :stroke-width="isActivePath(tab.href, path) ? 2.4 : 1.8" />
+                    <span class="w-full truncate px-1 text-center text-[0.65rem] font-medium leading-none">{{ tab.title }}</span>
                 </Link>
             </li>
 
-            <li class="flex-1">
+            <li class="min-w-0 flex-1">
                 <button
                     type="button"
-                    class="flex h-full w-full flex-col items-center justify-center gap-0.5 transition-colors"
+                    class="flex h-full w-full min-w-0 flex-col items-center justify-center gap-0.5 transition-colors"
                     :class="moreActive ? 'text-primary' : 'text-muted-foreground'"
                     :aria-expanded="moreOpen"
                     @click="openMore"
                 >
-                    <component :is="moreTab.icon" class="size-5" :stroke-width="moreActive ? 2.4 : 1.8" />
-                    <span class="text-[0.65rem] font-medium leading-none">{{ moreTab.title }}</span>
+                    <component :is="moreTab.icon" class="size-5 shrink-0" :stroke-width="moreActive ? 2.4 : 1.8" />
+                    <span class="w-full truncate px-1 text-center text-[0.65rem] font-medium leading-none">{{ moreTab.title }}</span>
                 </button>
             </li>
         </ul>

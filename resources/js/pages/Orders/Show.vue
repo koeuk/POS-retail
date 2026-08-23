@@ -97,7 +97,7 @@ onMounted(() => {
 
             <div class="grid items-start gap-4 lg:grid-cols-3">
                 <!-- Line items + money -->
-                <div class="space-y-4 lg:col-span-2">
+                <div class="min-w-0 space-y-4 lg:col-span-2">
                     <section class="animate-rise overflow-hidden rounded-xl border border-border bg-card shadow-sm">
                         <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                             Items

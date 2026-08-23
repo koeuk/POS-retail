@@ -157,7 +157,10 @@ const quickActions = computed(() =>
                  above a block of dead space. -->
             <div class="mt-4 grid items-start gap-4 lg:grid-cols-3">
                 <!-- One series, so no legend: the panel title names it. -->
-                <section class="animate-rise rounded-2xl border border-border bg-card p-4 shadow-sm lg:col-span-2" style="animation-delay: 120ms">
+                <section
+                    class="animate-rise min-w-0 rounded-2xl border border-border bg-card p-4 shadow-sm lg:col-span-2"
+                    style="animation-delay: 120ms"
+                >
                     <div class="mb-3 flex items-baseline justify-between">
                         <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Sales · last 7 days</h2>
                         <p class="tabular font-mono text-sm font-semibold">{{ money(weekTotal) }}</p>

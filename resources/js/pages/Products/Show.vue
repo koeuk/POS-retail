@@ -106,7 +106,9 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                     </p>
                 </section>
 
-                <div class="space-y-4 lg:col-span-2">
+                <!-- min-w-0: a grid item defaults to min-width:auto and will not shrink
+                     below its widest row, which pushed this column past the grid. -->
+                <div class="min-w-0 space-y-4 lg:col-span-2">
                     <!-- Money -->
                     <section class="animate-rise rounded-xl border border-border bg-card p-5 shadow-sm" style="animation-delay: 60ms">
                         <h2 class="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Price</h2>

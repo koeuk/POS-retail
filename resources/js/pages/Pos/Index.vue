@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import AppLayout from '@/layouts/AppLayout.vue';
 import Cart from '@/Pos/components/Cart.vue';
 import Checkout from '@/Pos/components/Checkout.vue';
@@ -14,7 +15,7 @@ import { http } from '@/Pos/lib/http';
 import { toDecimalString } from '@/Pos/lib/money';
 import type { PaymentMethod, PosFeed, StoredOrder } from '@/Pos/types';
 import { Head } from '@inertiajs/vue3';
-import { CircleAlert, LoaderCircle } from 'lucide-vue-next';
+import { CircleAlert, LoaderCircle, ShoppingCart } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 
 const props = defineProps<{
@@ -36,6 +37,14 @@ const loadError = ref<string | null>(null);
 const registerId = ref<number | null>(null);
 const paying = ref(false);
 const paymentOpen = ref(false);
+
+/*
+ * On a phone the cart lives in a sheet rather than stacked under the grid.
+ * Stacking gave the grid a few squeezed rows and pushed the total off-screen;
+ * a summary bar plus a sheet is what every till app converges on because the
+ * grid is where the work happens and the cart is only consulted.
+ */
+const cartOpen = ref(false);
 const toast = ref<{ kind: 'ok' | 'warn'; text: string } | null>(null);
 
 const currency = computed(() => feed.value?.settings.currency_symbol ?? '$');
@@ -181,6 +190,7 @@ async function completeSale(payment: { method: PaymentMethod; amount: number; re
 
     cart.clear();
     paymentOpen.value = false;
+    cartOpen.value = false;
     paying.value = false;
     await sync.refreshCount();
 
@@ -240,7 +250,15 @@ onMounted(loadFeed);
         <!-- Fills the viewport under the layout chrome. The grid and cart each
              scroll internally so the page itself never does — a till that
              scrolls as a whole is miserable on a tablet. -->
-        <div class="flex h-[calc(100dvh-9rem)] min-h-[28rem] flex-col md:h-[calc(100dvh-4rem)]">
+        <!--
+            Fills the viewport exactly. The layout wrapper already reserves the
+            tab bar via pb-tabbar, so this height must subtract it too or the
+            page gains a scrollbar it should never have. The grid and cart each
+            scroll internally instead.
+        -->
+        <div
+            class="flex h-[calc(100dvh-var(--safe-top)-var(--appbar-h)-var(--tabbar-h)-var(--safe-bottom))] min-h-[24rem] flex-col md:h-[calc(100dvh-4rem)]"
+        >
             <div
                 v-if="sync.authExpired.value"
                 class="shrink-0 border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-center text-xs text-destructive"
@@ -266,12 +284,60 @@ onMounted(loadFeed);
                     <ProductGrid :products="products" :categories="feed!.categories" :currency="currency" @add="cart.add($event)" />
                 </section>
 
-                <aside class="flex min-h-0 w-full shrink-0 flex-col border-t border-border lg:w-[24rem] lg:border-t-0">
+                <!-- Desktop keeps the cart permanently alongside the grid. -->
+                <aside class="hidden min-h-0 w-[24rem] shrink-0 flex-col lg:flex">
                     <Cart :currency="currency" />
                     <Checkout :currency="currency" @pay="paymentOpen = true" />
                 </aside>
             </main>
+
+            <!--
+                Phone summary bar. Sits inside the fixed-height column rather
+                than floating, so it can never cover a product tile, and it
+                carries the running total — the number a customer asks for
+                before the cart is ever opened.
+            -->
+            <button
+                v-if="!loading && !loadError"
+                type="button"
+                class="press flex shrink-0 items-center gap-3 border-t border-border bg-card px-4 py-3 text-left lg:hidden"
+                :disabled="cart.isEmpty"
+                @click="cartOpen = true"
+            >
+                <span class="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <ShoppingCart class="size-5" />
+                    <span
+                        v-if="cart.count"
+                        class="tabular absolute -right-1 -top-1 flex min-w-5 items-center justify-center rounded-full bg-foreground px-1 font-mono text-[0.65rem] font-bold text-background"
+                    >
+                        {{ cart.count }}
+                    </span>
+                </span>
+
+                <span class="min-w-0 flex-1">
+                    <span class="block text-sm font-semibold leading-tight">
+                        {{ cart.isEmpty ? 'Cart is empty' : 'View cart' }}
+                    </span>
+                    <span class="block truncate text-xs text-muted-foreground">
+                        {{ cart.isEmpty ? 'Tap a product to start' : `${cart.count} item${cart.count === 1 ? '' : 's'}` }}
+                    </span>
+                </span>
+
+                <span class="tabular shrink-0 font-mono text-xl font-bold text-primary"> {{ currency }}{{ cart.totals.total.toFixed(2) }} </span>
+            </button>
         </div>
+
+        <!-- Cart + checkout, for phones. -->
+        <Sheet v-model:open="cartOpen">
+            <SheetContent side="bottom" class="flex h-[85dvh] flex-col rounded-t-2xl p-0 lg:hidden">
+                <SheetHeader class="shrink-0 px-4 pt-4 text-left">
+                    <SheetTitle class="sr-only">Cart</SheetTitle>
+                </SheetHeader>
+
+                <Cart :currency="currency" />
+                <Checkout :currency="currency" @pay="paymentOpen = true" />
+            </SheetContent>
+        </Sheet>
 
         <PaymentModal
             :open="paymentOpen"
