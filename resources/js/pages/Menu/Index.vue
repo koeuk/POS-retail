@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ThemeToggle from '@/components/ThemeToggle.vue';
 import { Input } from '@/components/ui/input';
 import type { SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
@@ -106,6 +107,12 @@ const isStaff = computed(() => !!page.props.auth?.user);
                 <ArrowLeft class="size-4" />
                 <span class="hidden sm:inline">Dashboard</span>
             </Link>
+
+            <!-- Everyone gets this one: which theme a screen is comfortable in
+                 is the viewer's business, not the shop's. -->
+            <ThemeToggle
+                class="absolute right-4 top-4 border border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground/90 hover:bg-primary-foreground/20 hover:text-primary-foreground md:right-6 md:top-6"
+            />
 
             <div class="mx-auto max-w-5xl px-5 py-12 text-center md:py-16">
                 <!--
