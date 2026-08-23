@@ -133,6 +133,43 @@ export async function markAttemptFailed(clientUuid: string, error: string): Prom
     });
 }
 
+/**
+ * The server understood the request and refused this order outright — a
+ * product or register it names no longer exists, say. Retrying cannot help,
+ * so it stops being "pending": one unfixable sale must not hold the queue,
+ * or the till, hostage forever.
+ *
+ * The row is kept, as every row here is. The sale still happened, and a human
+ * has to decide what to do about it.
+ */
+export async function markRejected(clientUuid: string, error: string): Promise<void> {
+    const existing = await db.orders.get(clientUuid);
+    if (!existing) return;
+
+    await db.orders.update(clientUuid, {
+        state: 'failed',
+        attempts: (existing.attempts ?? 0) + 1,
+        last_error: error,
+    });
+}
+
+export async function rejectedCount(): Promise<number> {
+    return db.orders.where('state').equals('failed').count();
+}
+
+export async function rejectedOrders(): Promise<StoredOrder[]> {
+    return db.orders.where('state').equals('failed').sortBy('created_offline_at');
+}
+
+/** Put a rejected order back in the queue, once whatever it named exists again. */
+export async function requeueRejected(): Promise<number> {
+    const stuck = await rejectedOrders();
+
+    await Promise.all(stuck.map((order) => db.orders.update(order.client_uuid, { state: 'pending_sync', last_error: null })));
+
+    return stuck.length;
+}
+
 export async function recentOrders(limit = 20): Promise<StoredOrder[]> {
     const all = await db.orders.orderBy('created_offline_at').reverse().limit(limit).toArray();
     return all;

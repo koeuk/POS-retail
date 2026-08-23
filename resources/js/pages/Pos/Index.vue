@@ -242,8 +242,9 @@ onMounted(loadFeed);
                 :online="sync.online.value"
                 :syncing="sync.syncing.value"
                 :pending="sync.pending.value"
+                :rejected="sync.rejected.value"
                 :auth-expired="sync.authExpired.value"
-                @retry="sync.flush()"
+                @retry="sync.rejected.value > 0 ? sync.retryRejected() : sync.flush()"
             />
         </template>
 

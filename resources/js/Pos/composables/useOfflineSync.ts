@@ -1,5 +1,7 @@
-import { markAttemptFailed, markSynced, pendingCount, pendingOrders } from '@/Pos/db/dexie';
+import { markAttemptFailed, markRejected, markSynced, pendingCount, pendingOrders, rejectedCount, requeueRejected } from '@/Pos/db/dexie';
 import { SessionExpired, http, isReallyOnline } from '@/Pos/lib/http';
+import type { StoredOrder } from '@/Pos/types';
+import type { AxiosError } from 'axios';
 import { onBeforeUnmount, onMounted, readonly, ref } from 'vue';
 
 /** How often to retry the queue while the app is open. */
@@ -31,11 +33,53 @@ export function useOfflineSync() {
     const authExpired = ref(false);
     const lastError = ref<string | null>(null);
     const lastSyncedAt = ref<string | null>(null);
+    const rejected = ref(0);
 
     let timer: ReturnType<typeof setInterval> | null = null;
 
     async function refreshCount() {
         pending.value = await pendingCount();
+        rejected.value = await rejectedCount();
+    }
+
+    /**
+     * Laravel reports batch validation failures keyed by position —
+     * `orders.3.items.0.product_id`. Pull out which orders in the batch the
+     * server refused, so the rest of the queue is not held up by them.
+     */
+    function refusedIndices(errors: Record<string, string[]>): Map<number, string> {
+        const refused = new Map<number, string>();
+
+        for (const [key, messages] of Object.entries(errors ?? {})) {
+            const match = /^orders\.(\d+)\b/.exec(key);
+            if (!match) continue;
+
+            const index = Number(match[1]);
+            if (!refused.has(index)) refused.set(index, messages?.[0] ?? 'The server refused this order.');
+        }
+
+        return refused;
+    }
+
+    /**
+     * A 422 means the server read the request and rejected specific orders —
+     * a product or register they name has been deleted, most likely. Retrying
+     * an unchanged payload will fail identically forever, so those orders are
+     * set aside rather than left to block everything behind them.
+     *
+     * Returns true when the whole batch was accounted for.
+     */
+    async function setAsideRefused(batch: StoredOrder[], errors: Record<string, string[]>): Promise<boolean> {
+        const refused = refusedIndices(errors);
+
+        if (refused.size === 0) return false;
+
+        for (const [index, message] of refused) {
+            const order = batch[index];
+            if (order) await markRejected(order.client_uuid, message);
+        }
+
+        return true;
     }
 
     /**
@@ -59,11 +103,16 @@ export function useOfflineSync() {
 
         syncing.value = true;
 
+        // The server keys its validation errors by position within the batch it
+        // was sent, so the catch below has to know which batch that was.
+        let currentBatch: StoredOrder[] = [];
+
         try {
             const queued = await pendingOrders();
 
             for (let i = 0; i < queued.length; i += BATCH_SIZE) {
                 const batch = queued.slice(i, i + BATCH_SIZE);
+                currentBatch = batch;
 
                 const { data } = await http.post<{ results: SyncResult[] }>('/orders/sync', {
                     // Send only the wire fields. The local bookkeeping —
@@ -105,8 +154,27 @@ export function useOfflineSync() {
                 authExpired.value = true;
                 lastError.value = 'Session expired — sign in again to sync.';
             } else {
-                online.value = false;
-                lastError.value = 'Could not reach the server.';
+                const response = (error as AxiosError)?.response;
+
+                /*
+                 * A reply — any reply — proves the server is reachable.
+                 * Reporting a rejected payload as "offline" sends the cashier
+                 * to check the wifi over something the network had no part in,
+                 * and it holds the navigation lock closed indefinitely.
+                 */
+                if (response) {
+                    online.value = true;
+
+                    const errors = (response.data as { errors?: Record<string, string[]> })?.errors ?? {};
+                    const handled = response.status === 422 && (await setAsideRefused(currentBatch, errors));
+
+                    lastError.value = handled
+                        ? 'Some sales were refused by the server and need attention.'
+                        : `The server refused the sync (${response.status}).`;
+                } else {
+                    online.value = false;
+                    lastError.value = 'Could not reach the server.';
+                }
             }
         } finally {
             syncing.value = false;
@@ -143,14 +211,23 @@ export function useOfflineSync() {
         if (timer) clearInterval(timer);
     });
 
+    /** Try the set-aside orders once more — after the missing data is restored. */
+    async function retryRejected(): Promise<void> {
+        await requeueRejected();
+        await refreshCount();
+        await flush();
+    }
+
     return {
         online: readonly(online),
         syncing: readonly(syncing),
         pending: readonly(pending),
+        rejected: readonly(rejected),
         authExpired: readonly(authExpired),
         lastError: readonly(lastError),
         lastSyncedAt: readonly(lastSyncedAt),
         flush,
+        retryRejected,
         refreshCount,
         checkConnection,
     };

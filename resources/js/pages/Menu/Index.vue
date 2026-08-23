@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Input } from '@/components/ui/input';
-import { Head } from '@inertiajs/vue3';
-import { Search, UtensilsCrossed } from 'lucide-vue-next';
+import type { SharedData } from '@/types';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { ArrowLeft, Search, UtensilsCrossed } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 interface MenuPack {
@@ -73,6 +74,15 @@ const money = (value: number) =>
     })}`;
 
 const year = new Date().getFullYear();
+
+/*
+ * This is the one route in the app with no auth — a customer can open it from
+ * a QR code. The way back into the admin therefore only exists when somebody
+ * is actually signed in; showing a customer a door to the dashboard would be
+ * both confusing and an invitation.
+ */
+const page = usePage<SharedData>();
+const isStaff = computed(() => !!page.props.auth?.user);
 </script>
 
 <template>
@@ -80,7 +90,16 @@ const year = new Date().getFullYear();
 
     <div class="min-h-dvh bg-background text-foreground">
         <!-- Masthead -->
-        <header class="border-b border-border">
+        <header class="relative border-b border-border">
+            <Link
+                v-if="isStaff"
+                :href="route('dashboard')"
+                class="press absolute left-4 top-4 flex h-10 items-center gap-2 rounded-full border border-border bg-card px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground md:left-6 md:top-6"
+            >
+                <ArrowLeft class="size-4" />
+                <span class="hidden sm:inline">Dashboard</span>
+            </Link>
+
             <div class="mx-auto max-w-5xl px-5 py-12 text-center md:py-16">
                 <p class="animate-fade font-mono text-[0.7rem] uppercase tracking-[0.28em] text-primary">Our menu</p>
                 <h1 class="animate-rise mt-3 font-display text-4xl font-bold tracking-tight md:text-6xl" style="animation-delay: 60ms">
