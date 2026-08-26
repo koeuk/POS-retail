@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\SalesReporter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -40,7 +41,7 @@ class SaleTypeTest extends TestCase
         Stock::create(['product_id' => $this->product->id, 'store_id' => $this->store->id, 'qty' => 20]);
     }
 
-    private function sync(array $overrides = [], ?int $customerId = null): \Illuminate\Testing\TestResponse
+    private function sync(array $overrides = [], ?int $customerId = null): TestResponse
     {
         return $this->actingAs($this->cashier)->postJson(route('pos.data.orders.sync'), ['orders' => [array_merge([
             'client_uuid' => (string) Str::uuid(),
@@ -58,7 +59,7 @@ class SaleTypeTest extends TestCase
     }
 
     /* ------------------------------------------------------------------ */
-    /* Myself: leaves the shelf, never touches the till                    */
+    /* Myself: leaves the shelf, never touches the till */
     /* ------------------------------------------------------------------ */
 
     public function test_a_myself_sale_moves_stock_but_is_not_revenue(): void
@@ -88,7 +89,7 @@ class SaleTypeTest extends TestCase
     }
 
     /* ------------------------------------------------------------------ */
-    /* Debt: revenue AND a receivable, and it needs a name                  */
+    /* Debt: revenue AND a receivable, and it needs a name */
     /* ------------------------------------------------------------------ */
 
     public function test_a_debt_is_recorded_as_owed_in_full_regardless_of_what_the_till_sent(): void
@@ -123,7 +124,7 @@ class SaleTypeTest extends TestCase
     }
 
     /* ------------------------------------------------------------------ */
-    /* Settling                                                            */
+    /* Settling */
     /* ------------------------------------------------------------------ */
 
     public function test_a_debt_can_be_paid_off_in_parts_and_is_settled_when_paid_in_full(): void
@@ -173,7 +174,7 @@ class SaleTypeTest extends TestCase
     }
 
     /* ------------------------------------------------------------------ */
-    /* The two screens                                                     */
+    /* The two screens */
     /* ------------------------------------------------------------------ */
 
     public function test_the_debt_screen_lists_what_is_owed_and_sums_it(): void

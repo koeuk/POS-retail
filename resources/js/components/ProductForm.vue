@@ -39,6 +39,9 @@ const isEdit = computed(() => !!props.product);
 /** Sentinel for "received as single units", since a Select needs a string. */
 const SINGLE = 'single';
 
+/** "A box of something", where the something is not a pack you sell. */
+const CUSTOM = 'custom';
+
 const form = useForm({
     category_id: props.product ? String(props.product.category_id) : '',
     packs: props.packs.map((p): PackRow => ({ id: p.id, name: p.name, units_per_pack: p.units_per_pack, sell_price: p.sell_price })),
@@ -61,6 +64,7 @@ const form = useForm({
      */
     add_stock: '' as string | number,
     add_stock_pack_id: SINGLE as string,
+    add_stock_units_each: '' as string | number,
     add_stock_loose: '' as string | number,
     add_stock_store_id: '' as string,
     add_stock_note: '',
@@ -107,9 +111,13 @@ const receivableUnits = computed(() => props.packs.filter((p) => !!p.id));
 /** Base units in one of whatever is selected. */
 const unitsPerSelected = computed(() => {
     if (form.add_stock_pack_id === SINGLE) return 1;
+    if (form.add_stock_pack_id === CUSTOM) return Number(form.add_stock_units_each) || 1;
 
     return receivableUnits.value.find((p) => String(p.id) === form.add_stock_pack_id)?.units_per_pack ?? 1;
 });
+
+/** True while the delivery is counted in something bigger than a single. */
+const receivingInPacks = computed(() => form.add_stock_pack_id !== SINGLE);
 
 /** Base units this delivery adds: the packs, plus anything loose. */
 const receivingTotal = computed(() => (Number(form.add_stock) || 0) * unitsPerSelected.value + (Number(form.add_stock_loose) || 0));
@@ -139,14 +147,21 @@ const onHandBreakdown = computed(() => {
 function submit() {
     if (isEdit.value) {
         // Multipart cannot be sent as a real PUT, so spoof the method.
-        form.transform((data) => ({ ...data, _method: 'put' })).post(route('products.update', { product: props.product!.id }), {
+        form.transform((data) => ({
+            ...data,
+            _method: 'put',
+            // Only one of the two ever means anything; sending both would let
+            // the server choose, and it should not have to.
+            add_stock_pack_id: data.add_stock_pack_id === SINGLE || data.add_stock_pack_id === CUSTOM ? null : data.add_stock_pack_id,
+            add_stock_units_each: data.add_stock_pack_id === CUSTOM ? data.add_stock_units_each : null,
+        })).post(route('products.update', { product: props.product!.id }), {
             forceFormData: true,
             /*
              * Receiving is an action, not a setting. The update redirects away
              * so this rarely matters — but if it ever stops redirecting, a
              * second save would book the same delivery twice.
              */
-            onSuccess: () => form.reset('add_stock', 'add_stock_note'),
+            onSuccess: () => form.reset('add_stock', 'add_stock_loose', 'add_stock_note'),
         });
     } else {
         form.post(route('products.store'), { forceFormData: true });

@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\SaleType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * Validates a batch flush from the offline queue.
@@ -63,9 +64,9 @@ class SyncOrdersRequest extends FormRequest
      * A debt with no customer is money nobody can collect. The rule is
      * cross-field, so it lives here rather than in the flat rules array.
      */
-    public function withValidator(\Illuminate\Validation\Validator $validator): void
+    public function withValidator(Validator $validator): void
     {
-        $validator->after(function (\Illuminate\Validation\Validator $v) {
+        $validator->after(function (Validator $v) {
             foreach ($this->input('orders', []) as $i => $order) {
                 if (($order['sale_type'] ?? null) === SaleType::Debt->value && empty($order['customer_id'])) {
                     $v->errors()->add("orders.{$i}.customer_id", 'A sale on debt must be attached to a customer.');
