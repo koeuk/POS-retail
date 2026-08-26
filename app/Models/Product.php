@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Product extends Model
 {
@@ -70,12 +69,6 @@ class Product extends Model
     public function inventoryLogs(): HasMany
     {
         return $this->hasMany(InventoryLog::class);
-    }
-
-    /** Stock row for one store, for eager loading on the POS product feed. */
-    public function stockFor(int $storeId): HasOne
-    {
-        return $this->hasOne(Stock::class)->where('store_id', $storeId);
     }
 
     public function scopeActive(Builder $query): Builder

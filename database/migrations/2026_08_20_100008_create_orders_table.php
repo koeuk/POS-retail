@@ -27,7 +27,7 @@ return new class extends Migration
 
             $table->decimal('subtotal', 12, 2)->default(0);
             $table->decimal('discount_amount', 12, 2)->default(0);
-            $table->decimal('tax_amount', 12, 2)->default(0);
+            // total = subtotal - discount_amount. Nothing is added on top.
             $table->decimal('total', 12, 2)->default(0);
 
             // paid_amount = SUM(payments.amount); change_amount = paid - total, cash only.

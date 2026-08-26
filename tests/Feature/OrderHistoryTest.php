@@ -198,7 +198,7 @@ class OrderHistoryTest extends TestCase
                 ->has('order.payments', 1)
                 ->where('order.payments.0.method', 'cash')
                 ->has('settings.receipt_header')
-                ->has('settings.currency_symbol')
+                ->has('settings.currency.symbol')
             );
     }
 }

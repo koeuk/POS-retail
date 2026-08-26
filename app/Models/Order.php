@@ -3,12 +3,10 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Carbon;
 
 class Order extends Model
 {
@@ -73,25 +71,5 @@ class Order extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
-    }
-
-    public function scopeCompleted(Builder $query): Builder
-    {
-        return $query->where('status', OrderStatus::Completed);
-    }
-
-    /** True when the sale happened on a tablet before reaching the server. */
-    public function wasOffline(): bool
-    {
-        return $this->created_offline_at !== null;
-    }
-
-    /**
-     * Reports must bucket by when the sale actually happened, not when it
-     * synced — an offline batch can land hours or days later.
-     */
-    public function transactedAt(): Carbon
-    {
-        return $this->created_offline_at ?? $this->created_at;
     }
 }

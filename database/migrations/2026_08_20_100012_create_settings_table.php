@@ -8,7 +8,8 @@ return new class extends Migration
 {
     /**
      * Key/value store for receipt header and footer text, currency symbol and
-     * default tax rate. Cached into Dexie so offline receipts can render them.
+     * display currency and exchange rate. Cached into Dexie so offline receipts
+     * can render them.
      */
     public function up(): void
     {

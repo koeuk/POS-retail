@@ -410,7 +410,7 @@ class PosSyncTest extends TestCase
             ->assertOk()
             ->assertJsonStructure([
                 'store_id', 'synced_at', 'categories', 'registers',
-                'settings' => ['receipt_header', 'receipt_footer', 'currency_symbol'],
+                'settings' => ['receipt_header', 'receipt_footer', 'currency' => ['code', 'symbol', 'decimals', 'riel_per_usd']],
                 'products' => [['id', 'name', 'sku', 'barcode', 'sell_price', 'stock_qty']],
             ]);
 

@@ -59,22 +59,8 @@ class User extends Authenticatable
         return $this->role === Role::Manager;
     }
 
-    public function isCashier(): bool
-    {
-        return $this->role === Role::Cashier;
-    }
-
     public function hasRole(Role ...$roles): bool
     {
         return in_array($this->role, $roles, true);
-    }
-
-    /**
-     * Admins see every store; everyone else is scoped to their own.
-     * Returns null when the user is not store-bound.
-     */
-    public function resolvedStoreId(): ?int
-    {
-        return $this->store_id;
     }
 }

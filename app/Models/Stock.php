@@ -29,19 +29,4 @@ class Stock extends Model
     {
         return $this->belongsTo(Store::class);
     }
-
-    public function isLow(): bool
-    {
-        return $this->low_stock_threshold !== null
-            && $this->qty <= $this->low_stock_threshold;
-    }
-
-    /**
-     * True when offline sales have driven this below zero. Surfaced on the
-     * dashboard for reconciliation rather than being silently clamped.
-     */
-    public function isOversold(): bool
-    {
-        return $this->qty < 0;
-    }
 }

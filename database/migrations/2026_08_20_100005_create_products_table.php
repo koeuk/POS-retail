@@ -30,10 +30,8 @@ return new class extends Migration
             $table->string('barcode')->nullable()->unique();
             $table->text('description')->nullable();
             $table->decimal('cost_price', 12, 2)->default(0);
+            // The price the customer pays. There is no tax in this shop.
             $table->decimal('sell_price', 12, 2)->default(0);
-
-            // Tax-exclusive: sell_price does NOT include tax. Null means 0%.
-            $table->decimal('tax_rate', 5, 2)->nullable();
 
             $table->string('image')->nullable();
             $table->string('unit')->default('pcs');
