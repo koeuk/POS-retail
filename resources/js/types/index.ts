@@ -100,6 +100,9 @@ export interface Product {
     /** Base units one of these contains. 1 for a base product. */
     units_per_pack?: number;
     packs_count?: number;
+    /** Cheapest and dearest pack price, for the range shown in the list. */
+    pack_min_price?: string | null;
+    pack_max_price?: string | null;
     category?: Pick<Category, 'id' | 'name'>;
     name: string;
     sku: string;

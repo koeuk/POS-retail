@@ -66,6 +66,16 @@ function confirmDelete() {
     });
 }
 
+/**
+ * The dearest way to buy this product, when it is sold in packs as well as
+ * singly. Null when there is only one price, so the range collapses to it.
+ */
+function packMax(product: Product): string | null {
+    if (!product.packs_count || !product.pack_max_price) return null;
+
+    return Number(product.pack_max_price) > Number(product.sell_price) ? product.pack_max_price : null;
+}
+
 /** Stock is signed — offline sales can legitimately drive it below zero. */
 function stockTone(qty: number | null | undefined) {
     const n = qty ?? 0;
@@ -172,6 +182,9 @@ function stockTone(qty: number | null | undefined) {
                                 </TableCell>
                                 <TableCell data-numeric class="text-right font-medium">
                                     <Money :value="p.sell_price" />
+                                    <!-- Packs make one product several prices; the
+                                         range says so without listing them all. -->
+                                    <span v-if="packMax(p)" class="text-muted-foreground"> – <Money :value="packMax(p)!" /> </span>
                                 </TableCell>
                                 <TableCell data-numeric class="text-right">
                                     <span class="tabular font-mono text-sm" :class="stockTone(p.stock_qty)">
@@ -233,7 +246,10 @@ function stockTone(qty: number | null | undefined) {
                             </div>
 
                             <div class="shrink-0 text-right">
-                                <p class="font-medium leading-tight"><Money :value="p.sell_price" /></p>
+                                <p class="font-medium leading-tight">
+                                    <Money :value="p.sell_price" />
+                                    <span v-if="packMax(p)" class="text-muted-foreground">– <Money :value="packMax(p)!" /></span>
+                                </p>
                                 <p class="tabular font-mono text-xs" :class="stockTone(p.stock_qty)">{{ p.stock_qty ?? 0 }} {{ p.unit }}</p>
                             </div>
                         </Link>

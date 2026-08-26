@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import DevicePreviewSelect from '@/components/DevicePreviewSelect.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { isPreviewFrame } from '@/composables/useDevicePreview';
 import { cn } from '@/lib/utils';
 import type { BreadcrumbItemType } from '@/types';
 import type { HTMLAttributes } from 'vue';
@@ -52,6 +54,13 @@ const props = withDefaults(
              while the content below it scrolls. -->
         <div class="ml-auto flex items-center gap-2">
             <slot name="actions" />
+
+            <!--
+                Device preview. Hidden inside the preview frame itself — the
+                frame is already the device, and a picker in there would nest
+                frames forever.
+            -->
+            <DevicePreviewSelect v-if="!isPreviewFrame" />
 
             <!-- Always last: page chrome comes and goes, but the theme control
                  is in the same place on every screen. -->

@@ -28,14 +28,30 @@ class ProductController extends Controller
         $filters = $request->only('search', 'category_id', 'status');
 
         $products = Product::query()
-            ->with(['category:id,name', 'parent:id,name'])
+            /*
+             * Base products only. A pack is a way of buying this product, not a
+             * product of its own — it owns no stock, so listing it puts rows
+             * reading "0 pcs" beside the real item and doubles the catalogue.
+             * Its price appears on the parent's row as a range instead.
+             */
+            ->base()
+            ->with('category:id,name')
             ->withSum('stocks as stock_qty', 'qty')
             ->withCount('packs')
+            // Cheapest and dearest way to buy it, for the range in the list.
+            ->withMin('packs as pack_min_price', 'sell_price')
+            ->withMax('packs as pack_max_price', 'sell_price')
             ->when($filters['search'] ?? null, function ($query, string $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
                         ->orWhere('sku', 'like', "%{$search}%")
-                        ->orWhere('barcode', 'like', "%{$search}%");
+                        ->orWhere('barcode', 'like', "%{$search}%")
+                        // Scanning a case's barcode should find the product it
+                        // belongs to, not nothing.
+                        ->orWhereHas('packs', fn ($p) => $p
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('sku', 'like', "%{$search}%")
+                            ->orWhere('barcode', 'like', "%{$search}%"));
                 });
             })
             ->when($filters['category_id'] ?? null, fn ($q, $id) => $q->where('category_id', $id))
@@ -131,6 +147,11 @@ class ProductController extends Controller
 
         return Inertia::render('Products/Show', [
             'product' => $product->load('category:id,name'),
+            // Every way this can be bought. The list page shows only the range,
+            // so this is where the individual prices live.
+            'packs' => $product->packs()
+                ->orderBy('units_per_pack')
+                ->get(['id', 'name', 'units_per_pack', 'sell_price', 'is_active']),
             'stocks' => $product->stocks()->with('store:id,name')->get(),
             'movements' => $product->inventoryLogs()
                 ->with(['store:id,name', 'creator:id,name'])

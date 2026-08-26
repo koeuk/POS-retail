@@ -56,6 +56,20 @@ const visible = computed(() => {
 /** Every way this product can be sold, single first. */
 const sellableAs = (product: PosProduct) => [product, ...(packsByParent.value.get(product.id) ?? [])];
 
+/**
+ * The dearest way to buy it, when there is more than one. The tile shows the
+ * single price and this, so a cashier reads the span at a glance instead of
+ * having to open the chooser to find out a case exists.
+ */
+function dearest(product: PosProduct): string | null {
+    const options = sellableAs(product);
+    if (options.length === 1) return null;
+
+    const top = options.reduce((a, b) => (Number(b.sell_price) > Number(a.sell_price) ? b : a));
+
+    return Number(top.sell_price) > Number(product.sell_price) ? top.sell_price : null;
+}
+
 /* Which tile has its chooser open. Null means none — only one at a time, so a
    mis-tap never leaves two panels covering the grid. */
 const choosing = ref<number | null>(null);
@@ -167,6 +181,9 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                             <p class="line-clamp-2 text-sm font-medium leading-snug">{{ product.name }}</p>
                             <p class="tabular mt-auto font-mono text-base font-semibold text-primary">
                                 {{ formatMoney(Number(product.sell_price), currency) }}
+                                <span v-if="dearest(product)" class="text-xs font-normal text-muted-foreground">
+                                    – {{ formatMoney(Number(dearest(product)), currency) }}
+                                </span>
                             </p>
                             <p class="tabular font-mono text-[0.7rem]" :class="stockTone(product)">
                                 {{ product.track_stock ? `${product.stock_qty} ${product.unit}` : product.unit }}

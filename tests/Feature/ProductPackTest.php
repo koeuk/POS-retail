@@ -12,6 +12,7 @@ use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /**
@@ -356,5 +357,57 @@ class ProductPackTest extends TestCase
         $this->assertSame('Beer 330ml', $products[0]['name']);
         $this->assertCount(1, $products[0]['packs']);
         $this->assertSame('Case of 24', $products[0]['packs'][0]['name']);
+    }
+
+    /**
+     * A pack is a way of buying a product, not a product. Listing it put rows
+     * reading "0 pcs" beside the real item and doubled the catalogue.
+     */
+    public function test_the_catalogue_lists_products_not_their_packs(): void
+    {
+        $can = $this->can(120);
+        $this->packOf($can, 6, 'Six-pack', '4.32');
+        $this->packOf($can, 24, 'Case of 24', '16.00');
+
+        $this->actingAs($this->admin)
+            ->get(route('products.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('products.data', 1)
+                ->where('products.data.0.id', $can->id)
+                ->where('products.data.0.packs_count', 2)
+                // Carried so the row can show a range rather than one price.
+                ->where('products.data.0.pack_max_price', '16.00')
+            );
+    }
+
+    /** Scanning a case's barcode should find the product it belongs to. */
+    public function test_searching_finds_a_product_by_its_packs_details(): void
+    {
+        $can = $this->can();
+        $case = $this->packOf($can, 24, 'Case of 24', '16.00');
+
+        $this->actingAs($this->admin)
+            ->get(route('products.index', ['search' => $case->sku]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('products.data', 1)
+                ->where('products.data.0.id', $can->id)
+            );
+    }
+
+    public function test_the_detail_page_lists_every_way_to_buy_it(): void
+    {
+        $can = $this->can();
+        $this->packOf($can, 6, 'Six-pack', '4.32');
+
+        $this->actingAs($this->admin)
+            ->get(route('products.show', $can))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('packs', 1)
+                ->where('packs.0.name', 'Six-pack')
+                ->where('packs.0.units_per_pack', 6)
+            );
     }
 }

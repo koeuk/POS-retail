@@ -19,12 +19,24 @@ interface Movement {
     creator: { id: number; name: string } | null;
 }
 
-const props = defineProps<{
-    product: Product;
-    stocks: Stock[];
-    movements: Movement[];
-    sales: { qty: number; revenue: string } | null;
-}>();
+interface Pack {
+    id: number;
+    name: string;
+    units_per_pack: number;
+    sell_price: string;
+    is_active: boolean;
+}
+
+const props = withDefaults(
+    defineProps<{
+        product: Product;
+        packs?: Pack[];
+        stocks: Stock[];
+        movements: Movement[];
+        sales: { qty: number; revenue: string } | null;
+    }>(),
+    { packs: () => [] },
+);
 
 const onHand = computed(() => props.stocks.reduce((sum, s) => sum + s.qty, 0));
 
@@ -115,6 +127,33 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                                 <p class="text-2xl font-bold text-primary">
                                     <Money :value="product.sell_price" :muted="false" />
                                 </p>
+                                <p class="text-[0.7rem] text-muted-foreground">per {{ product.unit }}</p>
+
+                                <!--
+                                    The list page only has room for a range, so
+                                    the individual pack prices belong here — with
+                                    the per-unit figure, which is the number that
+                                    says whether the bulk price is a discount.
+                                -->
+                                <dl v-if="packs.length" class="mt-3 space-y-1 border-t border-border pt-2">
+                                    <div v-for="pack in packs" :key="pack.id" class="flex items-baseline justify-between gap-3">
+                                        <dt
+                                            class="truncate text-xs"
+                                            :class="pack.is_active ? 'text-muted-foreground' : 'text-muted-foreground/50 line-through'"
+                                        >
+                                            {{ pack.name }}
+                                            <span class="tabular font-mono">×{{ pack.units_per_pack }}</span>
+                                        </dt>
+                                        <dd class="shrink-0 text-right">
+                                            <span class="tabular font-mono text-sm font-medium"
+                                                ><Money :value="pack.sell_price" :muted="false"
+                                            /></span>
+                                            <span class="tabular ml-1 font-mono text-[0.65rem] text-muted-foreground">
+                                                {{ (Number(pack.sell_price) / pack.units_per_pack).toFixed(3) }} ea
+                                            </span>
+                                        </dd>
+                                    </div>
+                                </dl>
                             </div>
                             <div v-if="sales">
                                 <p class="text-xs text-muted-foreground">Sold to date</p>
