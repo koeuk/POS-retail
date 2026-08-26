@@ -23,7 +23,7 @@ const props = withDefaults(
         /** Categorical when each row is a different thing; single-hue otherwise. */
         categorical?: boolean;
     }>(),
-    { currency: '$', categorical: false },
+    { currency: () => USD, categorical: false },
 );
 
 /*

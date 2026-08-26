@@ -8,6 +8,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { printReceipt } from '@/Pos/composables/usePrint';
 import { Head, Link } from '@inertiajs/vue3';
 import { ArrowLeft, CloudOff, Printer } from 'lucide-vue-next';
+import { useCurrency, type CurrencyDef } from '@/composables/useCurrency';
 import { computed, onMounted } from 'vue';
 
 interface Item {

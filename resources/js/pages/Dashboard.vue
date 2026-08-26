@@ -5,11 +5,11 @@ import Money from '@/components/Money.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useCurrency } from '@/composables/useCurrency';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { Boxes, ChartNoAxesColumn, ChevronRight, CloudOff, PackageSearch, Receipt, ScanBarcode, TrendingUp, TriangleAlert } from 'lucide-vue-next';
-import { useCurrency } from '@/composables/useCurrency';
 import { computed } from 'vue';
 
 interface Summary {

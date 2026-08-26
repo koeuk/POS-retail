@@ -6,10 +6,10 @@ import DateRangePicker from '@/components/DateRangePicker.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useCurrency } from '@/composables/useCurrency';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { Boxes, Download, Receipt, TrendingUp } from 'lucide-vue-next';
-import { useCurrency } from '@/composables/useCurrency';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{

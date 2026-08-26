@@ -14,7 +14,7 @@ const props = withDefaults(
         currency?: CurrencyDef;
         height?: number;
     }>(),
-    { currency: '$', height: 200 },
+    { currency: () => USD, height: 200 },
 );
 
 /*

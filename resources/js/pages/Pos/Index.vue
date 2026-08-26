@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { USD } from '@/composables/useCurrency';
 import AppLayout from '@/layouts/AppLayout.vue';
 import Cart from '@/Pos/components/Cart.vue';
 import Checkout from '@/Pos/components/Checkout.vue';
@@ -12,7 +13,6 @@ import { useNavLock } from '@/Pos/composables/useNavLock';
 import { useOfflineSync } from '@/Pos/composables/useOfflineSync';
 import { cacheFeed, queueOrder, readCachedFeed } from '@/Pos/db/dexie';
 import { http } from '@/Pos/lib/http';
-import { USD } from '@/composables/useCurrency';
 import { formatMoney, toDecimalString } from '@/Pos/lib/money';
 import type { PaymentMethod, PosFeed, StoredOrder } from '@/Pos/types';
 import { Head } from '@inertiajs/vue3';
@@ -323,7 +323,7 @@ onMounted(loadFeed);
                     </span>
                 </span>
 
-                <span class="tabular shrink-0 font-mono text-xl font-bold text-primary"> {{ currency }}{{ cart.totals.total.toFixed(2) }} </span>
+                <span class="tabular shrink-0 font-mono text-xl font-bold text-primary"> {{ formatMoney(cart.totals.total, currency) }} </span>
             </button>
         </div>
 

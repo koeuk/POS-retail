@@ -93,7 +93,15 @@ function submit() {
                         <Label for="rate">Exchange rate</Label>
                         <div class="flex items-center gap-2">
                             <span class="shrink-0 font-mono text-sm text-muted-foreground">$1 =</span>
-                            <Input id="rate" v-model="form.riel_per_usd" type="number" min="1" step="1" inputmode="numeric" class="tabular font-mono" />
+                            <Input
+                                id="rate"
+                                v-model="form.riel_per_usd"
+                                type="number"
+                                min="1"
+                                step="1"
+                                inputmode="numeric"
+                                class="tabular font-mono"
+                            />
                             <span class="shrink-0 font-mono text-sm text-muted-foreground">៛</span>
                         </div>
                         <InputError :message="form.errors.riel_per_usd" />
