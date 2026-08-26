@@ -21,7 +21,14 @@ interface StockRow {
     id: number;
     qty: number;
     low_stock_threshold: number | null;
-    product: { id: number; name: string; sku: string; barcode: string | null; unit: string } | null;
+    product: {
+        id: number;
+        name: string;
+        sku: string;
+        barcode: string | null;
+        unit: string;
+        packs?: { id: number; name: string; units_per_pack: number }[];
+    } | null;
     store: { id: number; name: string } | null;
 }
 
@@ -261,6 +268,22 @@ function clearFilters() {
     state.value = ALL;
 }
 
+/*
+ * Stock the way it sits on the shelf: cases and loose units, counted by the
+ * largest pack the product is sold in. 97 cans reads as "8 × 12 + 1" when a
+ * case holds twelve. A product with no pack size just shows the number.
+ */
+function packed(stock: StockRow): { count: number; each: number; label: string; loose: number } | null {
+    const pack = (stock.product?.packs ?? []).filter((p) => p.units_per_pack > 1).sort((a, b) => b.units_per_pack - a.units_per_pack)[0];
+    if (!pack || stock.qty <= 0) return null;
+    return {
+        count: Math.floor(stock.qty / pack.units_per_pack),
+        each: pack.units_per_pack,
+        label: pack.name,
+        loose: stock.qty % pack.units_per_pack,
+    };
+}
+
 function tone(stock: StockRow) {
     if (stock.qty < 0) return 'text-destructive font-semibold';
     if (stock.qty === 0) return 'text-muted-foreground';
@@ -357,6 +380,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                                     <TableHead>Product</TableHead>
                                     <!-- Only worth a column when there is more than one. -->
                                     <TableHead v-if="stores.length > 1">Store</TableHead>
+                                    <TableHead data-numeric class="text-right">Quantity</TableHead>
                                     <TableHead data-numeric class="text-right">On hand</TableHead>
                                     <TableHead data-numeric class="text-right">Alert at</TableHead>
                                     <TableHead class="w-[1%]"></TableHead>
@@ -369,6 +393,18 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                                         <p class="tabular font-mono text-xs text-muted-foreground">{{ stock.product?.sku }}</p>
                                     </TableCell>
                                     <TableCell v-if="stores.length > 1" class="text-sm text-muted-foreground">{{ stock.store?.name }}</TableCell>
+                                    <TableCell data-numeric class="text-right">
+                                        <template v-if="packed(stock)">
+                                            <span class="tabular font-mono text-base">{{ packed(stock)!.count }}</span>
+                                            <span class="ml-1 text-xs text-muted-foreground"
+                                                >× {{ packed(stock)!.each }} {{ packed(stock)!.label }}</span
+                                            >
+                                            <p v-if="packed(stock)!.loose" class="tabular font-mono text-xs text-muted-foreground">
+                                                + {{ packed(stock)!.loose }} loose
+                                            </p>
+                                        </template>
+                                        <span v-else class="tabular font-mono text-base" :class="tone(stock)">{{ stock.qty.toLocaleString() }}</span>
+                                    </TableCell>
                                     <TableCell data-numeric class="text-right">
                                         <span class="tabular font-mono text-base" :class="tone(stock)">{{ stock.qty }}</span>
                                         <span class="ml-1 text-xs text-muted-foreground">{{ stock.product?.unit }}</span>

@@ -41,7 +41,11 @@ const props = defineProps<{
     methods: { value: string; label: string }[];
 }>();
 
-const { money } = useCurrency();
+const { currency, money } = useCurrency();
+
+/* Riel has no fractional unit, so a step or minimum of 0.01 asks for a
+   payment that cannot be made. Both follow the currency instead. */
+const amountStep = computed(() => (currency.value.decimals > 0 ? '0.01' : '1'));
 
 const search = ref(props.filters.search);
 const state = ref(props.filters.state);
@@ -295,15 +299,20 @@ function submitSettle() {
                     <div class="grid gap-4 py-5">
                         <div class="grid gap-2">
                             <Label for="amt">Amount received</Label>
-                            <Input
-                                id="amt"
-                                v-model="form.amount"
-                                type="number"
-                                step="0.01"
-                                min="0.01"
-                                inputmode="decimal"
-                                class="tabular font-mono"
-                            />
+                            <div class="relative">
+                                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                    {{ currency.symbol }}
+                                </span>
+                                <Input
+                                    id="amt"
+                                    v-model="form.amount"
+                                    type="number"
+                                    :step="amountStep"
+                                    :min="amountStep"
+                                    inputmode="decimal"
+                                    class="tabular pl-7 font-mono"
+                                />
+                            </div>
                             <InputError :message="form.errors.amount" />
                             <p class="text-xs text-muted-foreground">
                                 <template v-if="leftAfter > 0"

@@ -53,7 +53,13 @@ class InventoryController extends Controller
         };
 
         $stocks = $this->scoped($user)
-            ->with(['product:id,name,sku,barcode,unit,is_active', 'store:id,name'])
+            ->with([
+                'product:id,name,sku,barcode,unit,is_active',
+                // Pack sizes let the page say "8 × 12 + 1" instead of a bare 97 —
+                // the way the shelf is actually counted.
+                'product.packs:id,parent_product_id,name,units_per_pack',
+                'store:id,name',
+            ])
             ->whereHas('product', fn (Builder $q) => $q->where('is_active', true))
             ->when($filters['search'] ?? null, function (Builder $query, string $search) {
                 $query->whereHas('product', function (Builder $q) use ($search) {

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { useCurrency } from '@/composables/useCurrency';
 import type { Category, Product } from '@/types';
 import { Link, useForm } from '@inertiajs/vue3';
 import { ImageUp, LoaderCircle, Plus, Trash2 } from 'lucide-vue-next';
@@ -36,6 +37,22 @@ const props = withDefaults(
 
 const isEdit = computed(() => !!props.product);
 
+/*
+ * Money fields carry the shop's symbol, so it is never a guess whether a box
+ * wants dollars or riel — and the step follows the currency, because riel has
+ * no fractional unit and nudging one by a hundredth is meaningless.
+ */
+const { currency } = useCurrency();
+
+/**
+ * Decimal columns always arrive as "500.00". In a currency with no fractional
+ * unit that is two digits of noise in a box the shopkeeper is about to type
+ * into, so the stored string is trimmed to the currency's own precision.
+ */
+const forEditing = (amount: string | number | null | undefined): string => Number(amount ?? 0).toFixed(currency.value.decimals);
+
+const priceStep = computed(() => (currency.value.decimals > 0 ? '0.01' : '1'));
+
 /** Sentinel for "received as single units", since a Select needs a string. */
 const SINGLE = 'single';
 
@@ -44,12 +61,12 @@ const RECEIPT_KEYS = ['add_stock', 'add_stock_pack_id', 'add_stock_units_each', 
 
 const form = useForm({
     category_id: props.product ? String(props.product.category_id) : '',
-    packs: props.packs.map((p): PackRow => ({ id: p.id, name: p.name, units_per_pack: p.units_per_pack, sell_price: p.sell_price })),
+    packs: props.packs.map((p): PackRow => ({ id: p.id, name: p.name, units_per_pack: p.units_per_pack, sell_price: forEditing(p.sell_price) })),
     name: props.product?.name ?? '',
     sku: props.product?.sku ?? '',
     barcode: props.product?.barcode ?? '',
     description: props.product?.description ?? '',
-    sell_price: props.product?.sell_price ?? '0.00',
+    sell_price: props.product ? forEditing(props.product.sell_price) : '',
     unit: props.product?.unit ?? 'pcs',
     track_stock: props.product?.track_stock ?? true,
     is_active: props.product?.is_active ?? true,
@@ -77,7 +94,7 @@ const form = useForm({
  * its own, and no SKU to invent: the server derives one.
  */
 function addPack() {
-    form.packs.push({ id: null, name: '', units_per_pack: 6, sell_price: form.sell_price });
+    form.packs.push({ id: null, name: '', units_per_pack: 6, sell_price: forEditing(form.sell_price) });
 }
 
 function removePack(index: number) {
@@ -268,14 +285,19 @@ function submit() {
 
                             <div class="grid gap-1.5">
                                 <Label :for="`pack-price-${index}`" class="text-xs text-muted-foreground">Price</Label>
-                                <Input
-                                    :id="`pack-price-${index}`"
-                                    v-model="pack.sell_price"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    class="tabular font-mono"
-                                />
+                                <div class="relative">
+                                    <span class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                        {{ currency.symbol }}
+                                    </span>
+                                    <Input
+                                        :id="`pack-price-${index}`"
+                                        v-model="pack.sell_price"
+                                        type="number"
+                                        :step="priceStep"
+                                        min="0"
+                                        class="tabular pl-6 font-mono"
+                                    />
+                                </div>
                                 <InputError :message="packError(index, 'sell_price')" />
                             </div>
 
@@ -293,8 +315,14 @@ function submit() {
 
                         <!-- The per-unit figure is what tells you whether the bulk
                              price is actually a discount. -->
+                        <!--
+                            Deliberately finer than the currency's own decimals:
+                            this figure exists to compare against the single
+                            price, and rounding ៛83.3 to ៛83 hides the very
+                            difference it is there to show.
+                        -->
                         <p v-if="perUnit(pack) !== null" class="mt-2 text-xs text-muted-foreground">
-                            <span class="tabular font-mono">{{ perUnit(pack)!.toFixed(3) }}</span>
+                            <span class="tabular font-mono"> {{ currency.symbol }}{{ perUnit(pack)!.toFixed(currency.decimals > 0 ? 3 : 1) }} </span>
                             each
                         </p>
                     </div>
@@ -311,7 +339,12 @@ function submit() {
 
                 <div class="grid gap-2 sm:max-w-xs">
                     <Label for="sell">Sell price</Label>
-                    <Input id="sell" v-model="form.sell_price" type="number" step="0.01" min="0" class="tabular font-mono" />
+                    <div class="relative">
+                        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                            {{ currency.symbol }}
+                        </span>
+                        <Input id="sell" v-model="form.sell_price" type="number" :step="priceStep" min="0" class="tabular pl-7 font-mono" />
+                    </div>
                     <InputError :message="form.errors.sell_price" />
                 </div>
 

@@ -240,6 +240,22 @@ class InventoryTest extends TestCase
      * value is whitelisted: anything unrecognised falls back to lowest-first
      * rather than reaching orderBy() raw.
      */
+    public function test_the_index_ships_pack_sizes_so_stock_can_be_shown_in_cases(): void
+    {
+        $base = Product::factory()->create(['name' => 'Cola can']);
+        Product::factory()->create(['name' => 'Case of 12', 'parent_product_id' => $base->id, 'units_per_pack' => 12]);
+        Stock::create(['product_id' => $base->id, 'store_id' => $this->store->id, 'qty' => 97]);
+
+        $this->actingAs($this->admin)
+            ->get(route('inventory.index', ['search' => 'Cola can']))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('stocks.data.0.qty', 97)
+                ->where('stocks.data.0.product.packs.0.name', 'Case of 12')
+                ->where('stocks.data.0.product.packs.0.units_per_pack', 12)
+            );
+    }
+
     public function test_the_index_can_be_sorted_by_stock_or_name(): void
     {
         // setUp already made one product at qty 10. Add a clear spread.
