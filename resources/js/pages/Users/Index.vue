@@ -247,7 +247,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
 
                 <EmptyState v-else :icon="Users" title="No staff found" description="Try clearing the filters." />
 
-                <Pagination :links="users.links" :from="users.from" :to="users.to" :total="users.total" />
+                <Pagination :links="users.links" :from="users.from" :to="users.to" :total="users.total" :per-page="users.per_page" />
             </div>
         </div>
 

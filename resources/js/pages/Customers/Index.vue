@@ -193,7 +193,13 @@ function confirmDelete() {
                     <Button variant="outline" class="press" @click="openCreate">Add a customer</Button>
                 </EmptyState>
 
-                <Pagination :links="customers.links" :from="customers.from" :to="customers.to" :total="customers.total" />
+                <Pagination
+                    :links="customers.links"
+                    :from="customers.from"
+                    :to="customers.to"
+                    :total="customers.total"
+                    :per-page="customers.per_page"
+                />
             </div>
         </div>
 

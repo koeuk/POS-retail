@@ -349,7 +349,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                     <Button v-if="anyFilter" variant="outline" class="press" @click="clearFilters">Show everything</Button>
                 </EmptyState>
 
-                <Pagination :links="stocks.links" :from="stocks.from" :to="stocks.to" :total="stocks.total" />
+                <Pagination :links="stocks.links" :from="stocks.from" :to="stocks.to" :total="stocks.total" :per-page="stocks.per_page" />
             </div>
 
             <!-- The ledger. Every row above got here through one of these. -->

@@ -255,7 +255,7 @@ function stockTone(qty: number | null | undefined) {
                     </Button>
                 </EmptyState>
 
-                <Pagination :links="products.links" :from="products.from" :to="products.to" :total="products.total" />
+                <Pagination :links="products.links" :from="products.from" :to="products.to" :total="products.total" :per-page="products.per_page" />
             </div>
         </div>
 

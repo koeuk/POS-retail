@@ -191,7 +191,7 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                     description="Try clearing the filters. A sale queued offline only appears here once it has synced."
                 />
 
-                <Pagination :links="orders.links" :from="orders.from" :to="orders.to" :total="orders.total" />
+                <Pagination :links="orders.links" :from="orders.from" :to="orders.to" :total="orders.total" :per-page="orders.per_page" />
             </div>
         </div>
     </AppLayout>
