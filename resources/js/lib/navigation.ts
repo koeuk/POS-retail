@@ -3,6 +3,7 @@ import {
     BookOpen,
     Boxes,
     ChartNoAxesColumn,
+    HandCoins,
     LayoutGrid,
     MoreHorizontal,
     PackageSearch,
@@ -11,6 +12,7 @@ import {
     Shapes,
     Users,
     UsersRound,
+    Utensils,
 } from 'lucide-vue-next';
 
 /**
@@ -25,6 +27,8 @@ export const navGroups: NavGroup[] = [
             { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
             { title: 'Point of Sale', href: '/pos', icon: ScanBarcode },
             { title: 'Order History', href: '/orders', icon: ReceiptText, requires: 'manage' },
+            { title: 'In Debt', href: '/debts', icon: HandCoins, requires: 'manage' },
+            { title: 'Myself', href: '/consumption', icon: Utensils, requires: 'manage' },
             { title: 'Reports', href: '/reports', icon: ChartNoAxesColumn, requires: 'manage' },
             // The public customer catalogue. No `requires`: a cashier may well
             // want to show someone the menu across the counter.

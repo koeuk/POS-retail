@@ -68,6 +68,34 @@ class ProductRequest extends FormRequest
             // Opening stock, only meaningful on create.
             'opening_qty' => ['nullable', 'integer', 'min:0'],
             'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
+
+            /*
+             * Goods received, from the product screen rather than a trip to
+             * Inventory. Recorded as a real Restock movement, never as a raw
+             * write to stocks.qty — the ledger is the point of that page.
+             */
+            'add_stock' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+
+            /*
+             * A delivery arrives the way it is packed: three cases and a
+             * hundred loose packets, not 172 packets. The pack says what the
+             * quantity above is counted in; `add_stock_loose` carries the
+             * remainder in single units so both go in on one save.
+             */
+            'add_stock_pack_id' => ['nullable', 'integer', Rule::exists('products', 'id')],
+
+            /*
+             * How many units are in each of the things being received, when
+             * the container is not one of the sellable packs. A shop that buys
+             * beer by the 24 but only ever sells singles should not have to
+             * invent a priced "case" on the POS grid just to book a delivery.
+             */
+            'add_stock_units_each' => ['nullable', 'integer', 'min:1', 'max:100000'],
+
+            'add_stock_loose' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+
+            'add_stock_store_id' => ['nullable', 'integer', Rule::exists('stores', 'id')],
+            'add_stock_note' => ['nullable', 'string', 'max:255'],
         ];
     }
 
@@ -92,9 +120,25 @@ class ProductRequest extends FormRequest
             'track_stock' => $this->boolean('track_stock'),
             'is_active' => $this->boolean('is_active'),
             'barcode' => $this->input('barcode') ?: null,
-            'parent_product_id' => $this->input('parent_product_id') ?: null,
-            // A base product always contains one of itself.
-            'units_per_pack' => $this->input('parent_product_id') ? $this->input('units_per_pack') : 1,
         ]);
+
+        /*
+         * Only normalise the pack keys when the caller actually sent one.
+         *
+         * Merging them unconditionally meant any edit that did not mention
+         * them — the product form no longer does, since packs are managed as
+         * inline rows on the parent — silently reset parent_product_id to null
+         * and units_per_pack to 1, turning a case of 24 into a standalone
+         * product and orphaning its stock arithmetic.
+         */
+        if ($this->has('parent_product_id') || $this->has('units_per_pack')) {
+            $parentId = $this->input('parent_product_id') ?: null;
+
+            $this->merge([
+                'parent_product_id' => $parentId,
+                // A base product always contains one of itself.
+                'units_per_pack' => $parentId ? $this->input('units_per_pack') : 1,
+            ]);
+        }
     }
 }

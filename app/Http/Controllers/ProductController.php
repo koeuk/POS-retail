@@ -11,6 +11,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Stock;
 use App\Models\Store;
+use App\Models\User;
 use App\Support\PerPage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -176,6 +177,8 @@ class ProductController extends Controller
             'product' => $product->load('category:id,name', 'parent:id,name'),
             'categories' => Category::orderBy('name')->get(['id', 'name']),
             'packs' => $product->packs()->orderBy('units_per_pack')->get(['id', 'name', 'units_per_pack', 'sell_price', 'is_active']),
+            // Only worth offering a choice when there is one to make.
+            'stores' => Store::orderBy('name')->get(['id', 'name']),
             'stocks' => $product->stocks()->with('store:id,name')->get(),
         ]);
     }
@@ -186,7 +189,25 @@ class ProductController extends Controller
 
         $data = $request->validated();
         $packs = $data['packs'] ?? [];
-        unset($data['opening_qty'], $data['low_stock_threshold'], $data['packs']);
+        $receipt = [
+            'qty' => (int) ($data['add_stock'] ?? 0),
+            'pack_id' => $data['add_stock_pack_id'] ?? null,
+            'units_each' => (int) ($data['add_stock_units_each'] ?? 0),
+            'loose' => (int) ($data['add_stock_loose'] ?? 0),
+            'store_id' => $data['add_stock_store_id'] ?? null,
+            'note' => $data['add_stock_note'] ?? null,
+        ];
+        unset(
+            $data['opening_qty'],
+            $data['low_stock_threshold'],
+            $data['packs'],
+            $data['add_stock'],
+            $data['add_stock_pack_id'],
+            $data['add_stock_units_each'],
+            $data['add_stock_loose'],
+            $data['add_stock_store_id'],
+            $data['add_stock_note'],
+        );
 
         if ($request->hasFile('image')) {
             if ($product->image) {
@@ -197,7 +218,7 @@ class ProductController extends Controller
             unset($data['image']);
         }
 
-        DB::transaction(function () use ($product, $data, $packs, $request) {
+        DB::transaction(function () use ($product, $data, $packs, $receipt, $request) {
             $product->update($data);
 
             // A pack has no packs of its own, so the list is only meaningful on
@@ -205,10 +226,113 @@ class ProductController extends Controller
             if (! $product->isPack() && $request->has('packs')) {
                 $this->syncPacks($product, $packs);
             }
+
+            $this->receiveStock($product, $receipt, $request->user());
         });
 
         return to_route('products.index')
             ->with('success', "“{$product->name}” was updated.");
+    }
+
+    /**
+     * Record goods arriving, from the product screen.
+     *
+     * This is a shortcut to the Inventory page, not a way around it: the
+     * quantity still moves through a Restock movement with a note and an
+     * author, so the ledger can still answer why the figure changed. Writing
+     * stocks.qty directly here would leave a number nobody could explain.
+     *
+     * A pack has no shelf of its own, so its receipts land on the parent in
+     * base units — receiving two cases of 24 adds 48 cans.
+     */
+    /**
+     * Record goods arriving, counted the way the delivery actually came.
+     *
+     * A shop receives three cases and a hundred loose packets, not 172
+     * packets. The pack says what `qty` is counted in and the loose figure
+     * carries the remainder, so nobody has to do the multiplication at 7am.
+     *
+     * This is a shortcut to the Inventory page, not a way around it: the
+     * quantity still moves through a Restock movement with a note and an
+     * author, so the ledger can still answer why the figure changed.
+     *
+     * A pack has no shelf of its own, so receipts land on the parent in base
+     * units — three cases of 24 adds 72.
+     *
+     * @param  array{qty: int, pack_id: int|null, units_each: int, loose: int, store_id: int|null, note: string|null}  $receipt
+     */
+    private function receiveStock(Product $product, array $receipt, User $user): void
+    {
+        $target = $product->isPack() ? $product->parent : $product;
+
+        if (! $target) {
+            return;
+        }
+
+        $change = ($receipt['qty'] * $this->unitsPerReceipt($target, $product, $receipt))
+            + max(0, $receipt['loose']);
+
+        if ($change <= 0) {
+            return;
+        }
+
+        $storeId = $receipt['store_id'] ?? Store::query()->orderBy('id')->value('id');
+
+        if (! $storeId) {
+            return;
+        }
+
+        $stock = Stock::firstOrCreate(
+            ['product_id' => $target->id, 'store_id' => $storeId],
+            ['qty' => 0],
+        );
+
+        $stock->increment('qty', $change);
+
+        InventoryLog::create([
+            'product_id' => $target->id,
+            'store_id' => $storeId,
+            'type' => InventoryLogType::Restock,
+            'qty_change' => $change,
+            'reference_type' => Product::class,
+            'reference_id' => $product->id,
+            'note' => $receipt['note'] ?: 'Received from the product screen',
+            'created_by' => $user->id,
+        ]);
+    }
+
+    /**
+     * How many base units one of the received things holds.
+     *
+     * Three ways to say it, in order of authority:
+     *
+     *  1. a sellable pack of this product — its own size wins;
+     *  2. a size typed in for this delivery alone, for a container the shop
+     *     buys in but never sells as such;
+     *  3. otherwise a single unit.
+     *
+     * A pack id only counts when it really is a pack of this product —
+     * otherwise a hand-edited form could multiply a delivery by someone
+     * else's case size.
+     *
+     * @param  array{pack_id: int|null, units_each: int}  $receipt
+     */
+    private function unitsPerReceipt(Product $target, Product $edited, array $receipt): int
+    {
+        if ($receipt['pack_id']) {
+            $pack = $target->packs()->whereKey($receipt['pack_id'])->first();
+
+            if ($pack) {
+                return max(1, $pack->units_per_pack);
+            }
+        }
+
+        if ($receipt['units_each'] > 1) {
+            return $receipt['units_each'];
+        }
+
+        // Editing the pack row itself: its own size is the unit.
+        return $edited->isPack() ? max(1, $edited->units_per_pack) : 1;
     }
 
     /**

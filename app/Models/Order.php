@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
+use App\Enums\SaleType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,7 @@ class Order extends Model
         'register_id',
         'cashier_id',
         'customer_id',
+        'sale_type',
         'subtotal',
         'discount_amount',
         'total',
@@ -38,6 +40,7 @@ class Order extends Model
             'paid_amount' => 'decimal:2',
             'change_amount' => 'decimal:2',
             'status' => OrderStatus::class,
+            'sale_type' => SaleType::class,
             'synced_at' => 'datetime',
             'created_offline_at' => 'datetime',
         ];
@@ -71,5 +74,11 @@ class Order extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    /** What is still owed on this sale. Zero for anything but an unpaid debt. */
+    public function outstanding(): string
+    {
+        return number_format(max(0, (float) $this->total - (float) $this->paid_amount), 2, '.', '');
     }
 }

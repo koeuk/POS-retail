@@ -6,13 +6,18 @@ import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Category, Product, Stock } from '@/types';
 import { Head } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-defineProps<{
+const props = defineProps<{
     product: Product;
     categories: Category[];
     packs: Array<{ id: number; name: string; units_per_pack: number; sell_price: string; is_active: boolean }>;
+    stores: Array<{ id: number; name: string }>;
     stocks: Stock[];
 }>();
+
+/** Total on the shelf across stores — what the receive field counts up from. */
+const onHand = computed(() => props.stocks.reduce((sum, s) => sum + s.qty, 0));
 
 const tone = (s: Stock) => {
     if (s.qty < 0) return 'text-destructive';
@@ -64,7 +69,7 @@ const tone = (s: Stock) => {
                 </div>
             </section>
 
-            <ProductForm :categories="categories" :product="product" :packs="packs" />
+            <ProductForm :categories="categories" :product="product" :packs="packs" :stores="stores" :on-hand="onHand" />
         </div>
     </AppLayout>
 </template>

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
+use App\Enums\SaleType;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
@@ -82,10 +83,15 @@ class SalesReporter
         return new self($user->isAdmin() ? null : $user->store_id);
     }
 
+    /**
+     * Only sales that are actually revenue. Owner consumption leaves the shelf
+     * but never the till, so it is excluded from every figure here.
+     */
     private function orders(): Builder
     {
         return Order::query()
             ->where('status', OrderStatus::Completed)
+            ->where('sale_type', '!=', SaleType::Myself->value)
             ->when($this->storeId, fn ($q, $id) => $q->where('store_id', $id));
     }
 
@@ -203,6 +209,7 @@ class SalesReporter
         return OrderItem::query()
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->where('orders.status', OrderStatus::Completed)
+            ->where('orders.sale_type', '!=', SaleType::Myself->value)
             ->when($this->storeId, fn ($q, $id) => $q->where('orders.store_id', $id))
             ->whereRaw(self::businessDay().' BETWEEN ? AND ?', [$from->toDateString(), $to->toDateString()])
             // Group on the snapshot name: what the customer was actually sold,
@@ -224,6 +231,7 @@ class SalesReporter
         return Payment::query()
             ->join('orders', 'orders.id', '=', 'payments.order_id')
             ->where('orders.status', OrderStatus::Completed)
+            ->where('orders.sale_type', '!=', SaleType::Myself->value)
             ->when($this->storeId, fn ($q, $id) => $q->where('orders.store_id', $id))
             ->whereRaw(self::businessDay().' BETWEEN ? AND ?', [$from->toDateString(), $to->toDateString()])
             ->selectRaw('payments.method, COUNT(*) as count, SUM(payments.amount) as amount')
@@ -251,6 +259,7 @@ class SalesReporter
         $items = (int) OrderItem::query()
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->where('orders.status', OrderStatus::Completed)
+            ->where('orders.sale_type', '!=', SaleType::Myself->value)
             ->when($this->storeId, fn ($q, $id) => $q->where('orders.store_id', $id))
             ->whereRaw(self::businessDay().' BETWEEN ? AND ?', [$from->toDateString(), $to->toDateString()])
             ->sum('order_items.qty');

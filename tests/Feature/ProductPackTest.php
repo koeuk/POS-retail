@@ -410,4 +410,154 @@ class ProductPackTest extends TestCase
                 ->where('packs.0.units_per_pack', 6)
             );
     }
+
+    /* ------------------------------------------------------------------ */
+    /* Receiving stock from the product screen */
+    /* ------------------------------------------------------------------ */
+
+    private function editPayload(Product $product, array $extra = []): array
+    {
+        return array_merge([
+            'category_id' => $product->category_id,
+            'name' => $product->name,
+            'sku' => $product->sku,
+            'sell_price' => $product->sell_price,
+            'unit' => $product->unit,
+            'track_stock' => true,
+            'is_active' => true,
+        ], $extra);
+    }
+
+    /**
+     * The shortcut must go through the ledger, not around it: a quantity that
+     * changed because "someone edited the product" is a figure nobody can
+     * explain a week later.
+     */
+    public function test_receiving_stock_from_the_product_screen_records_a_restock(): void
+    {
+        $can = $this->can(120);
+
+        $this->actingAs($this->admin)
+            ->put(route('products.update', $can), $this->editPayload($can, [
+                'add_stock' => 24,
+                'add_stock_note' => 'Invoice 8812',
+            ]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(144, Stock::where('product_id', $can->id)->value('qty'));
+
+        $log = InventoryLog::where('product_id', $can->id)->latest('id')->firstOrFail();
+
+        $this->assertSame(InventoryLogType::Restock, $log->type);
+        $this->assertSame(24, $log->qty_change);
+        $this->assertSame('Invoice 8812', $log->note);
+        $this->assertSame($this->admin->id, $log->created_by);
+    }
+
+    /** An ordinary edit with the field left blank must not touch stock. */
+    public function test_saving_a_product_without_the_field_leaves_stock_alone(): void
+    {
+        $can = $this->can(120);
+
+        $this->actingAs($this->admin)
+            ->put(route('products.update', $can), $this->editPayload($can, ['name' => 'Renamed']))
+            ->assertRedirect();
+
+        $this->assertSame(120, Stock::where('product_id', $can->id)->value('qty'));
+        $this->assertSame(0, InventoryLog::where('product_id', $can->id)->count());
+    }
+
+    /** Receiving two cases of 24 puts 48 cans on the shelf, not 2. */
+    public function test_receiving_a_pack_lands_on_the_parent_in_base_units(): void
+    {
+        $can = $this->can(100);
+        $case = $this->packOf($can, 24, 'Case of 24', '16.00');
+
+        $this->actingAs($this->admin)
+            ->put(route('products.update', $case), $this->editPayload($case, ['add_stock' => 2]))
+            ->assertRedirect();
+
+        $this->assertSame(148, Stock::where('product_id', $can->id)->value('qty'));
+        $this->assertDatabaseMissing('stocks', ['product_id' => $case->id]);
+    }
+
+    /**
+     * Editing a pack must not quietly demote it. The form no longer sends the
+     * pack keys at all, and merging defaults for them turned a case of 24 into
+     * a standalone product with a shelf of its own.
+     */
+    public function test_editing_a_pack_keeps_it_a_pack(): void
+    {
+        $can = $this->can();
+        $case = $this->packOf($can, 24, 'Case of 24', '16.00');
+
+        $this->actingAs($this->admin)
+            ->put(route('products.update', $case), $this->editPayload($case, ['sell_price' => '17.50']))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $case->refresh();
+
+        $this->assertSame($can->id, $case->parent_product_id);
+        $this->assertSame(24, $case->units_per_pack);
+        $this->assertSame('17.50', $case->sell_price);
+    }
+
+    /**
+     * A delivery arrives the way it is packed. Three cases and a hundred loose
+     * packets is 172 packets, and nobody should have to work that out at 7am.
+     */
+    public function test_a_delivery_can_be_counted_in_cases_plus_loose_units(): void
+    {
+        $noodle = $this->can(0);
+        $case = $this->packOf($noodle, 24, 'Case of 24', '16.00');
+
+        $this->actingAs($this->admin)
+            ->put(route('products.update', $noodle), $this->editPayload($noodle, [
+                'add_stock' => 3,
+                'add_stock_pack_id' => $case->id,
+                'add_stock_loose' => 100,
+                'add_stock_note' => 'Monday delivery',
+            ]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        // 3 × 24 + 100.
+        $this->assertSame(172, Stock::where('product_id', $noodle->id)->value('qty'));
+        $this->assertSame(172, InventoryLog::where('product_id', $noodle->id)->latest('id')->value('qty_change'));
+    }
+
+    /** Loose units alone still work, with no pack chosen. */
+    public function test_a_delivery_of_loose_units_only(): void
+    {
+        $noodle = $this->can(10);
+
+        $this->actingAs($this->admin)
+            ->put(route('products.update', $noodle), $this->editPayload($noodle, ['add_stock' => 5]))
+            ->assertRedirect();
+
+        $this->assertSame(15, Stock::where('product_id', $noodle->id)->value('qty'));
+    }
+
+    /**
+     * The pack id decides the multiplier, so a hand-edited form must not be
+     * able to point it at somebody else's case size.
+     */
+    public function test_a_pack_belonging_to_another_product_is_not_honoured(): void
+    {
+        $noodle = $this->can(0);
+        $other = Product::factory()->create(['name' => 'Something else']);
+        $foreignPack = $this->packOf($other, 500, 'Pallet', '900.00');
+
+        $this->actingAs($this->admin)
+            ->put(route('products.update', $noodle), $this->editPayload($noodle, [
+                'add_stock' => 2,
+                'add_stock_pack_id' => $foreignPack->id,
+            ]))
+            ->assertRedirect();
+
+        // Counted as singles, not 2 × 500.
+        $this->assertSame(2, Stock::where('product_id', $noodle->id)->value('qty'));
+    }
 }

@@ -1,5 +1,5 @@
 import { computeTotals } from '@/Pos/lib/money';
-import type { CartLine, PosProduct } from '@/Pos/types';
+import type { CartLine, PosProduct, SaleType } from '@/Pos/types';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 
@@ -11,6 +11,14 @@ export const useCart = defineStore('pos-cart', () => {
     const lines = ref<CartLine[]>([]);
     const orderDiscount = ref(0);
     const customerId = ref<number | null>(null);
+    const customerName = ref<string | null>(null);
+
+    /*
+     * Why the goods are leaving. Defaults to an ordinary customer sale and
+     * resets with the cart, so a "myself" flag can never leak into the next
+     * customer's order by accident.
+     */
+    const saleType = ref<SaleType>('customer');
 
     const totals = computed(() =>
         computeTotals(
@@ -80,12 +88,16 @@ export const useCart = defineStore('pos-cart', () => {
         lines.value = [];
         orderDiscount.value = 0;
         customerId.value = null;
+        customerName.value = null;
+        saleType.value = 'customer';
     }
 
     return {
         lines,
         orderDiscount,
         customerId,
+        customerName,
+        saleType,
         totals,
         count,
         isEmpty,

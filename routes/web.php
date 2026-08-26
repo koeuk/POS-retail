@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ConsumptionController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DebtController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MenuController;
@@ -53,6 +55,8 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
     Route::prefix('pos/data')->name('pos.data.')->group(function () {
         Route::get('heartbeat', [PosDataController::class, 'heartbeat'])->name('heartbeat');
         Route::get('products', [PosDataController::class, 'products'])->name('products');
+        Route::get('customers', [PosDataController::class, 'customers'])->name('customers');
+        Route::post('customers', [PosDataController::class, 'storeCustomer'])->name('customers.store');
         Route::post('orders/sync', [PosDataController::class, 'sync'])->name('orders.sync');
         Route::get('orders/{clientUuid}/status', [PosDataController::class, 'status'])
             ->name('orders.status');
@@ -66,6 +70,10 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
     | read) live in the policies, not here.
     */
     Route::middleware('role:admin,manager')->group(function () {
+        Route::get('debts', [DebtController::class, 'index'])->name('debts.index');
+        Route::post('debts/{order}/settle', [DebtController::class, 'settle'])->name('debts.settle');
+        Route::get('consumption', [ConsumptionController::class, 'index'])->name('consumption.index');
+
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 

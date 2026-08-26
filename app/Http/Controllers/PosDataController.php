@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\SyncOrdersRequest;
 use App\Models\Category;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Register;
@@ -136,6 +137,39 @@ class PosDataController extends Controller
             'synced_at' => now()->toIso8601String(),
             'results' => $sync->syncMany($orders, $request->user()),
         ]);
+    }
+
+    /**
+     * Customers, for attaching a debt at the till. Kept tiny — a name, a phone,
+     * an id — because the till may cache it offline and a shop's customer list
+     * is not something to ship in full on every load.
+     */
+    public function customers(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->input('q'));
+
+        return response()->json(
+            Customer::query()
+                ->when($q !== '', fn ($query) => $query
+                    ->where('name', 'like', "%{$q}%")
+                    ->orWhere('phone', 'like', "%{$q}%"))
+                ->orderBy('name')
+                ->limit(20)
+                ->get(['id', 'name', 'phone'])
+        );
+    }
+
+    /** Create a customer from the till, so a debt never has to be turned away. */
+    public function storeCustomer(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:32'],
+        ]);
+
+        $customer = Customer::create($data + ['loyalty_points' => 0]);
+
+        return response()->json($customer->only('id', 'name', 'phone'), 201);
     }
 
     /** Lets the client confirm a flush it never saw the response to. */

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\PaymentMethod;
+use App\Enums\SaleType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -32,6 +33,7 @@ class SyncOrdersRequest extends FormRequest
             'orders.*.store_id' => ['nullable', 'integer', Rule::exists('stores', 'id')],
             'orders.*.register_id' => ['nullable', 'integer', Rule::exists('registers', 'id')],
             'orders.*.customer_id' => ['nullable', 'integer', Rule::exists('customers', 'id')],
+            'orders.*.sale_type' => ['nullable', Rule::enum(SaleType::class)],
             'orders.*.created_offline_at' => ['nullable', 'date'],
             'orders.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
 
@@ -55,5 +57,20 @@ class SyncOrdersRequest extends FormRequest
             'orders.*.client_uuid.distinct' => 'The same order appears twice in one batch.',
             'orders.max' => 'Flush at most 200 orders per request.',
         ];
+    }
+
+    /**
+     * A debt with no customer is money nobody can collect. The rule is
+     * cross-field, so it lives here rather than in the flat rules array.
+     */
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
+    {
+        $validator->after(function (\Illuminate\Validation\Validator $v) {
+            foreach ($this->input('orders', []) as $i => $order) {
+                if (($order['sale_type'] ?? null) === SaleType::Debt->value && empty($order['customer_id'])) {
+                    $v->errors()->add("orders.{$i}.customer_id", 'A sale on debt must be attached to a customer.');
+                }
+            }
+        });
     }
 }

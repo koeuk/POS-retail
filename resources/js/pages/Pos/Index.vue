@@ -4,6 +4,7 @@ import { USD } from '@/composables/useCurrency';
 import AppLayout from '@/layouts/AppLayout.vue';
 import Cart from '@/Pos/components/Cart.vue';
 import Checkout from '@/Pos/components/Checkout.vue';
+import CustomerPicker from '@/Pos/components/CustomerPicker.vue';
 import PaymentModal from '@/Pos/components/PaymentModal.vue';
 import ProductGrid from '@/Pos/components/ProductGrid.vue';
 import SyncStatusBadge from '@/Pos/components/SyncStatusBadge.vue';
@@ -38,6 +39,27 @@ const loadError = ref<string | null>(null);
 const registerId = ref<number | null>(null);
 const paying = ref(false);
 const paymentOpen = ref(false);
+const pickerOpen = ref(false);
+
+/*
+ * Only a customer sale takes money at the till, so only it opens the
+ * payment modal. A debt and an owner take-out complete straight away with
+ * nothing paid — asking a cashier to key "0.00 cash" for those would be
+ * theatre, and the wrong number to record.
+ */
+function startCheckout() {
+    if (cart.saleType === 'customer') {
+        paymentOpen.value = true;
+        return;
+    }
+    void completeSale({ method: 'cash', amount: 0, reference: null });
+}
+
+function attachCustomer(c: { id: number; name: string }) {
+    cart.customerId = c.id;
+    cart.customerName = c.name;
+    pickerOpen.value = false;
+}
 
 /*
  * On a phone the cart lives in a sheet rather than stacked under the grid.
@@ -146,6 +168,7 @@ async function completeSale(payment: { method: PaymentMethod; amount: number; re
         store_id: props.boot.store_id,
         register_id: registerId.value,
         customer_id: cart.customerId,
+        sale_type: cart.saleType,
         created_offline_at: new Date().toISOString(),
         discount_amount: toDecimalString(totals.discount),
         items: cart.lines.map((line) => ({
@@ -287,7 +310,7 @@ onMounted(loadFeed);
                 <!-- Desktop keeps the cart permanently alongside the grid. -->
                 <aside class="hidden min-h-0 w-[24rem] shrink-0 flex-col lg:flex">
                     <Cart :currency="currency" />
-                    <Checkout :currency="currency" @pay="paymentOpen = true" />
+                    <Checkout :currency="currency" @pay="startCheckout" @pick-customer="pickerOpen = true" />
                 </aside>
             </main>
 
@@ -335,9 +358,11 @@ onMounted(loadFeed);
                 </SheetHeader>
 
                 <Cart :currency="currency" />
-                <Checkout :currency="currency" @pay="paymentOpen = true" />
+                <Checkout :currency="currency" @pay="startCheckout" @pick-customer="pickerOpen = true" />
             </SheetContent>
         </Sheet>
+
+        <CustomerPicker :open="pickerOpen" @close="pickerOpen = false" @pick="attachCustomer" />
 
         <PaymentModal
             :open="paymentOpen"

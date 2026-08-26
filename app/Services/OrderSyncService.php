@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\InventoryLogType;
 use App\Enums\OrderStatus;
+use App\Enums\SaleType;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Register;
@@ -101,6 +102,8 @@ class OrderSyncService
         ));
 
         // Change is only ever given against cash; card and QR are exact.
+        $saleType = SaleType::tryFrom($payload['sale_type'] ?? '') ?? SaleType::Customer;
+
         $givesChange = collect($payload['payments'] ?? [])
             ->contains(fn ($p) => $p['method'] === 'cash');
 
@@ -115,10 +118,13 @@ class OrderSyncService
             'register_id' => $this->resolveRegister($payload, $storeId),
             'cashier_id' => $cashier->id,
             'customer_id' => $payload['customer_id'] ?? null,
+            'sale_type' => $saleType,
             'subtotal' => $totals->subtotal(),
             'discount_amount' => $totals->discountAmount(),
             'total' => $totals->total(),
-            'paid_amount' => OrderTotals::toDecimal($paid),
+            // A debt is recorded as owed in full: whatever the till sent as
+            // "paid" is ignored, because nothing changed hands.
+            'paid_amount' => $saleType->isReceivable() ? '0.00' : OrderTotals::toDecimal($paid),
             'change_amount' => OrderTotals::toDecimal($change),
             'status' => OrderStatus::Completed,
             'synced_at' => now(),

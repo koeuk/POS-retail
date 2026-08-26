@@ -34,6 +34,9 @@ export interface CartLine {
 
 export type PaymentMethod = 'cash' | 'card' | 'qr' | 'credit';
 
+/** Mirror of App\Enums\SaleType. */
+export type SaleType = 'customer' | 'debt' | 'myself';
+
 export interface PosSettings {
     receipt_header: string;
     receipt_footer: string | null;
@@ -65,6 +68,7 @@ export interface QueuedOrder {
     store_id: number;
     register_id: number | null;
     customer_id: number | null;
+    sale_type: SaleType;
     created_offline_at: string;
     discount_amount: string;
     items: {

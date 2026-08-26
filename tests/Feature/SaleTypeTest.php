@@ -1,0 +1,233 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\SaleType;
+use App\Models\Customer;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\Register;
+use App\Models\Stock;
+use App\Models\Store;
+use App\Models\User;
+use App\Services\SalesReporter;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
+use Inertia\Testing\AssertableInertia;
+use Tests\TestCase;
+
+class SaleTypeTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Store $store;
+
+    private User $cashier;
+
+    private User $admin;
+
+    private Product $product;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->store = Store::factory()->create();
+        Register::factory()->create(['store_id' => $this->store->id]);
+        $this->cashier = User::factory()->cashier($this->store)->create();
+        $this->admin = User::factory()->admin()->create();
+        $this->product = Product::factory()->create(['sell_price' => '10.00']);
+        Stock::create(['product_id' => $this->product->id, 'store_id' => $this->store->id, 'qty' => 20]);
+    }
+
+    private function sync(array $overrides = [], ?int $customerId = null): \Illuminate\Testing\TestResponse
+    {
+        return $this->actingAs($this->cashier)->postJson(route('pos.data.orders.sync'), ['orders' => [array_merge([
+            'client_uuid' => (string) Str::uuid(),
+            'customer_id' => $customerId,
+            'created_offline_at' => now()->toIso8601String(),
+            'discount_amount' => '0.00',
+            'items' => [['product_id' => $this->product->id, 'product_name' => $this->product->name, 'qty' => 2, 'unit_price' => '10.00', 'discount' => '0.00']],
+            'payments' => [['method' => 'cash', 'amount' => '20.00', 'reference_no' => null]],
+        ], $overrides)]]);
+    }
+
+    private function stock(): int
+    {
+        return (int) Stock::where('product_id', $this->product->id)->where('store_id', $this->store->id)->value('qty');
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Myself: leaves the shelf, never touches the till                    */
+    /* ------------------------------------------------------------------ */
+
+    public function test_a_myself_sale_moves_stock_but_is_not_revenue(): void
+    {
+        $this->sync(['sale_type' => 'myself'])->assertOk()->assertJsonPath('results.0.status', 'created');
+
+        $this->assertSame(18, $this->stock(), 'the goods really left the shelf');
+
+        $summary = (new SalesReporter($this->store->id))->summaryFor(now()->startOfDay());
+        $this->assertSame('0.00', $summary['sales'], 'eating a chocolate bar is not takings');
+        $this->assertSame(0, $summary['orders']);
+    }
+
+    public function test_a_customer_sale_is_revenue(): void
+    {
+        $this->sync(['sale_type' => 'customer'])->assertOk();
+
+        $summary = (new SalesReporter($this->store->id))->summaryFor(now()->startOfDay());
+        $this->assertSame('20.00', $summary['sales']);
+    }
+
+    public function test_the_type_defaults_to_customer_when_the_till_sends_none(): void
+    {
+        $this->sync()->assertOk();
+
+        $this->assertSame(SaleType::Customer, Order::firstOrFail()->sale_type);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Debt: revenue AND a receivable, and it needs a name                  */
+    /* ------------------------------------------------------------------ */
+
+    public function test_a_debt_is_recorded_as_owed_in_full_regardless_of_what_the_till_sent(): void
+    {
+        $c = Customer::factory()->create();
+
+        // The till sends a "payment" of 20.00; nothing actually changed hands.
+        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();
+
+        $order = Order::firstOrFail();
+        $this->assertSame('20.00', $order->total);
+        $this->assertSame('0.00', $order->paid_amount, 'a debt is unpaid by definition');
+        $this->assertSame('20.00', $order->outstanding());
+        $this->assertSame(18, $this->stock());
+
+        // It still counts as a sale — the goods were sold, just not yet paid for.
+        $this->assertSame('20.00', (new SalesReporter($this->store->id))->summaryFor(now()->startOfDay())['sales']);
+    }
+
+    /** Money nobody can collect is not a debt, it is a loss. */
+    public function test_a_debt_without_a_customer_is_rejected(): void
+    {
+        $this->sync(['sale_type' => 'debt'])->assertStatus(422)->assertJsonValidationErrors('orders.0.customer_id');
+
+        $this->assertSame(0, Order::count());
+        $this->assertSame(20, $this->stock(), 'nothing left the shelf');
+    }
+
+    public function test_an_unknown_sale_type_is_rejected(): void
+    {
+        $this->sync(['sale_type' => 'gift'])->assertStatus(422)->assertJsonValidationErrors('orders.0.sale_type');
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Settling                                                            */
+    /* ------------------------------------------------------------------ */
+
+    public function test_a_debt_can_be_paid_off_in_parts_and_is_settled_when_paid_in_full(): void
+    {
+        $c = Customer::factory()->create(['name' => 'Ada']);
+        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();
+        $order = Order::firstOrFail();
+
+        $this->actingAs($this->admin)
+            ->post(route('debts.settle', $order), ['amount' => '12.00', 'method' => 'cash'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('12.00', $order->fresh()->paid_amount);
+        $this->assertSame('8.00', $order->fresh()->outstanding());
+
+        $this->actingAs($this->admin)
+            ->post(route('debts.settle', $order), ['amount' => '8.00', 'method' => 'qr', 'reference_no' => 'QR-1'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('20.00', $order->fresh()->paid_amount);
+        $this->assertSame('0.00', $order->fresh()->outstanding());
+        $this->assertSame(2, $order->payments()->count(), 'each payment is its own ledger row');
+    }
+
+    public function test_you_cannot_pay_more_than_is_owed(): void
+    {
+        $c = Customer::factory()->create();
+        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();
+        $order = Order::firstOrFail();
+
+        $this->actingAs($this->admin)
+            ->post(route('debts.settle', $order), ['amount' => '25.00', 'method' => 'cash'])
+            ->assertSessionHasErrors('amount');
+
+        $this->assertSame('0.00', $order->fresh()->paid_amount);
+    }
+
+    /** Settling a debt "on credit" would just create another debt. */
+    public function test_a_debt_cannot_be_settled_on_credit(): void
+    {
+        $c = Customer::factory()->create();
+        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();
+
+        $this->actingAs($this->admin)
+            ->post(route('debts.settle', Order::firstOrFail()), ['amount' => '20.00', 'method' => 'credit'])
+            ->assertSessionHasErrors('method');
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* The two screens                                                     */
+    /* ------------------------------------------------------------------ */
+
+    public function test_the_debt_screen_lists_what_is_owed_and_sums_it(): void
+    {
+        $a = Customer::factory()->create(['name' => 'Ada']);
+        $b = Customer::factory()->create(['name' => 'Bob']);
+        $this->sync(['sale_type' => 'debt'], $a->id)->assertOk();
+        $this->sync(['sale_type' => 'debt'], $b->id)->assertOk();
+        $this->sync(['sale_type' => 'customer'])->assertOk(); // must not appear
+
+        $this->actingAs($this->admin)
+            ->get(route('debts.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Debts/Index')
+                ->has('debts.data', 2)
+                ->where('summary.open_count', 2)
+                ->where('summary.owed', '40.00')
+            );
+    }
+
+    public function test_the_myself_screen_lists_only_owner_take_outs(): void
+    {
+        $this->sync(['sale_type' => 'myself'])->assertOk();
+        $this->sync(['sale_type' => 'customer'])->assertOk(); // must not appear
+
+        $this->actingAs($this->admin)
+            ->get(route('consumption.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Consumption/Index')
+                ->has('rows.data', 1)
+                ->where('summary.month_count', 1)
+                ->where('summary.month_value', '20.00')
+            );
+    }
+
+    public function test_a_cashier_cannot_reach_either_screen(): void
+    {
+        $this->actingAs($this->cashier)->get(route('debts.index'))->assertForbidden();
+        $this->actingAs($this->cashier)->get(route('consumption.index'))->assertForbidden();
+    }
+
+    /** The till can look up and create the customer a debt needs. */
+    public function test_the_till_can_find_and_create_a_customer(): void
+    {
+        Customer::factory()->create(['name' => 'Ada Lovelace', 'phone' => '012 111 222']);
+
+        $this->actingAs($this->cashier)->getJson(route('pos.data.customers', ['q' => 'Ada']))
+            ->assertOk()->assertJsonCount(1)->assertJsonPath('0.name', 'Ada Lovelace');
+
+        $this->actingAs($this->cashier)->postJson(route('pos.data.customers.store'), ['name' => 'New Person', 'phone' => null])
+            ->assertCreated()->assertJsonPath('name', 'New Person');
+
+        $this->assertDatabaseHas('customers', ['name' => 'New Person']);
+    }
+}
