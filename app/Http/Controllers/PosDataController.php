@@ -9,8 +9,8 @@ use App\Models\Product;
 use App\Models\Register;
 use App\Models\Setting;
 use App\Models\Store;
-use App\Support\Currency;
 use App\Services\OrderSyncService;
+use App\Support\Currency;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

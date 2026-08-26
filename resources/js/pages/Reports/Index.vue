@@ -37,7 +37,7 @@ function preset(days: number) {
     to.value = end.toISOString().slice(0, 10);
 }
 
-const { money, currency } = useCurrency();
+const { money } = useCurrency();
 
 /*
  * Fixed slot per tender type, so cash is always slot 0 no matter how the
