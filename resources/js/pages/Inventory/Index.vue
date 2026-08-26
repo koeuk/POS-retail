@@ -14,7 +14,7 @@ import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Paginated } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Boxes, LoaderCircle, PackageSearch, Plus, Search, TriangleAlert } from 'lucide-vue-next';
+import { Boxes, Layers, LoaderCircle, PackageSearch, Plus, Search, TriangleAlert } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 interface StockRow {
@@ -41,7 +41,7 @@ const props = defineProps<{
     filters: { search?: string; store_id?: string; state?: string; sort?: string };
     stores: { id: number; name: string }[];
     movements: Movement[];
-    summary: { tracked: number; low: number; out: number; oversold: number };
+    summary: { tracked: number; units: number; low: number; out: number; oversold: number };
 }>();
 
 const ALL = 'all';
@@ -291,8 +291,9 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                 </template>
             </PageHeader>
 
-            <div class="stagger mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="stagger mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 <StatTile label="Tracked" :value="String(summary.tracked)" :icon="Boxes" hint="Product / store rows" />
+                <StatTile label="In stock" :value="summary.units.toLocaleString()" :icon="Layers" hint="Units on hand, all products" />
                 <StatTile label="Low stock" :value="String(summary.low)" :icon="TriangleAlert" hint="At or below the alert level" />
                 <StatTile label="Out of stock" :value="String(summary.out)" :icon="PackageSearch" hint="Exactly zero on hand" />
                 <StatTile

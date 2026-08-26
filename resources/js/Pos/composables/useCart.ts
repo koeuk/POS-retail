@@ -1,3 +1,4 @@
+import { minorFactor, useCurrency } from '@/composables/useCurrency';
 import { computeTotals } from '@/Pos/lib/money';
 import type { CartLine, PosProduct, SaleType } from '@/Pos/types';
 import { defineStore } from 'pinia';
@@ -20,6 +21,13 @@ export const useCart = defineStore('pos-cart', () => {
      */
     const saleType = ref<SaleType>('customer');
 
+    /*
+     * The shop's minor unit drives the arithmetic. Riel has none, so its
+     * factor is 1 — assuming cents quantised every riel price to the nearest
+     * 40៛ and put the printed receipt at odds with the server's total.
+     */
+    const { currency } = useCurrency();
+
     const totals = computed(() =>
         computeTotals(
             lines.value.map((l) => ({
@@ -28,6 +36,7 @@ export const useCart = defineStore('pos-cart', () => {
                 discount: l.discount,
             })),
             orderDiscount.value,
+            minorFactor(currency.value),
         ),
     );
 

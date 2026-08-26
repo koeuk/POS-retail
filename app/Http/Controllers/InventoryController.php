@@ -263,7 +263,7 @@ class InventoryController extends Controller
             ->get();
     }
 
-    /** @return array{tracked: int, low: int, out: int, oversold: int} */
+    /** @return array{tracked: int, units: int, low: int, out: int, oversold: int} */
     private function summary(User $user): array
     {
         $base = fn () => $this->scoped($user)
@@ -271,6 +271,9 @@ class InventoryController extends Controller
 
         return [
             'tracked' => $base()->count(),
+            // Physical units on the shelf. Oversold rows are negative and
+            // would silently shrink the number, so only what exists counts.
+            'units' => (int) $base()->where('qty', '>', 0)->sum('qty'),
             'low' => $base()
                 ->whereNotNull('low_stock_threshold')
                 ->whereColumn('qty', '<=', 'low_stock_threshold')

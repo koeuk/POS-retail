@@ -2,11 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\Register;
 use App\Models\Setting;
+use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\OrderTotals;
 use App\Support\Currency;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -178,5 +184,72 @@ class CurrencyTest extends TestCase
 
         $this->assertSame('USD', Setting::get('currency'), 'nothing changed');
         $this->actingAs($this->admin)->get(route('shop.edit'))->assertOk();
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Riel prices survive a sale exactly */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * The reason the stored base moved. With money kept in USD cents a riel
+     * price could only land on a multiple of 40៛ — 500៛ became 13 cents and
+     * came back as 520៛, on the shelf label, the receipt and the report alike.
+     */
+    public function test_a_riel_price_is_not_quantised_by_cents(): void
+    {
+        Setting::put('currency', 'KHR');
+
+        $totals = new OrderTotals([
+            ['qty' => 1, 'unit_price' => '500', 'discount' => 0],
+            ['qty' => 3, 'unit_price' => '1500', 'discount' => 0],
+        ]);
+
+        // 500 + 4,500. Not 520 + 4,560.
+        //
+        // No decimal places: riel has no fractional unit, so the string this
+        // hands to the money column carries none either.
+        $this->assertSame('5000', $totals->subtotal());
+        $this->assertSame('5000', $totals->total());
+    }
+
+    public function test_dollars_still_work_to_the_cent(): void
+    {
+        Setting::put('currency', 'USD');
+
+        $totals = new OrderTotals([
+            ['qty' => 3, 'unit_price' => '0.75', 'discount' => 0],
+            ['qty' => 1, 'unit_price' => '1.05', 'discount' => '0.05'],
+        ]);
+
+        $this->assertSame('3.25', $totals->subtotal());
+    }
+
+    /** An order records the currency it was rung up in, so history keeps its meaning. */
+    public function test_an_order_remembers_which_currency_it_was_rung_up_in(): void
+    {
+        Setting::put('currency', 'KHR');
+
+        $store = Store::factory()->create();
+        $register = Register::factory()->create(['store_id' => $store->id]);
+        $cashier = User::factory()->cashier($store)->create();
+        $product = Product::factory()->create(['sell_price' => '2000']);
+        Stock::create(['product_id' => $product->id, 'store_id' => $store->id, 'qty' => 10]);
+
+        $this->actingAs($cashier)->postJson(route('pos.data.orders.sync'), ['orders' => [[
+            'client_uuid' => (string) Str::uuid(),
+            'register_id' => $register->id,
+            'customer_id' => null,
+            'created_offline_at' => now()->toIso8601String(),
+            'discount_amount' => '0',
+            'items' => [['product_id' => $product->id, 'product_name' => $product->name, 'qty' => 2,
+                'unit_price' => '2000', 'discount' => '0']],
+            'payments' => [['method' => 'cash', 'amount' => '5000', 'reference_no' => null]],
+        ]]])->assertOk();
+
+        $order = Order::firstOrFail();
+
+        $this->assertSame('KHR', $order->currency);
+        $this->assertSame('4000.00', $order->total);
+        $this->assertSame('1000.00', $order->change_amount);
     }
 }

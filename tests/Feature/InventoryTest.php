@@ -276,6 +276,7 @@ class InventoryTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Inventory/Index')
                 ->where('summary.tracked', 4)
+                ->where('summary.units', 12) // 10 + 2; the oversold −3 must not shrink it
                 ->where('summary.low', 1)
                 ->where('summary.out', 1)
                 ->where('summary.oversold', 1)
