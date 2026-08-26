@@ -105,7 +105,6 @@ export interface Product {
     description: string | null;
     cost_price: string;
     sell_price: string;
-    tax_rate: string | null;
     image: string | null;
     unit: string;
     track_stock: boolean;

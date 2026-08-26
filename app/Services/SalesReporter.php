@@ -211,7 +211,7 @@ class SalesReporter
     {
         $row = $this->orders()
             ->whereRaw(self::businessDay().' BETWEEN ? AND ?', [$from->toDateString(), $to->toDateString()])
-            ->selectRaw('COUNT(*) as order_count, COALESCE(SUM(total), 0) as sales, COALESCE(SUM(tax_amount), 0) as tax')
+            ->selectRaw('COUNT(*) as order_count, COALESCE(SUM(total), 0) as sales')
             ->first();
 
         $orders = (int) ($row->order_count ?? 0);
@@ -227,7 +227,6 @@ class SalesReporter
         return [
             'orders' => $orders,
             'sales' => number_format($sales, 2, '.', ''),
-            'tax' => number_format((float) ($row->tax ?? 0), 2, '.', ''),
             'items' => $items,
             'basket' => number_format($orders > 0 ? $sales / $orders : 0, 2, '.', ''),
         ];

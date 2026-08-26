@@ -10,7 +10,6 @@ export interface PosProduct {
     category_id: number;
     category_name: string | null;
     sell_price: string;
-    tax_rate: number;
     unit: string;
     image: string | null;
     track_stock: boolean;
@@ -28,7 +27,6 @@ export interface CartLine {
     unitPrice: number;
     qty: number;
     discount: number;
-    taxRate: number;
     unit: string;
     trackStock: boolean;
     stockHint: number;
@@ -75,7 +73,6 @@ export interface QueuedOrder {
         qty: number;
         unit_price: string;
         discount: string;
-        tax_rate: number;
     }[];
     payments: {
         method: PaymentMethod;
@@ -95,7 +92,6 @@ export interface StoredOrder extends QueuedOrder {
     last_error: string | null;
     receipt: {
         subtotal: string;
-        tax: string;
         total: string;
         paid: string;
         change: string;

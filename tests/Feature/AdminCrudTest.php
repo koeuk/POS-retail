@@ -6,7 +6,6 @@ use App\Enums\Role;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Product;
-use App\Models\Setting;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
@@ -45,7 +44,6 @@ class AdminCrudTest extends TestCase
             'barcode' => '1234567890123',
             'cost_price' => '0.50',
             'sell_price' => '1.20',
-            'tax_rate' => '10.00',
             'unit' => 'can',
             'track_stock' => true,
             'is_active' => true,
@@ -234,7 +232,7 @@ class AdminCrudTest extends TestCase
 
     public function test_the_product_view_page_shows_stock_movements_and_sales(): void
     {
-        $product = Product::factory()->create(['sell_price' => '10.00', 'tax_rate' => '10.00']);
+        $product = Product::factory()->create(['sell_price' => '10.00']);
 
         Stock::create([
             'product_id' => $product->id,
@@ -249,25 +247,11 @@ class AdminCrudTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Products/Show')
                 ->where('product.id', $product->id)
-                ->where('taxRate', 10)
                 ->has('stocks', 1)
                 ->where('stocks.0.qty', 12)
                 ->has('movements')
                 ->has('sales')
             );
-    }
-
-    /** A product with no rate of its own shows the inherited default. */
-    public function test_the_view_page_reports_the_inherited_tax_rate(): void
-    {
-        // A fractional rate, so the assertion proves decimals survive the trip.
-        Setting::put('default_tax_rate', '7.50');
-        $product = Product::factory()->inheritsTax()->create();
-
-        $this->actingAs($this->admin)
-            ->get(route('products.show', $product))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('taxRate', 7.5));
     }
 
     /* ------------------------------------------------------------------ */

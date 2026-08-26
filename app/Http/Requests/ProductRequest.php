@@ -58,13 +58,7 @@ class ProductRequest extends FormRequest
                 Rule::unique('products', 'barcode')->ignore($productId),
             ],
             'description' => ['nullable', 'string', 'max:2000'],
-            /*
-             * One price. Cost is no longer captured, and tax is inherited from
-             * the default_tax_rate setting rather than set per product — see
-             * Product::effectiveTaxRate(). Neither key is validated here, so
-             * neither reaches the model: an existing product keeps whatever
-             * rate it already has, and a new one inherits.
-             */
+            // One price, and it is what the customer pays. No cost, no tax.
             'sell_price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
             'unit' => ['required', 'string', 'max:20'],
             'track_stock' => ['boolean'],

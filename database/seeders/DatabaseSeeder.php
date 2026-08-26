@@ -108,35 +108,33 @@ class DatabaseSeeder extends Seeder
     /** @param array<string, Category> $categories */
     private function seedProducts(Store $store, array $categories): void
     {
-        // [name, category, cost, sell, tax_rate, unit]
-        // tax_rate null means 0% — deliberately mixed so the per-line
-        // tax-exclusive calculation gets exercised by real data.
+        // [name, category, cost, sell, unit]
         $products = [
-            ['Cola 330ml', 'Soft Drinks', 0.35, 0.75, 10.00, 'can'],
-            ['Cola 1.5L', 'Soft Drinks', 0.90, 1.80, 10.00, 'btl'],
-            ['Orange Soda 330ml', 'Soft Drinks', 0.33, 0.70, 10.00, 'can'],
-            ['Lemon Soda 330ml', 'Soft Drinks', 0.33, 0.70, 10.00, 'can'],
-            ['Mineral Water 500ml', 'Water', 0.12, 0.30, null, 'btl'],
-            ['Mineral Water 1.5L', 'Water', 0.25, 0.60, null, 'btl'],
-            ['Sparkling Water 500ml', 'Water', 0.30, 0.85, 10.00, 'btl'],
-            ['Instant Coffee 100g', 'Coffee & Tea', 2.10, 4.50, 10.00, 'pcs'],
-            ['Green Tea 25 bags', 'Coffee & Tea', 1.40, 3.20, 10.00, 'box'],
-            ['Black Tea 25 bags', 'Coffee & Tea', 1.30, 3.00, 10.00, 'box'],
-            ['Potato Chips 150g', 'Chips', 0.80, 1.90, 10.00, 'pack'],
-            ['Corn Chips 150g', 'Chips', 0.85, 2.00, 10.00, 'pack'],
-            ['Prawn Crackers 100g', 'Chips', 0.60, 1.50, 10.00, 'pack'],
-            ['Chocolate Biscuits 200g', 'Biscuits', 1.10, 2.60, 10.00, 'pack'],
-            ['Cream Biscuits 200g', 'Biscuits', 1.00, 2.40, 10.00, 'pack'],
-            ['Dish Soap 500ml', 'Cleaning', 1.20, 2.75, 10.00, 'btl'],
-            ['Floor Cleaner 1L', 'Cleaning', 1.80, 3.90, 10.00, 'btl'],
-            ['Toilet Paper 4 rolls', 'Paper Goods', 1.50, 3.20, 10.00, 'pack'],
-            ['Paper Towels 2 rolls', 'Paper Goods', 1.30, 2.90, 10.00, 'pack'],
-            ['Bar Soap 100g', 'Personal Care', 0.40, 1.00, 10.00, 'pcs'],
-            ['Shampoo 400ml', 'Personal Care', 2.30, 5.10, 10.00, 'btl'],
-            ['Toothpaste 120g', 'Personal Care', 1.10, 2.50, 10.00, 'pcs'],
+            ['Cola 330ml', 'Soft Drinks', 0.35, 0.75, 'can'],
+            ['Cola 1.5L', 'Soft Drinks', 0.90, 1.80, 'btl'],
+            ['Orange Soda 330ml', 'Soft Drinks', 0.33, 0.70, 'can'],
+            ['Lemon Soda 330ml', 'Soft Drinks', 0.33, 0.70, 'can'],
+            ['Mineral Water 500ml', 'Water', 0.12, 0.30, 'btl'],
+            ['Mineral Water 1.5L', 'Water', 0.25, 0.60, 'btl'],
+            ['Sparkling Water 500ml', 'Water', 0.30, 0.85, 'btl'],
+            ['Instant Coffee 100g', 'Coffee & Tea', 2.10, 4.50, 'pcs'],
+            ['Green Tea 25 bags', 'Coffee & Tea', 1.40, 3.20, 'box'],
+            ['Black Tea 25 bags', 'Coffee & Tea', 1.30, 3.00, 'box'],
+            ['Potato Chips 150g', 'Chips', 0.80, 1.90, 'pack'],
+            ['Corn Chips 150g', 'Chips', 0.85, 2.00, 'pack'],
+            ['Prawn Crackers 100g', 'Chips', 0.60, 1.50, 'pack'],
+            ['Chocolate Biscuits 200g', 'Biscuits', 1.10, 2.60, 'pack'],
+            ['Cream Biscuits 200g', 'Biscuits', 1.00, 2.40, 'pack'],
+            ['Dish Soap 500ml', 'Cleaning', 1.20, 2.75, 'btl'],
+            ['Floor Cleaner 1L', 'Cleaning', 1.80, 3.90, 'btl'],
+            ['Toilet Paper 4 rolls', 'Paper Goods', 1.50, 3.20, 'pack'],
+            ['Paper Towels 2 rolls', 'Paper Goods', 1.30, 2.90, 'pack'],
+            ['Bar Soap 100g', 'Personal Care', 0.40, 1.00, 'pcs'],
+            ['Shampoo 400ml', 'Personal Care', 2.30, 5.10, 'btl'],
+            ['Toothpaste 120g', 'Personal Care', 1.10, 2.50, 'pcs'],
         ];
 
-        foreach ($products as $i => [$name, $categoryName, $cost, $sell, $taxRate, $unit]) {
+        foreach ($products as $i => [$name, $categoryName, $cost, $sell, $unit]) {
             $seq = $i + 1;
 
             $product = Product::create([
@@ -147,7 +145,6 @@ class DatabaseSeeder extends Seeder
                 'description' => null,
                 'cost_price' => $cost,
                 'sell_price' => $sell,
-                'tax_rate' => $taxRate,
                 'unit' => $unit,
                 'track_stock' => true,
                 'is_active' => true,
@@ -169,7 +166,6 @@ class DatabaseSeeder extends Seeder
             'receipt_footer' => 'Thank you for shopping with us!',
             'currency_symbol' => '$',
             'currency_code' => 'USD',
-            'default_tax_rate' => '10.00',
         ];
 
         foreach ($defaults as $key => $value) {

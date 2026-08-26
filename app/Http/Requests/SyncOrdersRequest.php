@@ -41,7 +41,6 @@ class SyncOrdersRequest extends FormRequest
             'orders.*.items.*.qty' => ['required', 'integer', 'min:1'],
             'orders.*.items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'orders.*.items.*.discount' => ['nullable', 'numeric', 'min:0'],
-            'orders.*.items.*.tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
 
             'orders.*.payments' => ['required', 'array', 'min:1'],
             'orders.*.payments.*.method' => ['required', Rule::enum(PaymentMethod::class)],

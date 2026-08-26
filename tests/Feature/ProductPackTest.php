@@ -78,7 +78,6 @@ class ProductPackTest extends TestCase
                     'qty' => $qty,
                     'unit_price' => $product->sell_price,
                     'discount' => '0.00',
-                    'tax_rate' => 0,
                 ]],
                 'payments' => [['method' => 'cash', 'amount' => '1000.00', 'reference_no' => null]],
             ]],

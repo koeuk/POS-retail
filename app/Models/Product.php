@@ -22,7 +22,6 @@ class Product extends Model
         'description',
         'cost_price',
         'sell_price',
-        'tax_rate',
         'image',
         'unit',
         'units_per_pack',
@@ -35,7 +34,6 @@ class Product extends Model
         return [
             'cost_price' => 'decimal:2',
             'sell_price' => 'decimal:2',
-            'tax_rate' => 'decimal:2',
             'units_per_pack' => 'integer',
             'track_stock' => 'boolean',
             'is_active' => 'boolean',
@@ -112,25 +110,5 @@ class Product extends Model
     public function baseUnits(int $qty = 1): int
     {
         return $qty * max(1, $this->units_per_pack);
-    }
-
-    /**
-     * The rate this product is actually taxed at.
-     *
-     * Tax is not edited per product — the form carries a single price field —
-     * so a null rate inherits `default_tax_rate` from settings. An explicit
-     * 0.00 still means zero-rated and is never overridden, which is how a
-     * product can opt out of tax entirely.
-     *
-     * Settings are cached forever and invalidated on save, so calling this in
-     * a loop over the whole catalogue costs one query, not one per product.
-     */
-    public function effectiveTaxRate(): float
-    {
-        if ($this->tax_rate !== null) {
-            return (float) $this->tax_rate;
-        }
-
-        return (float) (Setting::get('default_tax_rate') ?? 0);
     }
 }

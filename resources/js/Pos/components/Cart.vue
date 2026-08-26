@@ -47,7 +47,6 @@ const cart = useCart();
                     <p class="truncate text-sm font-medium leading-snug">{{ line.name }}</p>
                     <p class="tabular font-mono text-xs text-muted-foreground">
                         {{ formatMoney(line.unitPrice, currency) }}
-                        <span v-if="line.taxRate > 0"> + {{ line.taxRate }}%</span>
                         <span v-if="line.discount > 0" class="text-primary"> − {{ formatMoney(line.discount, currency) }} </span>
                     </p>
                     <p v-if="line.trackStock && line.qty > line.stockHint" class="mt-0.5 text-[0.7rem] font-medium text-destructive">

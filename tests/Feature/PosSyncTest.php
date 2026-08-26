@@ -72,7 +72,6 @@ class PosSyncTest extends TestCase
             'qty' => $qty,
             'unit_price' => $product->sell_price,
             'discount' => '0.00',
-            'tax_rate' => $product->tax_rate ?? 0,
         ], $overrides);
     }
 
@@ -243,79 +242,77 @@ class PosSyncTest extends TestCase
     /* Money */
     /* ================================================================== */
 
-    public function test_tax_is_charged_per_line_on_top_of_the_price(): void
+    /** The total is the lines, less the discounts. Nothing is added on top. */
+    public function test_the_total_is_exactly_the_sum_of_the_lines(): void
     {
-        $taxed = $this->stockedProduct(10, ['sell_price' => '10.00', 'tax_rate' => '10.00']);
-        $free = $this->stockedProduct(10, ['sell_price' => '5.00', 'tax_rate' => null]);
+        $a = $this->stockedProduct(10, ['sell_price' => '10.00']);
+        $b = $this->stockedProduct(10, ['sell_price' => '5.00']);
 
         $this->sync([
-            $this->orderPayload([
-                $this->line($taxed, 2, ['tax_rate' => '10.00']),
-                $this->line($free, 1, ['tax_rate' => 0]),
-            ]),
+            $this->orderPayload([$this->line($a, 2), $this->line($b, 1)]),
         ])->assertOk();
 
         $order = Order::firstOrFail();
 
-        $this->assertSame('25.00', $order->subtotal);   // 20.00 + 5.00
-        $this->assertSame('2.00', $order->tax_amount);  // 10% of 20.00 only
-        $this->assertSame('27.00', $order->total);
+        $this->assertSame('25.00', $order->subtotal);
+        $this->assertSame('25.00', $order->total);
     }
 
-    /**
-     * With mixed tax rates, an order discount has to be spread across the
-     * lines before tax — applying it to the total instead would charge the
-     * wrong tax on each band.
-     */
-    public function test_an_order_discount_is_spread_across_lines_before_tax(): void
+    public function test_an_order_discount_comes_straight_off_the_subtotal(): void
     {
-        $taxed = $this->stockedProduct(10, ['sell_price' => '10.00', 'tax_rate' => '10.00']);
-        $free = $this->stockedProduct(10, ['sell_price' => '10.00', 'tax_rate' => null]);
+        $a = $this->stockedProduct(10, ['sell_price' => '10.00']);
+        $b = $this->stockedProduct(10, ['sell_price' => '10.00']);
 
         $this->sync([
-            $this->orderPayload([
-                $this->line($taxed, 1, ['tax_rate' => '10.00']),
-                $this->line($free, 1, ['tax_rate' => 0]),
-            ], ['discount_amount' => '4.00']),
+            $this->orderPayload([$this->line($a, 1), $this->line($b, 1)], ['discount_amount' => '4.00']),
         ])->assertOk();
 
         $order = Order::firstOrFail();
 
-        // 20.00 subtotal, 4.00 off split evenly => each line taxable 8.00.
-        // Only the first line is taxable: 10% of 8.00 = 0.80.
         $this->assertSame('20.00', $order->subtotal);
         $this->assertSame('4.00', $order->discount_amount);
-        $this->assertSame('0.80', $order->tax_amount);
-        $this->assertSame('16.80', $order->total);
+        $this->assertSame('16.00', $order->total);
     }
 
-    public function test_a_line_discount_comes_off_before_the_line_is_taxed(): void
+    /** An order discount larger than the sale is capped; a total never goes negative. */
+    public function test_an_oversized_order_discount_is_capped_at_the_subtotal(): void
     {
-        $product = $this->stockedProduct(10, ['sell_price' => '10.00', 'tax_rate' => '10.00']);
+        $product = $this->stockedProduct(10, ['sell_price' => '10.00']);
 
         $this->sync([
-            $this->orderPayload([
-                $this->line($product, 2, ['discount' => '5.00', 'tax_rate' => '10.00']),
-            ]),
+            $this->orderPayload([$this->line($product, 1)], ['discount_amount' => '999.00']),
+        ])->assertOk();
+
+        $order = Order::firstOrFail();
+
+        $this->assertSame('10.00', $order->discount_amount);
+        $this->assertSame('0.00', $order->total);
+    }
+
+    public function test_a_line_discount_comes_off_that_line(): void
+    {
+        $product = $this->stockedProduct(10, ['sell_price' => '10.00']);
+
+        $this->sync([
+            $this->orderPayload([$this->line($product, 2, ['discount' => '5.00'])]),
         ])->assertOk();
 
         $order = Order::firstOrFail();
 
         $this->assertSame('15.00', $order->subtotal);   // 20.00 - 5.00
-        $this->assertSame('1.50', $order->tax_amount);
-        $this->assertSame('16.50', $order->total);
+        $this->assertSame('15.00', $order->total);
         $this->assertSame('15.00', $order->items()->first()->subtotal);
     }
 
     public function test_change_is_given_on_cash_but_not_on_card(): void
     {
-        $product = $this->stockedProduct(10, ['sell_price' => '10.00', 'tax_rate' => null]);
+        $product = $this->stockedProduct(10, ['sell_price' => '10.00']);
 
-        $cash = $this->orderPayload([$this->line($product, 1, ['tax_rate' => 0])], [
+        $cash = $this->orderPayload([$this->line($product, 1)], [
             'payments' => [['method' => 'cash', 'amount' => '20.00', 'reference_no' => null]],
         ]);
 
-        $card = $this->orderPayload([$this->line($product, 1, ['tax_rate' => 0])], [
+        $card = $this->orderPayload([$this->line($product, 1)], [
             'payments' => [['method' => 'card', 'amount' => '10.00', 'reference_no' => 'TXN-1']],
         ]);
 
@@ -383,10 +380,10 @@ class PosSyncTest extends TestCase
 
     public function test_payments_are_recorded_against_the_order(): void
     {
-        $product = $this->stockedProduct(10, ['sell_price' => '10.00', 'tax_rate' => null]);
+        $product = $this->stockedProduct(10, ['sell_price' => '10.00']);
 
         $this->sync([
-            $this->orderPayload([$this->line($product, 1, ['tax_rate' => 0])], [
+            $this->orderPayload([$this->line($product, 1)], [
                 'payments' => [['method' => 'qr', 'amount' => '10.00', 'reference_no' => 'QR-9']],
             ]),
         ])->assertOk();
@@ -410,7 +407,7 @@ class PosSyncTest extends TestCase
             ->assertJsonStructure([
                 'store_id', 'synced_at', 'categories', 'registers',
                 'settings' => ['receipt_header', 'receipt_footer', 'currency_symbol'],
-                'products' => [['id', 'name', 'sku', 'barcode', 'sell_price', 'tax_rate', 'stock_qty']],
+                'products' => [['id', 'name', 'sku', 'barcode', 'sell_price', 'stock_qty']],
             ]);
 
         $names = collect($response->json('products'))->pluck('name');
@@ -501,5 +498,51 @@ class PosSyncTest extends TestCase
 
         $this->assertSame($elsewhere->id, Order::where('client_uuid', $payload['client_uuid'])->value('store_id'));
         $this->assertSame(18, Stock::where('store_id', $elsewhere->id)->value('qty'));
+    }
+
+    /* ================================================================== */
+    /* Order numbering */
+    /* ================================================================== */
+
+    /**
+     * Numbering used to count the day's rows and add one. Delete an order from
+     * the middle and the count points at a number that already exists — and
+     * the retry recounted the same number, so the till could never sell again
+     * that day.
+     */
+    public function test_numbering_steps_over_a_gap_left_by_a_deleted_order(): void
+    {
+        $product = $this->stockedProduct(500);
+
+        $sell = fn () => $this->sync([$this->orderPayload([$this->line($product, 1)])])->json('results.0');
+
+        $sell();
+        $second = $sell();
+        $sell();
+
+        Order::where('order_no', $second['order_no'])->delete();
+
+        $result = $sell();
+
+        $prefix = sprintf('S%d-R%d-%s-', $this->store->id, $this->register->id, now()->format('ymd'));
+
+        $this->assertSame('created', $result['status']);
+        $this->assertSame($prefix.'0004', $result['order_no']);
+    }
+
+    public function test_numbering_is_per_store_per_day(): void
+    {
+        $product = $this->stockedProduct(50);
+
+        $today = $this->sync([$this->orderPayload([$this->line($product, 1)])])->json('results.0');
+        $this->assertStringEndsWith('-0001', $today['order_no']);
+
+        // A batch that was rung up yesterday numbers into yesterday's run.
+        $yesterday = $this->sync([
+            $this->orderPayload([$this->line($product, 1)], ['created_offline_at' => now()->subDay()->toIso8601String()]),
+        ])->json('results.0');
+
+        $this->assertStringContainsString(now()->subDay()->format('ymd'), $yesterday['order_no']);
+        $this->assertStringEndsWith('-0001', $yesterday['order_no']);
     }
 }

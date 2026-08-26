@@ -153,7 +153,6 @@ async function completeSale(payment: { method: PaymentMethod; amount: number; re
             qty: line.qty,
             unit_price: toDecimalString(line.unitPrice),
             discount: toDecimalString(line.discount),
-            tax_rate: line.taxRate,
         })),
         payments: [
             {
@@ -169,7 +168,6 @@ async function completeSale(payment: { method: PaymentMethod; amount: number; re
         last_error: null,
         receipt: {
             subtotal: toDecimalString(totals.subtotal),
-            tax: toDecimalString(totals.tax),
             total: toDecimalString(totals.total),
             paid: toDecimalString(payment.amount),
             change: toDecimalString(change),

@@ -8,12 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { Boxes, Download, Percent, Receipt, TrendingUp } from 'lucide-vue-next';
+import { Boxes, Download, Receipt, TrendingUp } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
     filters: { from: string; to: string };
-    totals: { orders: number; sales: string; tax: string; items: number; basket: string };
+    totals: { orders: number; sales: string; items: number; basket: string };
     byDay: { day: string; orders: number; sales: string }[];
     byProduct: { product_name: string; qty: number; revenue: string }[];
     byPayment: { method: string; count: number; amount: string }[];
@@ -116,7 +116,7 @@ const exportUrl = computed(() => route('reports.export', { from: from.value, to:
                 <StatTile label="Sales" :value="money(totals.sales)" :icon="TrendingUp" />
                 <StatTile label="Orders" :value="String(totals.orders)" :icon="Receipt" />
                 <StatTile label="Average basket" :value="money(totals.basket)" :icon="Boxes" />
-                <StatTile label="Tax collected" :value="money(totals.tax)" :icon="Percent" :hint="`${totals.items} items sold`" />
+                <StatTile label="Items sold" :value="String(totals.items)" :icon="Boxes" />
             </div>
 
             <section class="animate-rise mt-4 rounded-xl border border-border bg-card p-4 shadow-sm" style="animation-delay: 120ms">

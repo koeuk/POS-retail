@@ -25,8 +25,6 @@ const props = withDefaults(
     defineProps<{
         categories: Category[];
         product?: Product;
-        /** The rate this product will actually be taxed at, from settings. */
-        defaultTaxRate: number;
         /** Larger sizes already saved against this product. */
         packs?: Array<{ id: number; name: string; units_per_pack: number; sell_price: string }>;
     }>(),
@@ -82,12 +80,6 @@ function onFile(event: Event) {
     form.image = file;
     preview.value = file ? URL.createObjectURL(file) : preview.value;
 }
-
-/** What the customer will actually be charged, once tax is added. */
-const withTax = computed(() => {
-    const sell = Number(form.sell_price) || 0;
-    return sell * (1 + props.defaultTaxRate / 100);
-});
 
 function submit() {
     if (isEdit.value) {
@@ -225,18 +217,7 @@ function submit() {
                     <InputError :message="form.errors.sell_price" />
                 </div>
 
-                <!--
-                    Tax is not set per product any more: it comes from the
-                    default rate in settings. Showing the tax-inclusive figure
-                    here matters because the price typed above is the NET one,
-                    and the number the customer sees is this one.
-                -->
-                <p class="mt-3 text-xs text-muted-foreground">
-                    Tax-exclusive. At
-                    <strong class="font-medium text-foreground">{{ defaultTaxRate }}%</strong> tax the customer pays
-                    <strong class="tabular font-mono font-medium text-primary">{{ withTax.toFixed(2) }}</strong
-                    >.
-                </p>
+                <p class="mt-3 text-xs text-muted-foreground">This is the price the customer pays.</p>
             </section>
 
             <section v-if="!isEdit" class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">

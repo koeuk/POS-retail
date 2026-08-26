@@ -6,26 +6,23 @@
  * when the queue flushes. If the algorithms drift, the paper and the database
  * disagree and nobody can tell which one is right.
  *
- * Same rules as the server:
- *   1. line discount comes off the line
- *   2. the order discount is spread across lines in proportion to value
- *   3. tax is charged per line, on the discounted base, at that line's rate
+ * Same two steps as the server:
+ *   1. the line discount comes off each line
+ *   2. the order discount comes off the sum
  *
- * All arithmetic is in integer cents — floats drift, and a till adds thousands
- * of lines a day.
+ * No tax: a price is what the customer pays. All arithmetic is in integer
+ * cents — floats drift, and a till adds thousands of lines a day.
  */
 
 export interface TotalsLine {
     qty: number;
     unitPrice: number;
     discount: number;
-    taxRate: number;
 }
 
 export interface Totals {
     subtotal: number;
     discount: number;
-    tax: number;
     total: number;
     lineSubtotals: number[];
 }
@@ -38,36 +35,14 @@ export function computeTotals(lines: TotalsLine[], orderDiscount = 0): Totals {
     const nets = lines.map((line) => Math.max(0, toCents(line.unitPrice) * line.qty - toCents(line.discount)));
 
     const subtotal = nets.reduce((sum, n) => sum + n, 0);
+
+    // Never below zero, however large the number typed into the discount box.
     const discount = Math.min(toCents(orderDiscount), subtotal);
-
-    // Spread the order discount proportionally, giving the rounding remainder
-    // to the largest line so the parts always add back up to the whole.
-    const taxable = [...nets];
-
-    if (discount > 0 && subtotal > 0) {
-        let allocated = 0;
-        let largest = 0;
-
-        nets.forEach((net, i) => {
-            const share = Math.floor((discount * net) / subtotal);
-            taxable[i] = net - share;
-            allocated += share;
-            if (net > nets[largest]) largest = i;
-        });
-
-        const remainder = discount - allocated;
-        if (remainder > 0) {
-            taxable[largest] = Math.max(0, taxable[largest] - remainder);
-        }
-    }
-
-    const tax = lines.reduce((sum, line, i) => sum + Math.round((taxable[i] * line.taxRate) / 100), 0);
 
     return {
         subtotal: fromCents(subtotal),
         discount: fromCents(discount),
-        tax: fromCents(tax),
-        total: fromCents(subtotal - discount + tax),
+        total: fromCents(subtotal - discount),
         lineSubtotals: nets.map(fromCents),
     };
 }

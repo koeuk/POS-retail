@@ -26,7 +26,6 @@ const props = defineProps<{
         status: string;
         subtotal: string;
         discount_amount: string;
-        tax_amount: string;
         total: string;
         paid_amount: string;
         change_amount: string;
@@ -140,10 +139,6 @@ onMounted(() => {
                             <div v-if="Number(order.discount_amount) > 0" class="flex justify-between text-primary">
                                 <dt>Order discount</dt>
                                 <dd class="tabular font-mono">− {{ money(order.discount_amount) }}</dd>
-                            </div>
-                            <div class="flex justify-between">
-                                <dt class="text-muted-foreground">Tax</dt>
-                                <dd class="tabular font-mono">{{ money(order.tax_amount) }}</dd>
                             </div>
                             <div class="flex items-baseline justify-between border-t border-border pt-2">
                                 <dt class="font-display text-base font-semibold">Total</dt>
@@ -277,10 +272,6 @@ onMounted(() => {
                     <div v-if="Number(order.discount_amount) > 0" class="flex justify-between">
                         <dt>Discount</dt>
                         <dd>− {{ money(order.discount_amount) }}</dd>
-                    </div>
-                    <div class="flex justify-between">
-                        <dt>Tax</dt>
-                        <dd>{{ money(order.tax_amount) }}</dd>
                     </div>
                     <div class="mt-1 flex justify-between border-t border-black/40 pt-1 text-sm font-bold">
                         <dt>TOTAL</dt>

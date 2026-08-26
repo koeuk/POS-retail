@@ -41,7 +41,6 @@ class ReportsTest extends TestCase
             'customer_id' => null,
             'subtotal' => '10.00',
             'discount_amount' => '0.00',
-            'tax_amount' => '1.00',
             'total' => '11.00',
             'paid_amount' => '11.00',
             'change_amount' => '0.00',

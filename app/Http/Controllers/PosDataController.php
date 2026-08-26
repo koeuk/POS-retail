@@ -76,7 +76,6 @@ class PosDataController extends Controller
                     'category_id' => $product->category_id,
                     'category_name' => $product->category?->name,
                     'sell_price' => $product->sell_price,
-                    'tax_rate' => $product->effectiveTaxRate(),
                     'unit' => $product->unit,
                     'image' => $product->image,
                     'track_stock' => $product->track_stock,

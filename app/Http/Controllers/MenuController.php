@@ -57,19 +57,11 @@ class MenuController extends Controller
                         'id' => $pack->id,
                         'name' => $pack->name,
                         'units' => $pack->units_per_pack,
-                        'price' => round((float) $pack->sell_price * (1 + $pack->effectiveTaxRate() / 100), 2),
+                        'price' => (float) $pack->sell_price,
                     ])
                     ->values(),
 
-                /*
-                 * Prices are stored tax-exclusive, but a customer-facing menu
-                 * must show what they actually pay — quoting the net figure
-                 * would understate every price at the till.
-                 */
-                'price' => round(
-                    (float) $p->sell_price * (1 + $p->effectiveTaxRate() / 100),
-                    2
-                ),
+                'price' => (float) $p->sell_price,
             ])
             ->values();
 

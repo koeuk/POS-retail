@@ -9,7 +9,6 @@ use App\Models\Category;
 use App\Models\InventoryLog;
 use App\Models\OrderItem;
 use App\Models\Product;
-use App\Models\Setting;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Support\PerPage;
@@ -61,8 +60,6 @@ class ProductController extends Controller
 
         return Inertia::render('Products/Create', [
             'categories' => Category::orderBy('name')->get(['id', 'name']),
-            // Tax is no longer per product; the form shows which rate applies.
-            'defaultTaxRate' => (float) (Setting::get('default_tax_rate') ?? 0),
         ]);
     }
 
@@ -134,7 +131,6 @@ class ProductController extends Controller
 
         return Inertia::render('Products/Show', [
             'product' => $product->load('category:id,name'),
-            'taxRate' => $product->effectiveTaxRate(),
             'stocks' => $product->stocks()->with('store:id,name')->get(),
             'movements' => $product->inventoryLogs()
                 ->with(['store:id,name', 'creator:id,name'])
@@ -159,7 +155,6 @@ class ProductController extends Controller
             'product' => $product->load('category:id,name', 'parent:id,name'),
             'categories' => Category::orderBy('name')->get(['id', 'name']),
             'packs' => $product->packs()->orderBy('units_per_pack')->get(['id', 'name', 'units_per_pack', 'sell_price', 'is_active']),
-            'defaultTaxRate' => $product->effectiveTaxRate(),
             'stocks' => $product->stocks()->with('store:id,name')->get(),
         ]);
     }

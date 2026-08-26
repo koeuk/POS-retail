@@ -23,7 +23,6 @@ class Order extends Model
         'customer_id',
         'subtotal',
         'discount_amount',
-        'tax_amount',
         'total',
         'paid_amount',
         'change_amount',
@@ -37,7 +36,6 @@ class Order extends Model
         return [
             'subtotal' => 'decimal:2',
             'discount_amount' => 'decimal:2',
-            'tax_amount' => 'decimal:2',
             'total' => 'decimal:2',
             'paid_amount' => 'decimal:2',
             'change_amount' => 'decimal:2',

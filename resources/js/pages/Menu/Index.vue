@@ -126,7 +126,7 @@ const isStaff = computed(() => !!page.props.auth?.user);
                     {{ shop.name }}
                 </h1>
                 <p class="animate-rise mx-auto mt-3 max-w-md text-sm text-brand-foreground/85" style="animation-delay: 120ms">
-                    Everything we stock, with current prices. All prices include tax.
+                    Everything we stock, with current prices.
                 </p>
             </div>
         </header>

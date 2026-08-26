@@ -74,7 +74,7 @@ class StoreSetupTest extends TestCase
             'order_no' => 'KEEP-1',
             'store_id' => $doomed->id,
             'cashier_id' => $admin->id,
-            'subtotal' => '1.00', 'discount_amount' => '0.00', 'tax_amount' => '0.00',
+            'subtotal' => '1.00', 'discount_amount' => '0.00',
             'total' => '1.00', 'paid_amount' => '1.00', 'change_amount' => '0.00',
             'status' => OrderStatus::Completed,
         ]);

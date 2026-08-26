@@ -11,12 +11,9 @@ const cart = useCart();
 
 <template>
     <!--
-        One number at the till.
-        A cashier reads the figure the customer has to pay and nothing else; the
-        subtotal and tax breakdown is bookkeeping, and it belongs on the receipt
-        and in Reports where someone is actually reconciling. Tax is still
-        calculated per line and still recorded on the order — this only stops
-        showing the working.
+        One number at the till. A cashier reads the figure the customer has to
+        pay and nothing else; the line-by-line breakdown belongs on the receipt
+        and in Reports, where someone is actually reconciling.
     -->
     <div class="shrink-0 border-t border-border bg-card">
         <div class="space-y-3 p-4">

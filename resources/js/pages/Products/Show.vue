@@ -21,15 +21,12 @@ interface Movement {
 
 const props = defineProps<{
     product: Product;
-    taxRate: number;
     stocks: Stock[];
     movements: Movement[];
     sales: { qty: number; revenue: string } | null;
 }>();
 
 const onHand = computed(() => props.stocks.reduce((sum, s) => sum + s.qty, 0));
-
-const withTax = computed(() => Number(props.product.sell_price) * (1 + props.taxRate / 100));
 
 function tone(stock: Stock) {
     if (stock.qty < 0) return 'text-destructive';
@@ -114,16 +111,10 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                         <h2 class="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Price</h2>
                         <div class="flex flex-wrap gap-6">
                             <div>
-                                <p class="text-xs text-muted-foreground">Shelf price</p>
+                                <p class="text-xs text-muted-foreground">Price</p>
                                 <p class="text-2xl font-bold text-primary">
                                     <Money :value="product.sell_price" :muted="false" />
                                 </p>
-                                <p class="text-[0.7rem] text-muted-foreground">tax-exclusive</p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-muted-foreground">Customer pays</p>
-                                <p class="tabular font-mono text-2xl font-semibold">{{ withTax.toFixed(2) }}</p>
-                                <p class="text-[0.7rem] text-muted-foreground">includes {{ taxRate }}% tax</p>
                             </div>
                             <div v-if="sales">
                                 <p class="text-xs text-muted-foreground">Sold to date</p>

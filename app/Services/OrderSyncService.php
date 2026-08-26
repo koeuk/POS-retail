@@ -118,7 +118,6 @@ class OrderSyncService
             'customer_id' => $payload['customer_id'] ?? null,
             'subtotal' => $totals->subtotal(),
             'discount_amount' => $totals->discountAmount(),
-            'tax_amount' => $totals->taxAmount(),
             'total' => $totals->total(),
             'paid_amount' => OrderTotals::toDecimal($paid),
             'change_amount' => OrderTotals::toDecimal($change),
