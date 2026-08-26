@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { CurrencyDef } from '@/composables/useCurrency';
 import { formatMoney } from '@/Pos/lib/money';
 import type { PaymentMethod } from '@/Pos/types';
 import { Banknote, Check, CreditCard, Delete, QrCode, Wallet, X } from 'lucide-vue-next';
@@ -7,7 +8,7 @@ import { computed, ref, watch } from 'vue';
 const props = defineProps<{
     open: boolean;
     total: number;
-    currency: string;
+    currency: CurrencyDef;
     busy?: boolean;
 }>();
 

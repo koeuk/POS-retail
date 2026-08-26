@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\Role;
+use App\Support\Currency;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -59,6 +60,9 @@ class HandleInertiaRequests extends Middleware
                     'isAdmin' => (bool) $request->user()?->isAdmin(),
                 ],
             ],
+            // Every price on every page formats through this. Changing the
+            // setting therefore changes the whole app on the next request.
+            'currency' => fn () => Currency::current()->toArray(),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

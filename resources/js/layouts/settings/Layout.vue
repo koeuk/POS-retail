@@ -2,23 +2,21 @@
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import type { SharedData } from '@/types';
 import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: '/settings/profile',
-    },
-    {
-        title: 'Password',
-        href: '/settings/password',
-    },
-    {
-        title: 'Appearance',
-        href: '/settings/appearance',
-    },
-];
+const page = usePage<SharedData>();
+
+/* Shop settings change what every cashier and customer sees, so the entry is
+   admin-only — a manager should not be able to flip the currency. */
+const sidebarNavItems = computed<NavItem[]>(() => [
+    { title: 'Profile', href: '/settings/profile' },
+    { title: 'Password', href: '/settings/password' },
+    { title: 'Appearance', href: '/settings/appearance' },
+    ...(page.props.auth.can.isAdmin ? [{ title: 'Shop', href: '/settings/shop' }] : []),
+]);
 
 const currentPath = window.location.pathname;
 </script>

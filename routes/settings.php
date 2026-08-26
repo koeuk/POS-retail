@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\Settings\ShopController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -18,4 +19,10 @@ Route::middleware('auth')->group(function () {
     Route::get('settings/appearance', function () {
         return Inertia::render('settings/Appearance');
     })->name('appearance');
+
+    // Shop-wide, so admin only — this changes what every cashier sees.
+    Route::middleware('role:admin')->group(function () {
+        Route::get('settings/shop', [ShopController::class, 'edit'])->name('shop.edit');
+        Route::put('settings/shop', [ShopController::class, 'update'])->name('shop.update');
+    });
 });

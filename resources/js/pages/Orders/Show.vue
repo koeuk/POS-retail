@@ -39,13 +39,10 @@ const props = defineProps<{
         register: { id: number; name: string } | null;
         customer: { id: number; name: string; phone: string | null; email: string | null } | null;
     };
-    settings: { receipt_header: string; receipt_footer: string | null; currency_symbol: string };
+    settings: { receipt_header: string; receipt_footer: string | null; currency: CurrencyDef };
 }>();
 
-const currency = computed(() => props.settings.currency_symbol ?? '$');
-
-const money = (v: string | number) =>
-    `${currency.value}${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const { money } = useCurrency(() => props.settings.currency);
 
 const stamp = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—');
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Setting;
+use App\Support\Currency;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -81,7 +82,7 @@ class MenuController extends Controller
             'shop' => [
                 'name' => Setting::get('receipt_header', config('app.name')),
                 'footer' => Setting::get('receipt_footer'),
-                'currency' => Setting::get('currency_symbol', '$'),
+                'currency' => Currency::current()->toArray(),
             ],
         ]);
     }

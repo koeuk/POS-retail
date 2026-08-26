@@ -9,6 +9,7 @@ import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { Boxes, Download, Receipt, TrendingUp } from 'lucide-vue-next';
+import { useCurrency } from '@/composables/useCurrency';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -36,7 +37,7 @@ function preset(days: number) {
     to.value = end.toISOString().slice(0, 10);
 }
 
-const money = (v: string | number) => `$${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const { money, currency } = useCurrency();
 
 /*
  * Fixed slot per tender type, so cash is always slot 0 no matter how the

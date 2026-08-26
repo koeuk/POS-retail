@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\Register;
 use App\Models\Setting;
 use App\Models\Store;
+use App\Support\Currency;
 use App\Services\OrderSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -101,7 +102,7 @@ class PosDataController extends Controller
             'settings' => [
                 'receipt_header' => Setting::get('receipt_header', config('app.name')),
                 'receipt_footer' => Setting::get('receipt_footer'),
-                'currency_symbol' => Setting::get('currency_symbol', '$'),
+                'currency' => Currency::current()->toArray(),
             ],
         ]);
     }

@@ -12,7 +12,8 @@ import { useNavLock } from '@/Pos/composables/useNavLock';
 import { useOfflineSync } from '@/Pos/composables/useOfflineSync';
 import { cacheFeed, queueOrder, readCachedFeed } from '@/Pos/db/dexie';
 import { http } from '@/Pos/lib/http';
-import { toDecimalString } from '@/Pos/lib/money';
+import { USD } from '@/composables/useCurrency';
+import { formatMoney, toDecimalString } from '@/Pos/lib/money';
 import type { PaymentMethod, PosFeed, StoredOrder } from '@/Pos/types';
 import { Head } from '@inertiajs/vue3';
 import { CircleAlert, LoaderCircle, ShoppingCart } from 'lucide-vue-next';
@@ -47,7 +48,7 @@ const paymentOpen = ref(false);
 const cartOpen = ref(false);
 const toast = ref<{ kind: 'ok' | 'warn'; text: string } | null>(null);
 
-const currency = computed(() => feed.value?.settings.currency_symbol ?? '$');
+const currency = computed(() => feed.value?.settings.currency ?? USD);
 const products = computed(() => feed.value?.products ?? []);
 
 /*
@@ -192,7 +193,7 @@ async function completeSale(payment: { method: PaymentMethod; amount: number; re
     paying.value = false;
     await sync.refreshCount();
 
-    flash('ok', `Sale saved · ${currency.value}${order.total}`);
+    flash('ok', `Sale saved · ${formatMoney(Number(order.total), currency.value)}`);
 
     void sync.flush().then(() => {
         if (sync.online.value) void refreshStockHints();

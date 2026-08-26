@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import type { CurrencyDef } from '@/composables/useCurrency';
 import { useCart } from '@/Pos/composables/useCart';
 import { formatMoney } from '@/Pos/lib/money';
 import { Minus, Plus, ShoppingCart, Trash2 } from 'lucide-vue-next';
 
-defineProps<{ currency: string }>();
+defineProps<{ currency: CurrencyDef }>();
 
 const cart = useCart();
 </script>

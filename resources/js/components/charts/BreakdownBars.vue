@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatCurrency, USD, type CurrencyDef } from '@/composables/useCurrency';
 import { computed } from 'vue';
 
 interface Row {
@@ -18,7 +19,7 @@ interface Row {
 const props = withDefaults(
     defineProps<{
         rows: Row[];
-        currency?: string;
+        currency?: CurrencyDef;
         /** Categorical when each row is a different thing; single-hue otherwise. */
         categorical?: boolean;
     }>(),
@@ -41,7 +42,7 @@ const seriesVar = (row: Row, index: number) => `var(--series-${((row.slot ?? ind
 
 const share = (value: number) => (total.value > 0 ? Math.round((value / total.value) * 100) : 0);
 
-const money = (n: number) => `${props.currency}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (n: number) => formatCurrency(n, props.currency ?? USD);
 </script>
 
 <template>

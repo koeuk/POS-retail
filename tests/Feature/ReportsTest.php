@@ -10,6 +10,7 @@ use App\Models\Store;
 use App\Models\User;
 use App\Services\SalesReporter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -69,7 +70,7 @@ class ReportsTest extends TestCase
         $reporter = new SalesReporter($this->store->id);
 
         $onSaleDay = $reporter->summaryFor($soldOn->copy()->startOfDay());
-        $onSyncDay = $reporter->summaryFor(now()->startOfDay());
+        $onSyncDay = $reporter->summaryFor(SalesReporter::businessNow()->startOfDay());
 
         $this->assertSame('50.00', $onSaleDay['sales'], 'takings belong to the day of the sale');
         $this->assertSame(1, $onSaleDay['orders']);
@@ -82,7 +83,7 @@ class ReportsTest extends TestCase
     {
         $this->sale(['total' => '25.00']);
 
-        $summary = (new SalesReporter($this->store->id))->summaryFor(now()->startOfDay());
+        $summary = (new SalesReporter($this->store->id))->summaryFor(SalesReporter::businessNow()->startOfDay());
 
         $this->assertSame('25.00', $summary['sales']);
     }
@@ -97,7 +98,7 @@ class ReportsTest extends TestCase
         $this->sale(['total' => '99.00', 'status' => OrderStatus::Refunded]);
         $this->sale(['total' => '99.00', 'status' => OrderStatus::Void]);
 
-        $summary = (new SalesReporter($this->store->id))->summaryFor(now()->startOfDay());
+        $summary = (new SalesReporter($this->store->id))->summaryFor(SalesReporter::businessNow()->startOfDay());
 
         $this->assertSame('10.00', $summary['sales']);
         $this->assertSame(1, $summary['orders']);
@@ -112,11 +113,11 @@ class ReportsTest extends TestCase
 
         $manager = User::factory()->manager($this->store)->create();
 
-        $summary = SalesReporter::for($manager)->summaryFor(now()->startOfDay());
+        $summary = SalesReporter::for($manager)->summaryFor(SalesReporter::businessNow()->startOfDay());
         $this->assertSame('10.00', $summary['sales']);
 
         // An admin has no store binding and sees the lot.
-        $all = SalesReporter::for($this->admin)->summaryFor(now()->startOfDay());
+        $all = SalesReporter::for($this->admin)->summaryFor(SalesReporter::businessNow()->startOfDay());
         $this->assertSame('87.00', $all['sales']);
     }
 
@@ -126,7 +127,7 @@ class ReportsTest extends TestCase
         $this->sale(['total' => '10.00']);
 
         $rows = (new SalesReporter($this->store->id))
-            ->salesByDay(now()->subDays(6)->startOfDay(), now()->startOfDay());
+            ->salesByDay(SalesReporter::businessNow()->subDays(6)->startOfDay(), SalesReporter::businessNow()->startOfDay());
 
         $this->assertCount(7, $rows);
         $this->assertSame('0.00', $rows->first()['sales']);
@@ -191,7 +192,7 @@ class ReportsTest extends TestCase
         $this->sale(['total' => '33.00']);
 
         $response = $this->actingAs($this->admin)
-            ->get(route('reports.export', ['from' => now()->toDateString(), 'to' => now()->toDateString()]))
+            ->get(route('reports.export', ['from' => SalesReporter::businessNow()->toDateString(), 'to' => SalesReporter::businessNow()->toDateString()]))
             ->assertOk()
             ->assertHeader('content-type', 'text/csv; charset=UTF-8');
 
@@ -205,8 +206,49 @@ class ReportsTest extends TestCase
     public function test_an_absurd_date_range_is_clamped(): void
     {
         $this->actingAs($this->admin)
-            ->get(route('reports.index', ['from' => '1990-01-01', 'to' => now()->toDateString()]))
+            ->get(route('reports.index', ['from' => '1990-01-01', 'to' => SalesReporter::businessNow()->toDateString()]))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page->has('byDay', 367));
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* The shop's day */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Timestamps are stored in UTC; the shop is not in UTC. A sale rung up at
+     * 06:00 in Phnom Penh happened at 23:00 UTC the day before, and grouping it
+     * by the UTC date made the morning's takings vanish from today's dashboard.
+     */
+    public function test_a_sale_is_reported_on_the_shops_day_not_the_servers(): void
+    {
+        config(['pos.business_timezone' => 'Asia/Phnom_Penh']);
+
+        // 06:00 Monday in Phnom Penh == 23:00 Sunday UTC.
+        $utcInstant = Carbon::parse('2026-08-23 23:00:00', 'UTC');
+
+        $order = $this->sale(['total' => '42.00']);
+        $order->forceFill(['created_offline_at' => $utcInstant, 'created_at' => $utcInstant])->save();
+
+        $reporter = new SalesReporter($this->store->id);
+
+        $shopMonday = $reporter->summaryFor(Carbon::parse('2026-08-24'));
+        $utcSunday = $reporter->summaryFor(Carbon::parse('2026-08-23'));
+
+        $this->assertSame('42.00', number_format((float) $shopMonday['sales'], 2, '.', ''));
+        $this->assertSame('0.00', number_format((float) $utcSunday['sales'], 2, '.', ''));
+    }
+
+    /** A shop that really does keep UTC is left alone — no conversion at all. */
+    public function test_a_utc_shop_skips_the_conversion(): void
+    {
+        config(['pos.business_timezone' => 'UTC']);
+
+        $this->assertStringNotContainsString('CONVERT_TZ', SalesReporter::businessDay());
+
+        config(['pos.business_timezone' => 'Asia/Phnom_Penh']);
+
+        $this->assertStringContainsString('CONVERT_TZ', SalesReporter::businessDay());
+        $this->assertStringContainsString("'+07:00'", SalesReporter::businessDay());
     }
 }

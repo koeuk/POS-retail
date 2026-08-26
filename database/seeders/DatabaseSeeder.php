@@ -164,8 +164,9 @@ class DatabaseSeeder extends Seeder
         $defaults = [
             'receipt_header' => $store->name,
             'receipt_footer' => 'Thank you for shopping with us!',
-            'currency_symbol' => '$',
-            'currency_code' => 'USD',
+            // Display currency and the rate that converts stored USD prices.
+            'currency' => 'USD',
+            'riel_per_usd' => '4100',
         ];
 
         foreach ($defaults as $key => $value) {

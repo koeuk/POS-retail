@@ -54,7 +54,10 @@ class ReportController extends Controller
      */
     private function range(Request $request): array
     {
-        $to = $request->date('to') ?? now();
+        // "Up to today" means the shop's today. On a server keeping UTC these
+        // are different dates for part of every evening, and the difference is
+        // a whole day's takings missing from the default view.
+        $to = $request->date('to') ?? SalesReporter::businessNow();
         $from = $request->date('from') ?? $to->copy()->subDays(29);
 
         if ($from->gt($to)) {

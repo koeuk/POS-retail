@@ -14,7 +14,8 @@ class DashboardController extends Controller
         $user = $request->user();
         $reporter = SalesReporter::for($user);
 
-        $today = now()->startOfDay();
+        // The shop's day, not the server's — see SalesReporter::businessDay().
+        $today = SalesReporter::businessNow()->startOfDay();
         $yesterday = $today->copy()->subDay();
 
         $todaySummary = $reporter->summaryFor($today);

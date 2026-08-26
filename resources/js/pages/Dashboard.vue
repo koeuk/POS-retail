@@ -9,6 +9,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import type { SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { Boxes, ChartNoAxesColumn, ChevronRight, CloudOff, PackageSearch, Receipt, ScanBarcode, TrendingUp, TriangleAlert } from 'lucide-vue-next';
+import { useCurrency } from '@/composables/useCurrency';
 import { computed } from 'vue';
 
 interface Summary {
@@ -53,7 +54,7 @@ const greeting = computed(() => {
     return 'Good evening';
 });
 
-const money = (v: string | number) => `$${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const { money } = useCurrency();
 
 const time = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '—');
 

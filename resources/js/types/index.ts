@@ -40,6 +40,8 @@ export interface SharedData {
     quote: { message: string; author: string };
     auth: Auth;
     flash: { success: string | null; error: string | null };
+    /** The shop's display currency; stored prices are always USD. */
+    currency: { code: string; symbol: string; decimals: number; riel_per_usd: number };
     ziggy: {
         location: string;
         url: string;

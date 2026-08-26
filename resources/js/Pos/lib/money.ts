@@ -47,12 +47,8 @@ export function computeTotals(lines: TotalsLine[], orderDiscount = 0): Totals {
     };
 }
 
-export function formatMoney(value: number, symbol = '$'): string {
-    return `${symbol}${value.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    })}`;
-}
+/** Re-exported so POS components format prices exactly like the rest of the app. */
+export { formatCurrency as formatMoney } from '@/composables/useCurrency';
 
 /** Laravel decimal columns arrive as strings; keep the 2dp shape going back. */
 export const toDecimalString = (value: number): string => value.toFixed(2);

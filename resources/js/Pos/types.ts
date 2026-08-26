@@ -37,7 +37,7 @@ export type PaymentMethod = 'cash' | 'card' | 'qr' | 'credit';
 export interface PosSettings {
     receipt_header: string;
     receipt_footer: string | null;
-    currency_symbol: string;
+    currency: { code: string; symbol: string; decimals: number; riel_per_usd: number };
 }
 
 export interface PosRegister {

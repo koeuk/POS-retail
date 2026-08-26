@@ -28,8 +28,12 @@ class SalesReporter
     public function __construct(private readonly ?int $storeId = null) {}
 
     /**
-     * COALESCE(created_offline_at, created_at) — when the sale actually
-     * happened.
+     * The shop's calendar day for a sale.
+     *
+     * Both timestamps are UTC. The shop is not: a sale at 06:00 in Phnom Penh
+     * is 23:00 UTC the day before, and reporting it under yesterday makes the
+     * morning's takings disappear from today's dashboard. The stored instant
+     * is therefore shifted into the business timezone before the date is taken.
      *
      * Returned as raw SQL text, not a DB::raw() Expression: Laravel 11 dropped
      * Expression::__toString(), so an Expression cannot be concatenated into a
@@ -37,12 +41,39 @@ class SalesReporter
      */
     public static function businessDay(): string
     {
-        return 'DATE(COALESCE(orders.created_offline_at, orders.created_at))';
+        return 'DATE('.self::businessMoment().')';
     }
 
     public static function businessMoment(): string
     {
-        return 'COALESCE(orders.created_offline_at, orders.created_at)';
+        $offset = self::utcOffset();
+
+        $moment = 'COALESCE(orders.created_offline_at, orders.created_at)';
+
+        // A zero offset means the shop keeps UTC; skip the conversion so the
+        // expression stays index-friendly and readable in a query log.
+        return $offset === '+00:00'
+            ? $moment
+            : sprintf("CONVERT_TZ(%s, '+00:00', '%s')", $moment, $offset);
+    }
+
+    /**
+     * The business timezone as a fixed +HH:MM offset.
+     *
+     * CONVERT_TZ only accepts named zones when MySQL's timezone tables have
+     * been loaded, which is not a safe assumption on a shop's own server — an
+     * offset always works. Cambodia has no daylight saving, so a fixed offset
+     * loses nothing; a zone that did observe it would need those tables.
+     */
+    public static function utcOffset(): string
+    {
+        return Carbon::now(config('pos.business_timezone'))->format('P');
+    }
+
+    /** "Now", as the shop reckons it. */
+    public static function businessNow(): Carbon
+    {
+        return Carbon::now(config('pos.business_timezone'));
     }
 
     /** Admins see every store; everyone else is pinned to their own. */

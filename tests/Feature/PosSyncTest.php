@@ -8,7 +8,9 @@ use App\Models\Register;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\SalesReporter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -369,7 +371,9 @@ class PosSyncTest extends TestCase
         $this->sync($orders)->assertOk();
 
         $numbers = Order::orderBy('id')->pluck('order_no')->all();
-        $stamp = $day->format('ymd');
+
+        // Numbers carry the shop's date for that instant, not the server's.
+        $stamp = $day->copy()->setTimezone(config('pos.business_timezone'))->format('ymd');
 
         $this->assertSame([
             "S{$this->store->id}-R{$this->register->id}-{$stamp}-0001",
@@ -524,7 +528,7 @@ class PosSyncTest extends TestCase
 
         $result = $sell();
 
-        $prefix = sprintf('S%d-R%d-%s-', $this->store->id, $this->register->id, now()->format('ymd'));
+        $prefix = sprintf('S%d-R%d-%s-', $this->store->id, $this->register->id, SalesReporter::businessNow()->format('ymd'));
 
         $this->assertSame('created', $result['status']);
         $this->assertSame($prefix.'0004', $result['order_no']);
@@ -542,7 +546,71 @@ class PosSyncTest extends TestCase
             $this->orderPayload([$this->line($product, 1)], ['created_offline_at' => now()->subDay()->toIso8601String()]),
         ])->json('results.0');
 
-        $this->assertStringContainsString(now()->subDay()->format('ymd'), $yesterday['order_no']);
+        $this->assertStringContainsString(SalesReporter::businessNow()->subDay()->format('ymd'), $yesterday['order_no']);
         $this->assertStringEndsWith('-0001', $yesterday['order_no']);
+    }
+
+    /* ================================================================== */
+    /* Clocks */
+    /* ================================================================== */
+
+    /**
+     * A till that lost its battery comes back believing it is years from now.
+     * The sale is real, so it is kept — but its own date is not trusted into
+     * the order number and the reports.
+     */
+    public function test_a_wildly_wrong_device_clock_falls_back_to_server_time(): void
+    {
+        $product = $this->stockedProduct(50);
+
+        $result = $this->sync([
+            $this->orderPayload([$this->line($product, 1)], ['created_offline_at' => '2031-01-01T09:00:00Z']),
+        ])->json('results.0');
+
+        $this->assertSame('created', $result['status']);
+        $this->assertStringContainsString(SalesReporter::businessNow()->format('ymd'), $result['order_no']);
+
+        $order = Order::where('order_no', $result['order_no'])->firstOrFail();
+        $this->assertTrue($order->created_offline_at->isSameDay(now()));
+    }
+
+    /** An ordinary offline stretch is still honoured to the second. */
+    public function test_a_genuine_offline_timestamp_is_kept(): void
+    {
+        $product = $this->stockedProduct(50);
+        $when = now()->subDays(3)->startOfHour();
+
+        $result = $this->sync([
+            $this->orderPayload([$this->line($product, 1)], ['created_offline_at' => $when->toIso8601String()]),
+        ])->json('results.0');
+
+        $order = Order::where('order_no', $result['order_no'])->firstOrFail();
+
+        // The instant is preserved exactly; the number carries the shop's date
+        // for that instant, which is not always the UTC one.
+        $this->assertSame($when->toDateTimeString(), $order->created_offline_at->toDateTimeString());
+        $this->assertStringContainsString(
+            $when->copy()->setTimezone(config('pos.business_timezone'))->format('ymd'),
+            $order->order_no,
+        );
+    }
+
+    /**
+     * The device sends its own offset. Storing that wall-clock reading verbatim
+     * put created_offline_at on a different clock from created_at, and the two
+     * are compared with COALESCE all over the reports.
+     */
+    public function test_an_offset_timestamp_is_normalised_to_utc(): void
+    {
+        $product = $this->stockedProduct(50);
+
+        // 06:00 in Phnom Penh is 23:00 the previous day in UTC.
+        $result = $this->sync([
+            $this->orderPayload([$this->line($product, 1)], ['created_offline_at' => '2026-08-24T06:00:00+07:00']),
+        ])->json('results.0');
+
+        $stored = Order::where('order_no', $result['order_no'])->value('created_offline_at');
+
+        $this->assertSame('2026-08-23 23:00:00', Carbon::parse($stored)->utc()->toDateTimeString());
     }
 }

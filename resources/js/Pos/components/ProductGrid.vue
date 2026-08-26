@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { CurrencyDef } from '@/composables/useCurrency';
 import { formatMoney } from '@/Pos/lib/money';
 import type { PosCategory, PosProduct } from '@/Pos/types';
 import { Layers, PackageOpen, Search } from 'lucide-vue-next';
@@ -7,7 +8,7 @@ import { computed, ref } from 'vue';
 const props = defineProps<{
     products: PosProduct[];
     categories: PosCategory[];
-    currency: string;
+    currency: CurrencyDef;
 }>();
 
 const emit = defineEmits<{ add: [product: PosProduct] }>();

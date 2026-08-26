@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import type { SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, Search, UtensilsCrossed } from 'lucide-vue-next';
+import { formatCurrency, type CurrencyDef } from '@/composables/useCurrency';
 import { computed, ref } from 'vue';
 
 interface MenuPack {
@@ -29,7 +30,7 @@ const props = defineProps<{
     products: MenuProduct[];
     categories: { id: number; name: string }[];
     filters: { search: string; category: number | null };
-    shop: { name: string; footer: string | null; currency: string };
+    shop: { name: string; footer: string | null; currency: CurrencyDef };
 }>();
 
 /*
@@ -68,11 +69,7 @@ const grouped = computed(() => {
     return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
 });
 
-const money = (value: number) =>
-    `${props.shop.currency}${value.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    })}`;
+const money = (value: number) => formatCurrency(value, props.shop.currency);
 
 const year = new Date().getFullYear();
 

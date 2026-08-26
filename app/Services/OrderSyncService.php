@@ -6,6 +6,7 @@ use App\Enums\InventoryLogType;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Register;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
@@ -92,9 +93,7 @@ class OrderSyncService
 
         $totals = new OrderTotals($items, $payload['discount_amount'] ?? 0);
 
-        $offlineAt = isset($payload['created_offline_at'])
-            ? Carbon::parse($payload['created_offline_at'])
-            : null;
+        $offlineAt = $this->offlineTimestamp($payload);
 
         $paid = array_sum(array_map(
             fn ($p) => OrderTotals::toCents($p['amount']),
@@ -113,7 +112,7 @@ class OrderSyncService
             'client_uuid' => $payload['client_uuid'],
             'order_no' => $this->nextOrderNo($storeId, $payload['register_id'] ?? null, $offlineAt, $attempt),
             'store_id' => $storeId,
-            'register_id' => $payload['register_id'] ?? null,
+            'register_id' => $this->resolveRegister($payload, $storeId),
             'cashier_id' => $cashier->id,
             'customer_id' => $payload['customer_id'] ?? null,
             'subtotal' => $totals->subtotal(),
@@ -194,6 +193,75 @@ class OrderSyncService
     }
 
     /**
+     * The register this sale was rung up on, or null.
+     *
+     * A register belongs to one store. Recording a Store B terminal against a
+     * Store A sale would make the order number and the receipt disagree about
+     * where the sale happened, so an unrelated register is dropped rather than
+     * stored — the sale itself is never at risk over it.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function resolveRegister(array $payload, int $storeId): ?int
+    {
+        $registerId = $payload['register_id'] ?? null;
+
+        if (! $registerId) {
+            return null;
+        }
+
+        return Register::where('id', $registerId)->where('store_id', $storeId)->exists()
+            ? (int) $registerId
+            : null;
+    }
+
+    /**
+     * When the sale was actually rung up, according to the till — sanity
+     * checked, and normalised to UTC so it can be compared with created_at.
+     *
+     * Two separate problems are handled here:
+     *
+     *  - **Clock skew.** A cheap tablet that has lost its battery comes back
+     *    believing it is 2031, and that date would otherwise be written into
+     *    the order number and every report. The sale is never rejected for it
+     *    — the cash is in the drawer — so an implausible stamp falls back to
+     *    now() rather than failing.
+     *  - **Timezone.** Carbon::parse keeps whatever offset the device sent, and
+     *    Eloquent then stores that wall-clock reading verbatim, while
+     *    created_at is UTC. Two columns on two different clocks made
+     *    COALESCE(created_offline_at, created_at) meaningless.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function offlineTimestamp(array $payload): ?Carbon
+    {
+        if (! isset($payload['created_offline_at'])) {
+            return null;
+        }
+
+        try {
+            $at = Carbon::parse($payload['created_offline_at'])->utc();
+        } catch (Throwable) {
+            return null;
+        }
+
+        // A day of slack forwards for ordinary drift; a year back covers any
+        // real offline stretch. Anything outside that is a broken clock.
+        $implausible = $at->isAfter(now()->addDay()) || $at->isBefore(now()->subYear());
+
+        if ($implausible) {
+            Log::warning('POS order carried an implausible timestamp; using server time', [
+                'client_uuid' => $payload['client_uuid'] ?? null,
+                'claimed' => $at->toIso8601String(),
+            ]);
+
+            return now();
+        }
+
+        return $at;
+    }
+
+    /**
      * Which store this sale belongs to.
      *
      * A cashier bound to a store may only ever write to that store, whatever
@@ -223,7 +291,8 @@ class OrderSyncService
      */
     private function nextOrderNo(int $storeId, ?int $registerId, ?Carbon $offlineAt, int $attempt = 1): string
     {
-        $day = ($offlineAt ?? now())->copy();
+        // Numbered by the shop's day, matching how the reports group them.
+        $day = ($offlineAt ?? now())->copy()->setTimezone(config('pos.business_timezone'));
         $prefix = sprintf('S%d-R%d-%s-', $storeId, $registerId ?? 0, $day->format('ymd'));
 
         /*

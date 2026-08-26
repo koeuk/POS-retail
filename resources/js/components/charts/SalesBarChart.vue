@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatCurrency, USD, type CurrencyDef } from '@/composables/useCurrency';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 interface Row {
@@ -10,7 +11,7 @@ interface Row {
 const props = withDefaults(
     defineProps<{
         rows: Row[];
-        currency?: string;
+        currency?: CurrencyDef;
         height?: number;
     }>(),
     { currency: '$', height: 200 },
@@ -83,7 +84,7 @@ function clearHover() {
 
 const shortDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
-const money = (n: number) => `${props.currency}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (n: number) => formatCurrency(n, props.currency ?? USD);
 
 const tooltip = computed(() => {
     if (hovered.value === null) return null;

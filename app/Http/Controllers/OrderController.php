@@ -9,6 +9,7 @@ use App\Models\Setting;
 use App\Models\Store;
 use App\Models\User;
 use App\Services\SalesReporter;
+use App\Support\Currency;
 use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -98,7 +99,7 @@ class OrderController extends Controller
             'settings' => [
                 'receipt_header' => Setting::get('receipt_header', config('app.name')),
                 'receipt_footer' => Setting::get('receipt_footer'),
-                'currency_symbol' => Setting::get('currency_symbol', '$'),
+                'currency' => Currency::current()->toArray(),
             ],
         ]);
     }
