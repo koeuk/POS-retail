@@ -689,4 +689,55 @@ class ProductPackTest extends TestCase
 
         $this->assertSame(7, Stock::where('product_id', $can->id)->value('qty'));
     }
+
+    /**
+     * The create form has no Add stock section, so it must not post the fields
+     * that belong to it. It once sent the Select's "single" sentinel as a pack
+     * id, which failed integer validation on a field the page never shows —
+     * the form just refused to save, with the error nowhere on screen.
+     */
+    public function test_creating_a_product_is_not_blocked_by_receipt_fields(): void
+    {
+        $category = Category::factory()->create();
+
+        $this->actingAs($this->admin)->post(route('products.store'), [
+            'category_id' => $category->id,
+            'name' => 'Plain product',
+            'sku' => 'PLAIN-1',
+            'sell_price' => '1.50',
+            'unit' => 'pcs',
+            'track_stock' => true,
+            'is_active' => true,
+            'opening_qty' => 5,
+            'low_stock_threshold' => 2,
+        ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $product = Product::where('sku', 'PLAIN-1')->firstOrFail();
+
+        $this->assertSame(5, (int) Stock::where('product_id', $product->id)->sum('qty'));
+    }
+
+    /** And a product created with pack rows still works. */
+    public function test_creating_a_product_with_packs_still_works(): void
+    {
+        $category = Category::factory()->create();
+
+        $this->actingAs($this->admin)->post(route('products.store'), [
+            'category_id' => $category->id,
+            'name' => 'Boxed product',
+            'sku' => 'BOXED-1',
+            'sell_price' => '1.00',
+            'unit' => 'pcs',
+            'track_stock' => true,
+            'is_active' => true,
+            'opening_qty' => 0,
+            'packs' => [['name' => 'Case', 'units_per_pack' => 24, 'sell_price' => '20.00']],
+        ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(1, Product::where('sku', 'BOXED-1')->firstOrFail()->packs()->count());
+    }
 }

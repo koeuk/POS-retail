@@ -39,6 +39,9 @@ const isEdit = computed(() => !!props.product);
 /** Sentinel for "received as single units", since a Select needs a string. */
 const SINGLE = 'single';
 
+/** Fields that only mean anything once the product exists. */
+const RECEIPT_KEYS = ['add_stock', 'add_stock_pack_id', 'add_stock_units_each', 'add_stock_unit_label', 'add_stock_loose', 'add_stock_note'] as const;
+
 const form = useForm({
     category_id: props.product ? String(props.product.category_id) : '',
     packs: props.packs.map((p): PackRow => ({ id: p.id, name: p.name, units_per_pack: p.units_per_pack, sell_price: p.sell_price })),
@@ -155,8 +158,8 @@ function submit() {
         form.transform((data) => ({
             ...data,
             _method: 'put',
-            // Only one of the two ever means anything; sending both would let
-            // the server choose, and it should not have to.
+            // SINGLE is a sentinel the Select needs; the server wants a real
+            // pack id or nothing at all.
             add_stock_pack_id: data.add_stock_pack_id === SINGLE ? null : data.add_stock_pack_id,
         })).post(route('products.update', { product: props.product!.id }), {
             forceFormData: true,
@@ -167,9 +170,24 @@ function submit() {
              */
             onSuccess: () => form.reset('add_stock', 'add_stock_loose', 'add_stock_note'),
         });
-    } else {
-        form.post(route('products.store'), { forceFormData: true });
+
+        return;
     }
+
+    /*
+     * Creating has no Add stock section — a product that does not exist yet
+     * cannot have received a delivery — so those keys are dropped rather than
+     * sent along. Leaving them in meant posting the SINGLE sentinel as a pack
+     * id, which failed validation on a field the create form never shows: the
+     * form simply refused to save, with the error nowhere on screen.
+     */
+    form.transform((data) => {
+        const payload: Record<string, unknown> = { ...data };
+
+        for (const key of RECEIPT_KEYS) delete payload[key];
+
+        return payload;
+    }).post(route('products.store'), { forceFormData: true });
 }
 </script>
 
