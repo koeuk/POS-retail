@@ -196,6 +196,31 @@ class SaleTypeTest extends TestCase
             );
     }
 
+    /**
+     * The details panel reads the items and payments straight off the row,
+     * so the list must ship them — an empty panel would look like a debt for
+     * nothing, which is the one thing a customer will argue about.
+     */
+    public function test_each_debt_row_carries_its_items_and_payments(): void
+    {
+        $c = Customer::factory()->create(['name' => 'Ada']);
+        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();
+        $order = Order::firstOrFail();
+        $this->actingAs($this->admin)->post(route('debts.settle', $order), ['amount' => '5.00', 'method' => 'cash']);
+
+        $this->actingAs($this->admin)
+            ->get(route('debts.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('debts.data', 1)
+                ->has('debts.data.0.items', 1)
+                ->where('debts.data.0.items.0.product_name', $this->product->name)
+                ->where('debts.data.0.items.0.qty', 2)
+                ->has('debts.data.0.payments', 1)
+                ->where('debts.data.0.payments.0.amount', '5.00')
+            );
+    }
+
     public function test_the_myself_screen_lists_only_owner_take_outs(): void
     {
         $this->sync(['sale_type' => 'myself'])->assertOk();

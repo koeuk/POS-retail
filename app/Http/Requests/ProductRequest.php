@@ -45,7 +45,7 @@ class ProductRequest extends FormRequest
             'packs' => ['array', 'max:20'],
             'packs.*.id' => ['nullable', 'integer', Rule::exists('products', 'id')],
             'packs.*.name' => ['required', 'string', 'max:255'],
-            'packs.*.units_per_pack' => ['required', 'integer', 'min:2', 'max:100000'],
+            'packs.*.units_per_pack' => ['required', 'integer', 'min:1', 'max:100000'],
             'packs.*.sell_price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
             'packs.*.barcode' => ['nullable', 'string', 'max:64'],
             'name' => ['required', 'string', 'max:255'],
@@ -117,7 +117,7 @@ class ProductRequest extends FormRequest
             'units_per_pack.required_with' => 'Say how many units this pack contains.',
             'packs.*.name.required' => 'Give each pack size a name.',
             'packs.*.units_per_pack.required' => 'Say how many units the pack contains.',
-            'packs.*.units_per_pack.min' => 'A pack has to hold at least two — one of something is the product itself.',
+            'packs.*.units_per_pack.min' => 'A pack has to hold at least one.',
             'packs.*.sell_price.required' => 'Give each pack size a price.',
         ];
     }

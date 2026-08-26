@@ -229,7 +229,7 @@ function submit() {
                     <span class="text-xs text-muted-foreground">Optional</span>
                 </div>
                 <p class="mb-4 text-xs text-muted-foreground">
-                    Selling the same thing by the twelve, the six and the single? Add a row for each larger size. Stock stays counted in
+                    Selling the same thing by the twelve, the six or the single? Add a row for each. Stock stays counted in
                     {{ form.unit || 'single units' }} — selling one pack takes its whole contents off the same shelf.
                 </p>
 
@@ -244,7 +244,7 @@ function submit() {
 
                             <div class="grid gap-1.5">
                                 <Label :for="`pack-units-${index}`" class="text-xs text-muted-foreground">Holds</Label>
-                                <Input :id="`pack-units-${index}`" v-model="pack.units_per_pack" type="number" min="2" class="tabular font-mono" />
+                                <Input :id="`pack-units-${index}`" v-model="pack.units_per_pack" type="number" min="1" class="tabular font-mono" />
                                 <InputError :message="packError(index, 'units_per_pack')" />
                             </div>
 

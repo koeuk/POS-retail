@@ -244,7 +244,11 @@ class ProductPackTest extends TestCase
         $this->assertDatabaseHas('products', ['id' => $case->id, 'is_active' => false]);
     }
 
-    public function test_a_pack_row_must_hold_more_than_one(): void
+    /**
+     * A pack of one is legitimate: the same item sold under another name or at
+     * another price — a single pulled from a case, say. Only zero is refused.
+     */
+    public function test_a_pack_row_may_hold_a_single_unit(): void
     {
         $can = $this->can();
 
@@ -256,7 +260,25 @@ class ProductPackTest extends TestCase
             'unit' => $can->unit,
             'track_stock' => true,
             'is_active' => true,
-            'packs' => [['name' => 'Single', 'units_per_pack' => 1, 'sell_price' => '0.75']],
+            'packs' => [['name' => 'Half case', 'units_per_pack' => 1, 'sell_price' => '2.50']],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame(1, $can->packs()->value('units_per_pack'));
+    }
+
+    public function test_a_pack_row_cannot_hold_nothing(): void
+    {
+        $can = $this->can();
+
+        $this->actingAs($this->admin)->put(route('products.update', $can), [
+            'category_id' => $can->category_id,
+            'name' => $can->name,
+            'sku' => $can->sku,
+            'sell_price' => $can->sell_price,
+            'unit' => $can->unit,
+            'track_stock' => true,
+            'is_active' => true,
+            'packs' => [['name' => 'Nothing', 'units_per_pack' => 0, 'sell_price' => '2.50']],
         ])->assertSessionHasErrors('packs.0.units_per_pack');
     }
 
