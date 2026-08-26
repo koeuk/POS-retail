@@ -452,4 +452,54 @@ class PosSyncTest extends TestCase
             ->where('store_id', $this->store->id)
             ->value('qty');
     }
+
+    /* ================================================================== */
+    /* Store binding */
+    /* ================================================================== */
+
+    /**
+     * A till that has been offline for hours is not a trustworthy witness to
+     * which shop it is standing in. Honouring its claim let one store's
+     * cashier move another store's stock.
+     */
+    public function test_a_cashiers_sale_lands_in_their_own_store_whatever_the_payload_claims(): void
+    {
+        $other = Store::factory()->create();
+        $otherProduct = Product::factory()->create();
+        Stock::create(['product_id' => $otherProduct->id, 'store_id' => $other->id, 'qty' => 50]);
+
+        $mine = $this->stockedProduct(100);
+
+        $payload = $this->orderPayload([$this->line($mine, 5)], ['store_id' => $other->id]);
+
+        $this->sync([$payload])->assertOk()->assertJsonPath('results.0.status', 'created');
+
+        $order = Order::where('client_uuid', $payload['client_uuid'])->firstOrFail();
+
+        $this->assertSame($this->store->id, $order->store_id);
+
+        // And the other store's shelf is untouched.
+        $this->assertSame(50, Stock::where('store_id', $other->id)->value('qty'));
+    }
+
+    /** An admin covers every shop, so they may still say which one. */
+    public function test_an_unbound_admin_may_name_the_store(): void
+    {
+        $elsewhere = Store::factory()->create();
+        Register::factory()->create(['store_id' => $elsewhere->id]);
+        $admin = User::factory()->admin()->create();
+
+        $product = Product::factory()->create();
+        Stock::create(['product_id' => $product->id, 'store_id' => $elsewhere->id, 'qty' => 20]);
+
+        $payload = $this->orderPayload([$this->line($product, 2)], ['store_id' => $elsewhere->id]);
+
+        $this->actingAs($admin)
+            ->postJson(route('pos.data.orders.sync'), ['orders' => [$payload]])
+            ->assertOk()
+            ->assertJsonPath('results.0.status', 'created');
+
+        $this->assertSame($elsewhere->id, Order::where('client_uuid', $payload['client_uuid'])->value('store_id'));
+        $this->assertSame(18, Stock::where('store_id', $elsewhere->id)->value('qty'));
+    }
 }

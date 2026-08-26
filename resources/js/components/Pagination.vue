@@ -62,10 +62,12 @@ const hasPages = computed(() => numbered.value.length > 1);
             </p>
 
             <!--
-                Only shown once the list is longer than the smallest page size;
-                a selector on a 7-row list is a control with nothing to do.
+                Always shown on a non-empty list. It used to hide until the
+                list outgrew the smallest page size, but a page size is a
+                preference set before the list grows — a control that only
+                appears once it is needed is one nobody can find.
             -->
-            <label v-if="total > PER_PAGE_OPTIONS[0]" class="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <label class="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span class="hidden sm:inline">Show</span>
                 <select
                     :value="perPage"

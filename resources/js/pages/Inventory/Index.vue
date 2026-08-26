@@ -279,107 +279,120 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                 />
             </div>
 
-            <div class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 60ms">
-                <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
-                    <div class="relative min-w-[14rem] flex-1">
-                        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input v-model="search" placeholder="Search name, SKU or barcode…" class="pl-9" autocomplete="off" />
+            <!--
+                70 / 30: the list is the work surface and the ledger is a
+                glance. They sit side by side only from xl up — at a laptop
+                width the 30% column would be too narrow to read a product
+                name, so it stacks underneath instead. min-w-0 on both columns
+                keeps a long product name from widening the grid.
+            -->
+            <div class="grid items-start gap-4 xl:grid-cols-[7fr_3fr]">
+                <div class="animate-rise min-w-0 rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 60ms">
+                    <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
+                        <div class="relative min-w-[14rem] flex-1">
+                            <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input v-model="search" placeholder="Search name, SKU or barcode…" class="pl-9" autocomplete="off" />
+                        </div>
+
+                        <Select v-if="stores.length > 1" v-model="storeId">
+                            <SelectTrigger class="w-[11rem]"><SelectValue placeholder="Store" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem :value="ALL">All stores</SelectItem>
+                                <SelectItem v-for="s in stores" :key="s.id" :value="String(s.id)">{{ s.name }}</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        <Select v-model="state">
+                            <SelectTrigger class="w-[11rem]"><SelectValue placeholder="Anything" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem :value="ALL">Anything</SelectItem>
+                                <SelectItem value="low">Low stock</SelectItem>
+                                <SelectItem value="out">Out of stock</SelectItem>
+                                <SelectItem value="oversold">Oversold</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
-                    <Select v-if="stores.length > 1" v-model="storeId">
-                        <SelectTrigger class="w-[11rem]"><SelectValue placeholder="Store" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem :value="ALL">All stores</SelectItem>
-                            <SelectItem v-for="s in stores" :key="s.id" :value="String(s.id)">{{ s.name }}</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <div v-if="stocks.data.length" class="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow class="hover:bg-transparent">
+                                    <TableHead>Product</TableHead>
+                                    <!-- Only worth a column when there is more than one. -->
+                                    <TableHead v-if="stores.length > 1">Store</TableHead>
+                                    <TableHead data-numeric class="text-right">On hand</TableHead>
+                                    <TableHead data-numeric class="text-right">Alert at</TableHead>
+                                    <TableHead class="w-[1%]"></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <tbody class="[&_tr:last-child]:border-0">
+                                <TableRow v-for="stock in stocks.data" :key="stock.id" class="group">
+                                    <TableCell>
+                                        <p class="font-medium leading-tight">{{ stock.product?.name }}</p>
+                                        <p class="tabular font-mono text-xs text-muted-foreground">{{ stock.product?.sku }}</p>
+                                    </TableCell>
+                                    <TableCell v-if="stores.length > 1" class="text-sm text-muted-foreground">{{ stock.store?.name }}</TableCell>
+                                    <TableCell data-numeric class="text-right">
+                                        <span class="tabular font-mono text-base" :class="tone(stock)">{{ stock.qty }}</span>
+                                        <span class="ml-1 text-xs text-muted-foreground">{{ stock.product?.unit }}</span>
+                                    </TableCell>
+                                    <TableCell data-numeric class="text-right">
+                                        <button
+                                            type="button"
+                                            class="press tabular rounded-md px-2 py-1 font-mono text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                            @click="openThreshold(stock)"
+                                        >
+                                            {{ stock.low_stock_threshold ?? '—' }}
+                                        </button>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Button size="sm" variant="outline" class="press" @click="openAdjust(stock)">Adjust</Button>
+                                    </TableCell>
+                                </TableRow>
+                            </tbody>
+                        </Table>
+                    </div>
 
-                    <Select v-model="state">
-                        <SelectTrigger class="w-[11rem]"><SelectValue placeholder="Anything" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem :value="ALL">Anything</SelectItem>
-                            <SelectItem value="low">Low stock</SelectItem>
-                            <SelectItem value="out">Out of stock</SelectItem>
-                            <SelectItem value="oversold">Oversold</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <EmptyState v-else :icon="PackageSearch" :title="emptyCopy.title" :description="emptyCopy.description">
+                        <Button v-if="anyFilter" variant="outline" class="press" @click="clearFilters">Show everything</Button>
+                    </EmptyState>
+
+                    <Pagination :links="stocks.links" :from="stocks.from" :to="stocks.to" :total="stocks.total" :per-page="stocks.per_page" />
                 </div>
 
-                <div v-if="stocks.data.length" class="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow class="hover:bg-transparent">
-                                <TableHead>Product</TableHead>
-                                <!-- Only worth a column when there is more than one. -->
-                                <TableHead v-if="stores.length > 1">Store</TableHead>
-                                <TableHead data-numeric class="text-right">On hand</TableHead>
-                                <TableHead data-numeric class="text-right">Alert at</TableHead>
-                                <TableHead class="w-[1%]"></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <tbody class="[&_tr:last-child]:border-0">
-                            <TableRow v-for="stock in stocks.data" :key="stock.id" class="group">
-                                <TableCell>
-                                    <p class="font-medium leading-tight">{{ stock.product?.name }}</p>
-                                    <p class="tabular font-mono text-xs text-muted-foreground">{{ stock.product?.sku }}</p>
-                                </TableCell>
-                                <TableCell v-if="stores.length > 1" class="text-sm text-muted-foreground">{{ stock.store?.name }}</TableCell>
-                                <TableCell data-numeric class="text-right">
-                                    <span class="tabular font-mono text-base" :class="tone(stock)">{{ stock.qty }}</span>
-                                    <span class="ml-1 text-xs text-muted-foreground">{{ stock.product?.unit }}</span>
-                                </TableCell>
-                                <TableCell data-numeric class="text-right">
-                                    <button
-                                        type="button"
-                                        class="press tabular rounded-md px-2 py-1 font-mono text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                                        @click="openThreshold(stock)"
-                                    >
-                                        {{ stock.low_stock_threshold ?? '—' }}
-                                    </button>
-                                </TableCell>
-                                <TableCell>
-                                    <Button size="sm" variant="outline" class="press" @click="openAdjust(stock)">Adjust</Button>
-                                </TableCell>
-                            </TableRow>
-                        </tbody>
-                    </Table>
-                </div>
-
-                <EmptyState v-else :icon="PackageSearch" :title="emptyCopy.title" :description="emptyCopy.description">
-                    <Button v-if="anyFilter" variant="outline" class="press" @click="clearFilters">Show everything</Button>
-                </EmptyState>
-
-                <Pagination :links="stocks.links" :from="stocks.from" :to="stocks.to" :total="stocks.total" :per-page="stocks.per_page" />
-            </div>
-
-            <!-- The ledger. Every row above got here through one of these. -->
-            <section class="animate-rise mt-4 rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 120ms">
-                <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    Recent movements
-                </h2>
-                <ul v-if="movements.length" class="divide-y divide-border">
-                    <li v-for="movement in movements" :key="movement.id" class="flex items-center gap-3 px-4 py-2.5">
-                        <Badge :variant="typeTone(movement.type)" class="w-[5.5rem] justify-center capitalize">
-                            {{ movement.type }}
-                        </Badge>
-                        <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-medium">{{ movement.product?.name }}</p>
-                            <p class="truncate text-[0.7rem] text-muted-foreground">
+                <!-- The ledger. Every row on the left got here through one of these. -->
+                <section class="animate-rise min-w-0 rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 120ms">
+                    <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                        Recent movements
+                    </h2>
+                    <ul v-if="movements.length" class="divide-y divide-border">
+                        <!--
+                        Two lines per row rather than one: in a 30% column the
+                        badge, name and delta cannot share a line without the
+                        name being cut to a few letters. Type and change sit
+                        together on top; who, when and why sit underneath.
+                    -->
+                        <li v-for="movement in movements" :key="movement.id" class="px-4 py-2.5">
+                            <div class="flex items-center gap-2">
+                                <Badge :variant="typeTone(movement.type)" class="shrink-0 capitalize">{{ movement.type }}</Badge>
+                                <p class="min-w-0 flex-1 truncate text-sm font-medium">{{ movement.product?.name }}</p>
+                                <span
+                                    class="tabular shrink-0 font-mono text-sm font-semibold"
+                                    :class="movement.qty_change < 0 ? 'text-destructive' : 'text-primary'"
+                                >
+                                    {{ movement.qty_change > 0 ? '+' : '' }}{{ movement.qty_change }}
+                                </span>
+                            </div>
+                            <p class="mt-0.5 truncate text-[0.7rem] text-muted-foreground">
                                 <template v-if="stores.length > 1">{{ movement.store?.name }} · </template>{{ movement.creator?.name ?? 'System' }} ·
                                 {{ when(movement.created_at) }}
                                 <span v-if="movement.note">· {{ movement.note }}</span>
                             </p>
-                        </div>
-                        <span
-                            class="tabular shrink-0 font-mono text-sm font-semibold"
-                            :class="movement.qty_change < 0 ? 'text-destructive' : 'text-primary'"
-                        >
-                            {{ movement.qty_change > 0 ? '+' : '' }}{{ movement.qty_change }}
-                        </span>
-                    </li>
-                </ul>
-                <p v-else class="px-4 py-8 text-center text-sm text-muted-foreground">No movements recorded yet.</p>
-            </section>
+                        </li>
+                    </ul>
+                    <p v-else class="px-4 py-8 text-center text-sm text-muted-foreground">No movements recorded yet.</p>
+                </section>
+            </div>
         </div>
 
         <!-- Record a movement -->

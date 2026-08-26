@@ -114,10 +114,20 @@ class PosDataController extends Controller
     public function sync(SyncOrdersRequest $request, OrderSyncService $sync): JsonResponse
     {
         $orders = $request->validated('orders');
-        $storeId = $this->resolveStoreId($request);
+        $boundStoreId = $request->user()->store_id;
+        $fallbackStoreId = $this->resolveStoreId($request);
 
-        $orders = array_map(function (array $order) use ($storeId) {
-            $order['store_id'] ??= $storeId;
+        $orders = array_map(function (array $order) use ($boundStoreId, $fallbackStoreId) {
+            /*
+             * A till bound to a store may only write to that store, whatever
+             * the payload says — it has been offline for hours and its idea of
+             * which shop it is standing in is a hint, not a fact. An unbound
+             * admin covers several shops, so their per-order choice stands.
+             *
+             * The service enforces the same rule; this only stops the edge
+             * from passing on a claim it already knows to be wrong.
+             */
+            $order['store_id'] = $boundStoreId ?: ($order['store_id'] ?? $fallbackStoreId);
 
             return $order;
         }, $orders);

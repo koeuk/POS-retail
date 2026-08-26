@@ -7,6 +7,7 @@ use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Stock;
+use App\Models\Store;
 use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
@@ -56,12 +57,13 @@ class OrderSyncService
 
         for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS; $attempt++) {
             try {
-                $order = DB::transaction(fn () => $this->createOrder($payload, $cashier));
+                $order = DB::transaction(fn () => $this->createOrder($payload, $cashier, $attempt));
 
                 return $this->result($uuid, 'created', $order);
             } catch (UniqueConstraintViolationException $e) {
                 // Either another flush won the race on client_uuid, or two
-                // registers grabbed the same order_no. Only the first is done.
+                // registers grabbed the same order_no. Only the first is done;
+                // the next attempt asks for a number one further along.
                 if ($winner = Order::where('client_uuid', $uuid)->first()) {
                     return $this->result($uuid, 'already_synced', $winner);
                 }
@@ -83,9 +85,9 @@ class OrderSyncService
     }
 
     /** @param array<string, mixed> $payload */
-    private function createOrder(array $payload, User $cashier): Order
+    private function createOrder(array $payload, User $cashier, int $attempt = 1): Order
     {
-        $storeId = (int) ($payload['store_id'] ?? $cashier->store_id);
+        $storeId = $this->resolveStore($payload, $cashier);
         $items = $payload['items'];
 
         $totals = new OrderTotals($items, $payload['discount_amount'] ?? 0);
@@ -109,7 +111,7 @@ class OrderSyncService
 
         $order = Order::create([
             'client_uuid' => $payload['client_uuid'],
-            'order_no' => $this->nextOrderNo($storeId, $payload['register_id'] ?? null, $offlineAt),
+            'order_no' => $this->nextOrderNo($storeId, $payload['register_id'] ?? null, $offlineAt, $attempt),
             'store_id' => $storeId,
             'register_id' => $payload['register_id'] ?? null,
             'cashier_id' => $cashier->id,
@@ -193,33 +195,54 @@ class OrderSyncService
     }
 
     /**
+     * Which store this sale belongs to.
+     *
+     * A cashier bound to a store may only ever write to that store, whatever
+     * the payload says. The client is an offline device that has been out of
+     * contact for hours — its idea of which shop it is standing in is a hint,
+     * and honouring it lets one till move another shop's stock.
+     *
+     * Only an unbound user (an admin covering several shops) may name one.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function resolveStore(array $payload, User $cashier): int
+    {
+        if ($cashier->store_id) {
+            return $cashier->store_id;
+        }
+
+        return (int) ($payload['store_id'] ?? Store::query()->orderBy('id')->value('id'));
+    }
+
+    /**
      * Format: S{store}-R{register}-{YYMMDD}-{seq}
      *
      * Sequence is per store per business day, and the business day is when the
      * sale actually happened — not when it reached the server. An offline batch
      * from yesterday must number itself into yesterday's run.
      */
-    private function nextOrderNo(int $storeId, ?int $registerId, ?Carbon $offlineAt): string
+    private function nextOrderNo(int $storeId, ?int $registerId, ?Carbon $offlineAt, int $attempt = 1): string
     {
         $day = ($offlineAt ?? now())->copy();
+        $prefix = sprintf('S%d-R%d-%s-', $storeId, $registerId ?? 0, $day->format('ymd'));
 
-        $countedToday = Order::where('store_id', $storeId)
-            ->where(function ($query) use ($day) {
-                $query->whereDate('created_offline_at', $day->toDateString())
-                    ->orWhere(function ($q) use ($day) {
-                        $q->whereNull('created_offline_at')
-                            ->whereDate('created_at', $day->toDateString());
-                    });
-            })
-            ->count();
+        /*
+         * Read the highest sequence already issued rather than counting rows.
+         *
+         * Counting looks equivalent and is not: delete one order from the
+         * middle of a day and the count points at a number that already
+         * exists, so every subsequent sale collides — and the retry recounts
+         * the same number, so it can never get past it. Taking max()+1 steps
+         * over gaps, and the attempt offset walks forward if two registers
+         * land on the same number at once.
+         */
+        $highest = (int) Order::where('store_id', $storeId)
+            ->where('order_no', 'like', $prefix.'%')
+            ->selectRaw('COALESCE(MAX(CAST(SUBSTRING_INDEX(order_no, ?, -1) AS UNSIGNED)), 0) AS seq', ['-'])
+            ->value('seq');
 
-        return sprintf(
-            'S%d-R%d-%s-%04d',
-            $storeId,
-            $registerId ?? 0,
-            $day->format('ymd'),
-            $countedToday + 1,
-        );
+        return $prefix.sprintf('%04d', $highest + $attempt);
     }
 
     private function result(string $uuid, string $status, ?Order $order, ?string $message = null): array
