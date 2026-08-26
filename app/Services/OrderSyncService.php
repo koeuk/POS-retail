@@ -11,6 +11,7 @@ use App\Models\Register;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\Currency;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -97,7 +98,7 @@ class OrderSyncService
         $offlineAt = $this->offlineTimestamp($payload);
 
         $paid = array_sum(array_map(
-            fn ($p) => OrderTotals::toCents($p['amount']),
+            fn ($p) => OrderTotals::toMinor($p['amount']),
             $payload['payments'] ?? []
         ));
 
@@ -108,7 +109,7 @@ class OrderSyncService
             ->contains(fn ($p) => $p['method'] === 'cash');
 
         $change = $givesChange
-            ? max(0, $paid - OrderTotals::toCents($totals->total()))
+            ? max(0, $paid - OrderTotals::toMinor($totals->total()))
             : 0;
 
         $order = Order::create([
@@ -119,6 +120,7 @@ class OrderSyncService
             'cashier_id' => $cashier->id,
             'customer_id' => $payload['customer_id'] ?? null,
             'sale_type' => $saleType,
+            'currency' => Currency::current()->code,
             'subtotal' => $totals->subtotal(),
             'discount_amount' => $totals->discountAmount(),
             'total' => $totals->total(),
@@ -145,9 +147,9 @@ class OrderSyncService
                 // Snapshots. The name and price are whatever the customer was
                 // shown at the till, not whatever the product says today.
                 'product_name' => $item['product_name'] ?? $product?->name ?? 'Unknown product',
-                'unit_price' => OrderTotals::toDecimal(OrderTotals::toCents($item['unit_price'])),
+                'unit_price' => OrderTotals::toDecimal(OrderTotals::toMinor($item['unit_price'])),
                 'qty' => (int) $item['qty'],
-                'discount' => OrderTotals::toDecimal(OrderTotals::toCents($item['discount'] ?? 0)),
+                'discount' => OrderTotals::toDecimal(OrderTotals::toMinor($item['discount'] ?? 0)),
                 'subtotal' => $totals->lineSubtotal($index),
             ]);
 
@@ -172,7 +174,7 @@ class OrderSyncService
         foreach ($paymentsToRecord as $payment) {
             $order->payments()->create([
                 'method' => $payment['method'],
-                'amount' => OrderTotals::toDecimal(OrderTotals::toCents($payment['amount'])),
+                'amount' => OrderTotals::toDecimal(OrderTotals::toMinor($payment['amount'])),
                 'reference_no' => $payment['reference_no'] ?? null,
             ]);
         }

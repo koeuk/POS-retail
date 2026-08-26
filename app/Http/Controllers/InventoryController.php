@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\InventoryLogType;
 use App\Models\InventoryLog;
+use App\Models\Product;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
@@ -38,7 +39,18 @@ class InventoryController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $filters = $request->only('search', 'store_id', 'state');
+        $filters = $request->only('search', 'store_id', 'state', 'sort');
+
+        /*
+         * Whitelisted, like per_page: `sort` arrives from the query string and
+         * must never reach orderBy() raw. Lowest-first is the default because
+         * the thing you open Inventory to find is what is about to run out.
+         */
+        $sort = match ($filters['sort'] ?? 'low') {
+            'high' => ['qty', 'desc'],
+            'name' => ['name', 'asc'],
+            default => ['qty', 'asc'],
+        };
 
         $stocks = $this->scoped($user)
             ->with(['product:id,name,sku,barcode,unit,is_active', 'store:id,name'])
@@ -60,7 +72,13 @@ class InventoryController extends Controller
                 ->where('qty', '>=', 0))
             ->when(($filters['state'] ?? null) === 'oversold', fn (Builder $q) => $q->where('qty', '<', 0))
             ->when(($filters['state'] ?? null) === 'out', fn (Builder $q) => $q->where('qty', '=', 0))
-            ->orderBy('qty')
+            ->when(
+                $sort[0] === 'name',
+                // Sorting by product name means joining products; sorting by
+                // stock uses the row's own column and needs no join.
+                fn (Builder $q) => $q->orderBy(Product::select('name')->whereColumn('products.id', 'stocks.product_id'), $sort[1]),
+                fn (Builder $q) => $q->orderBy('qty', $sort[1])
+            )
             ->paginate(PerPage::resolve($request))
             ->withQueryString();
 

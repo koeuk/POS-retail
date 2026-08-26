@@ -235,6 +235,35 @@ class InventoryTest extends TestCase
     /* Listing */
     /* ------------------------------------------------------------------ */
 
+    /**
+     * The list can be ordered by stock in either direction or by name. The
+     * value is whitelisted: anything unrecognised falls back to lowest-first
+     * rather than reaching orderBy() raw.
+     */
+    public function test_the_index_can_be_sorted_by_stock_or_name(): void
+    {
+        // setUp already made one product at qty 10. Add a clear spread.
+        $lo = Product::factory()->create(['name' => 'Aardvark Snacks']);
+        $hi = Product::factory()->create(['name' => 'Zebra Crisps']);
+        Stock::create(['product_id' => $lo->id, 'store_id' => $this->store->id, 'qty' => 1]);
+        Stock::create(['product_id' => $hi->id, 'store_id' => $this->store->id, 'qty' => 99]);
+
+        $qtys = fn (string $sort) => collect($this->actingAs($this->admin)
+            ->get(route('inventory.index', ['sort' => $sort]))
+            ->assertOk()
+            ->viewData('page')['props']['stocks']['data'])->pluck('qty')->all();
+
+        $this->assertSame([1, 10, 99], $qtys('low'), 'lowest stock first');
+        $this->assertSame([99, 10, 1], $qtys('high'), 'highest stock first');
+        $this->assertSame([1, 10, 99], $qtys('bogus'), 'an unknown sort falls back to lowest-first');
+
+        $names = collect($this->actingAs($this->admin)
+            ->get(route('inventory.index', ['sort' => 'name']))
+            ->viewData('page')['props']['stocks']['data'])->pluck('product.name')->all();
+        $this->assertSame('Aardvark Snacks', $names[0]);
+        $this->assertSame('Zebra Crisps', $names[2]);
+    }
+
     public function test_the_index_summarises_and_filters_by_state(): void
     {
         $low = Stock::create(['product_id' => Product::factory()->create()->id, 'store_id' => $this->store->id, 'qty' => 2, 'low_stock_threshold' => 5]);

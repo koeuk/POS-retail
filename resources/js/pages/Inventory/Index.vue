@@ -38,7 +38,7 @@ interface Movement {
 
 const props = defineProps<{
     stocks: Paginated<StockRow>;
-    filters: { search?: string; store_id?: string; state?: string };
+    filters: { search?: string; store_id?: string; state?: string; sort?: string };
     stores: { id: number; name: string }[];
     movements: Movement[];
     summary: { tracked: number; low: number; out: number; oversold: number };
@@ -48,6 +48,7 @@ const ALL = 'all';
 const search = ref(props.filters.search ?? '');
 const storeId = ref(props.filters.store_id ?? ALL);
 const state = ref(props.filters.state ?? ALL);
+const sort = ref(props.filters.sort ?? 'low');
 let debounce: ReturnType<typeof setTimeout>;
 
 function reload() {
@@ -57,6 +58,7 @@ function reload() {
             search: search.value || undefined,
             store_id: storeId.value === ALL ? undefined : storeId.value,
             state: state.value === ALL ? undefined : state.value,
+            sort: sort.value === 'low' ? undefined : sort.value,
         },
         { preserveState: true, preserveScroll: true, replace: true },
     );
@@ -66,7 +68,7 @@ watch(search, () => {
     clearTimeout(debounce);
     debounce = setTimeout(reload, 300);
 });
-watch([storeId, state], reload);
+watch([storeId, state, sort], reload);
 
 /* ------------------------------------------------------------------ */
 /* Movement dialog                                                     */
@@ -332,6 +334,17 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                                 <SelectItem value="low">Low stock</SelectItem>
                                 <SelectItem value="out">Out of stock</SelectItem>
                                 <SelectItem value="oversold">Oversold</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        <!-- Order, separate from the state filter: "what is oversold"
+                         and "show me the emptiest first" are different questions. -->
+                        <Select v-model="sort">
+                            <SelectTrigger class="w-[11.5rem]" aria-label="Sort by"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="low">Stock: low to high</SelectItem>
+                                <SelectItem value="high">Stock: high to low</SelectItem>
+                                <SelectItem value="name">Name A–Z</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

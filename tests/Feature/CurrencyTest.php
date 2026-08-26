@@ -26,39 +26,51 @@ class CurrencyTest extends TestCase
     }
 
     /* ------------------------------------------------------------------ */
-    /* Conversion */
+    /* Formatting — no conversion */
     /* ------------------------------------------------------------------ */
 
-    public function test_usd_is_the_identity_and_never_disturbs_the_stored_value(): void
+    /**
+     * A stored amount is already in the shop's currency, so formatting only
+     * decides how it looks. Money used to be kept in dollars and multiplied on
+     * the way out, which could not express riel: a US cent is 40៛, so a 500៛
+     * price became 13 cents and came back as 520៛.
+     */
+    public function test_formatting_shows_the_stored_amount_untouched(): void
     {
-        $usd = Currency::make('USD');
+        $this->assertSame('$4.00', Currency::make('USD')->format('4.00'));
+        $this->assertSame('$1,234.56', Currency::make('USD')->format(1234.56));
 
-        $this->assertSame('$4.00', $usd->format('4.00'));
-        $this->assertSame('$1,234.56', $usd->format(1234.56));
-        $this->assertSame(4.0, $usd->convert('4.00'));
+        // 500 stored under a riel shop is 500 riel, not 500 dollars converted.
+        $this->assertSame('៛500', Currency::make('KHR')->format('500'));
+        $this->assertSame('៛16,400', Currency::make('KHR')->format(16400));
     }
 
-    /**
-     * Riel has no fractional unit. A converted price must land on a whole
-     * riel, and the thousands separator matters — ៛16,400 reads, ៛16400 does not.
-     */
-    public function test_riel_converts_at_the_rate_and_rounds_to_whole_riel(): void
+    /** Riel has no fractional unit, and the thousands separator earns its keep. */
+    public function test_riel_is_shown_as_whole_riel(): void
     {
         $khr = Currency::make('KHR');
 
-        $this->assertSame('៛16,400', $khr->format('4.00'));
-        $this->assertSame(16400.0, $khr->convert('4.00'));
-
-        // 0.35 × 4100 = 1435 exactly; 0.33 × 4100 = 1353 — no decimals survive.
-        $this->assertSame('៛1,435', $khr->format('0.35'));
-        $this->assertSame('៛1,353', $khr->format('0.33'));
+        $this->assertSame('៛1,435', $khr->format('1435.4'));
+        $this->assertSame('៛1,353', $khr->format(1352.6));
     }
 
-    public function test_the_rate_comes_from_settings(): void
+    /** Arithmetic runs in minor units: cents for dollars, whole riel for riel. */
+    public function test_the_minor_unit_follows_the_currency(): void
+    {
+        $this->assertSame(100, Currency::make('USD')->minorFactor());
+        $this->assertSame(1, Currency::make('KHR')->minorFactor());
+    }
+
+    /**
+     * Conversion survives for one purpose only: the migration that moved the
+     * stored base from dollars to the shop's own money.
+     */
+    public function test_conversion_is_still_available_for_the_migration(): void
     {
         Setting::put('riel_per_usd', '4000');
 
-        $this->assertSame('៛4,000', Currency::make('KHR')->format('1.00'));
+        $this->assertSame(4000.0, Currency::make('KHR')->fromUsd('1.00'));
+        $this->assertSame(4.0, Currency::make('USD')->fromUsd('4.00'));
     }
 
     /** A stale or hand-edited setting must not crash every page that formats a price. */

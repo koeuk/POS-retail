@@ -21,6 +21,7 @@ class Order extends Model
         'cashier_id',
         'customer_id',
         'sale_type',
+        'currency',
         'subtotal',
         'discount_amount',
         'total',

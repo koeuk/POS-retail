@@ -3,8 +3,12 @@ import { usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 /**
- * Mirror of App\Support\Currency. Stored amounts are always USD; this converts
- * and formats them for display in whatever the shop is set to show.
+ * Mirror of App\Support\Currency.
+ *
+ * Amounts are stored in the shop's own currency, so nothing is converted here
+ * — this only decides how a number looks. Money used to be kept in dollars and
+ * multiplied on the way out, which could not express riel: a US cent is 40៛,
+ * so a 500៛ price became 13 cents and came back as 520៛.
  */
 export interface CurrencyDef {
     code: string;
@@ -16,22 +20,16 @@ export interface CurrencyDef {
 
 export const USD: CurrencyDef = { code: 'USD', symbol: '$', decimals: 2, riel_per_usd: 4100 };
 
-/** Convert a stored USD amount into `def`, rounded to that currency's decimals. */
-export function convertAmount(usd: number | string | null | undefined, def: CurrencyDef): number {
-    const amount = Number(usd ?? 0);
-    if (!Number.isFinite(amount)) return 0;
-
-    if (def.code === 'USD') return Math.round(amount * 100) / 100;
-
-    const factor = 10 ** def.decimals;
-    return Math.round(amount * def.riel_per_usd * factor) / factor;
-}
+/** How many minor units make one whole one: 100 for dollars, 1 for riel. */
+export const minorFactor = (def: CurrencyDef): number => 10 ** def.decimals;
 
 /** "$4.00" or "៛16,400". The one place a price becomes a string. */
-export function formatCurrency(usd: number | string | null | undefined, def: CurrencyDef): string {
+export function formatCurrency(amount: number | string | null | undefined, def: CurrencyDef): string {
+    const value = Number(amount ?? 0);
+
     return (
         def.symbol +
-        convertAmount(usd, def).toLocaleString(undefined, {
+        (Number.isFinite(value) ? value : 0).toLocaleString(undefined, {
             minimumFractionDigits: def.decimals,
             maximumFractionDigits: def.decimals,
         })
@@ -48,8 +46,7 @@ export function useCurrency(override?: () => CurrencyDef | undefined) {
 
     const currency = computed<CurrencyDef>(() => override?.() ?? page.props.currency ?? USD);
 
-    const money = (usd: number | string | null | undefined) => formatCurrency(usd, currency.value);
-    const convert = (usd: number | string | null | undefined) => convertAmount(usd, currency.value);
+    const money = (amount: number | string | null | undefined) => formatCurrency(amount, currency.value);
 
-    return { currency, money, convert };
+    return { currency, money };
 }

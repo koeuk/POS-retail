@@ -5,15 +5,20 @@ namespace App\Support;
 use App\Models\Setting;
 
 /**
- * The shop's display currency.
+ * The shop's currency — the one prices are actually *stored* in.
  *
- * Prices are stored in exactly one base currency (USD) and never change.
- * What changes is how they are *shown*: the `currency` setting picks dollars
- * or riel, and `riel_per_usd` converts on the way out. Flipping the setting
- * flips every price, total and receipt in the app without touching a row.
+ * This used to be a display layer over USD: every amount was kept in dollars
+ * and multiplied by a rate on the way out. That cannot represent riel. A US
+ * cent is 40៛ at a 4,000 rate, so a 500៛ price had nowhere to live: it became
+ * 13 cents and came back as 520៛, and the error reached shelf labels,
+ * receipts and reports alike.
+ *
+ * So the stored number is now the shop's own money. Type 500៛ and 500៛ is
+ * what is stored, charged, printed and totalled — exactly.
  *
  * Riel has no fractional unit — a price is ៛4,000, never ៛4,000.50 — so each
- * currency carries its own decimal count and the formatter rounds to it.
+ * currency carries its own decimal count, and all arithmetic happens in that
+ * currency's minor unit (cents for dollars, whole riel for riel).
  */
 final class Currency
 {
@@ -63,24 +68,37 @@ final class Currency
     }
 
     /**
-     * Convert a stored USD amount into this currency, rounded to its decimals.
-     * For USD this is the identity, so the stored value is never disturbed.
+     * How many minor units make one whole unit: 100 for dollars, 1 for riel.
+     * All money arithmetic runs in these, because integers do not drift.
      */
-    public function convert(string|float|int|null $usd): float
+    public function minorFactor(): int
+    {
+        return 10 ** $this->decimals;
+    }
+
+    /**
+     * "$4.00" or "៛16,400".
+     *
+     * No conversion: the stored amount is already in this currency. Only the
+     * one-off migration that changed the base ever converted anything.
+     */
+    public function format(string|float|int|null $amount): string
+    {
+        return $this->symbol.number_format((float) ($amount ?? 0), $this->decimals);
+    }
+
+    /**
+     * Convert between the two currencies. Used by the migration that moved the
+     * stored base, and by nothing on a request path — a price is not a
+     * conversion of some other price.
+     */
+    public function fromUsd(string|float|int|null $usd): float
     {
         $amount = (float) ($usd ?? 0);
 
-        if ($this->code === self::USD) {
-            return round($amount, 2);
-        }
-
-        return round($amount * $this->rielPerUsd, $this->decimals);
-    }
-
-    /** "$4.00" or "៛16,400". */
-    public function format(string|float|int|null $usd): string
-    {
-        return $this->symbol.number_format($this->convert($usd), $this->decimals);
+        return $this->code === self::USD
+            ? round($amount, 2)
+            : round($amount * $this->rielPerUsd, $this->decimals);
     }
 
     /** What the frontend needs to format prices identically. */
