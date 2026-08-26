@@ -39,9 +39,6 @@ const isEdit = computed(() => !!props.product);
 /** Sentinel for "received as single units", since a Select needs a string. */
 const SINGLE = 'single';
 
-/** "A box of something", where the something is not a pack you sell. */
-const CUSTOM = 'custom';
-
 const form = useForm({
     category_id: props.product ? String(props.product.category_id) : '',
     packs: props.packs.map((p): PackRow => ({ id: p.id, name: p.name, units_per_pack: p.units_per_pack, sell_price: p.sell_price })),
@@ -65,6 +62,7 @@ const form = useForm({
     add_stock: '' as string | number,
     add_stock_pack_id: SINGLE as string,
     add_stock_units_each: '' as string | number,
+    add_stock_unit_label: '',
     add_stock_loose: '' as string | number,
     add_stock_store_id: '' as string,
     add_stock_note: '',
@@ -108,16 +106,23 @@ function onFile(event: Event) {
  */
 const receivableUnits = computed(() => props.packs.filter((p) => !!p.id));
 
-/** Base units in one of whatever is selected. */
+/**
+ * Base units in one of the things being received.
+ *
+ * A saved pack is authoritative when one is chosen; otherwise the optional
+ * pair below says how the delivery was boxed. Not every product comes 24 to a
+ * case, so both are left blank by default and a bare quantity means singles.
+ */
 const unitsPerSelected = computed(() => {
-    if (form.add_stock_pack_id === SINGLE) return 1;
-    if (form.add_stock_pack_id === CUSTOM) return Number(form.add_stock_units_each) || 1;
+    if (form.add_stock_pack_id !== SINGLE) {
+        return receivableUnits.value.find((p) => String(p.id) === form.add_stock_pack_id)?.units_per_pack ?? 1;
+    }
 
-    return receivableUnits.value.find((p) => String(p.id) === form.add_stock_pack_id)?.units_per_pack ?? 1;
+    return Number(form.add_stock_units_each) || 1;
 });
 
 /** True while the delivery is counted in something bigger than a single. */
-const receivingInPacks = computed(() => form.add_stock_pack_id !== SINGLE);
+const receivingInPacks = computed(() => unitsPerSelected.value > 1);
 
 /** Base units this delivery adds: the packs, plus anything loose. */
 const receivingTotal = computed(() => (Number(form.add_stock) || 0) * unitsPerSelected.value + (Number(form.add_stock_loose) || 0));
@@ -152,8 +157,7 @@ function submit() {
             _method: 'put',
             // Only one of the two ever means anything; sending both would let
             // the server choose, and it should not have to.
-            add_stock_pack_id: data.add_stock_pack_id === SINGLE || data.add_stock_pack_id === CUSTOM ? null : data.add_stock_pack_id,
-            add_stock_units_each: data.add_stock_pack_id === CUSTOM ? data.add_stock_units_each : null,
+            add_stock_pack_id: data.add_stock_pack_id === SINGLE ? null : data.add_stock_pack_id,
         })).post(route('products.update', { product: props.product!.id }), {
             forceFormData: true,
             /*
@@ -324,7 +328,7 @@ function submit() {
                             <Input id="add-stock" v-model="form.add_stock" type="number" min="0" placeholder="0" class="tabular w-24 font-mono" />
                             <!-- Counted the way the delivery arrived: three cases,
                                  not seventy-two packets. -->
-                            <Select v-if="receivableUnits.length" v-model="form.add_stock_pack_id">
+                            <Select v-model="form.add_stock_pack_id">
                                 <SelectTrigger class="flex-1"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem :value="SINGLE">{{ form.unit || 'single' }}</SelectItem>
@@ -333,13 +337,41 @@ function submit() {
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
-                            <span v-else class="flex items-center text-sm text-muted-foreground">{{ form.unit }}</span>
                         </div>
                         <InputError :message="form.errors.add_stock" />
                     </div>
 
-                    <!-- The remainder that did not come in a full pack. -->
-                    <div v-if="receivableUnits.length && form.add_stock_pack_id !== SINGLE" class="grid gap-2">
+                    <!--
+                        How the delivery was boxed. Optional and blank by
+                        default, because not every product comes 24 to a case —
+                        a bare quantity means singles. It is used for this
+                        delivery only and never becomes a pack to sell.
+                    -->
+                    <div v-if="form.add_stock_pack_id === SINGLE" class="grid gap-2">
+                        <Label for="add-stock-units-each">Each contains <span class="text-muted-foreground">(optional)</span></Label>
+                        <div class="flex gap-2">
+                            <Input
+                                id="add-stock-units-each"
+                                v-model="form.add_stock_units_each"
+                                type="number"
+                                min="1"
+                                placeholder="24"
+                                class="tabular w-24 font-mono"
+                                aria-label="Units in each container"
+                            />
+                            <Input
+                                v-model="form.add_stock_unit_label"
+                                :placeholder="form.unit || 'cans'"
+                                class="flex-1"
+                                aria-label="What the container is called"
+                            />
+                        </div>
+                        <p class="text-xs text-muted-foreground">Leave blank if they arrived loose.</p>
+                        <InputError :message="form.errors.add_stock_units_each" />
+                    </div>
+
+                    <!-- The remainder that did not come in a full container. -->
+                    <div v-if="receivingInPacks" class="grid gap-2">
                         <Label for="add-stock-loose">Plus loose {{ form.unit }}</Label>
                         <Input id="add-stock-loose" v-model="form.add_stock_loose" type="number" min="0" placeholder="0" class="tabular font-mono" />
                         <InputError :message="form.errors.add_stock_loose" />

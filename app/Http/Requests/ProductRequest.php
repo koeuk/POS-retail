@@ -92,6 +92,14 @@ class ProductRequest extends FormRequest
              */
             'add_stock_units_each' => ['nullable', 'integer', 'min:1', 'max:100000'],
 
+            /*
+             * What to call the container — "set", "case", "carton". Purely a
+             * label: it never becomes a pack and never reaches the POS grid.
+             * It exists so the movement reads "10 × 24 cans" in the ledger
+             * rather than a bare number nobody can picture.
+             */
+            'add_stock_unit_label' => ['nullable', 'string', 'max:30'],
+
             'add_stock_loose' => ['nullable', 'integer', 'min:0', 'max:1000000'],
 
             'add_stock_store_id' => ['nullable', 'integer', Rule::exists('stores', 'id')],

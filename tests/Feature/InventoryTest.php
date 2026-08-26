@@ -260,4 +260,65 @@ class InventoryTest extends TestCase
             ->get(route('inventory.index', ['state' => 'low']))
             ->assertInertia(fn (AssertableInertia $p) => $p->has('stocks.data', 1)->where('stocks.data.0.id', $low->id));
     }
+
+    /* ------------------------------------------------------------------ */
+    /* Counting in containers */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Goods arrive, and are counted, the way they are boxed. Five cases of
+     * twelve and three loose is sixty-three — nobody should have to work that
+     * out standing at the shelf.
+     */
+    public function test_a_restock_can_be_counted_in_containers_plus_loose(): void
+    {
+        $this->move([
+            'mode' => 'restock',
+            'quantity' => 5,
+            'units_each' => 12,
+            'unit_label' => 'កេស',
+            'loose' => 3,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame(73, $this->stock->fresh()->qty);
+
+        $log = InventoryLog::where('product_id', $this->product->id)->latest('id')->firstOrFail();
+        $this->assertSame(63, $log->qty_change);
+        $this->assertSame('5 × 12 per កេស, plus 3 loose', $log->note);
+    }
+
+    /** A stocktake counted in cases is still one absolute figure. */
+    public function test_a_count_in_containers_is_absolute(): void
+    {
+        $this->move([
+            'mode' => 'count',
+            'quantity' => 2,
+            'units_each' => 12,
+        ])->assertRedirect();
+
+        // 24 counted against 10 on the books.
+        $this->assertSame(24, $this->stock->fresh()->qty);
+        $this->assertSame(14, InventoryLog::latest('id')->value('qty_change'));
+    }
+
+    /** Blank means singles, exactly as before. */
+    public function test_a_movement_without_a_container_is_unchanged(): void
+    {
+        $this->move(['mode' => 'restock', 'quantity' => 4])->assertRedirect();
+
+        $this->assertSame(14, $this->stock->fresh()->qty);
+        $this->assertNull(InventoryLog::latest('id')->value('note'));
+    }
+
+    public function test_a_written_note_beats_the_generated_one(): void
+    {
+        $this->move([
+            'mode' => 'restock',
+            'quantity' => 2,
+            'units_each' => 6,
+            'note' => 'Invoice 4410',
+        ])->assertRedirect();
+
+        $this->assertSame('Invoice 4410', InventoryLog::latest('id')->value('note'));
+    }
 }

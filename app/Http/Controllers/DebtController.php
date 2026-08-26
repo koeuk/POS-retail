@@ -35,7 +35,14 @@ class DebtController extends Controller
         $filters = $request->only('search', 'state');
 
         $debts = $this->scoped($user)
-            ->with(['customer:id,name,phone', 'cashier:id,name'])
+            ->with([
+                'customer:id,name,phone',
+                'cashier:id,name',
+                // What they took and what they have paid so far, so the page
+                // can show the whole story of a debt without a round trip.
+                'items:id,order_id,product_name,qty,unit_price,subtotal',
+                'payments:id,order_id,method,amount,reference_no,created_at',
+            ])
             ->withCount('items')
             ->when($filters['search'] ?? null, function (Builder $q, string $search) {
                 $q->where(function (Builder $w) use ($search) {

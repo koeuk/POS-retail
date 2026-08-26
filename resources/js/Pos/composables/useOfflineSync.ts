@@ -123,6 +123,12 @@ export function useOfflineSync() {
                         store_id: o.store_id,
                         register_id: o.register_id,
                         customer_id: o.customer_id,
+                        // Easy to forget: this allowlist is the ONLY path to
+                        // the server, so a field left out here is silently
+                        // dropped and the server falls back to a default.
+                        // That is exactly how a "myself" sale once landed as
+                        // a paid customer sale.
+                        sale_type: o.sale_type,
                         created_offline_at: o.created_offline_at,
                         discount_amount: o.discount_amount,
                         items: o.items,

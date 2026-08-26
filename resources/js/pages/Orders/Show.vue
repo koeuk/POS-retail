@@ -8,7 +8,7 @@ import { useCurrency, type CurrencyDef } from '@/composables/useCurrency';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { printReceipt } from '@/Pos/composables/usePrint';
 import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, CloudOff, Printer } from 'lucide-vue-next';
+import { ArrowLeft, CloudOff, HandCoins, Printer, Utensils } from 'lucide-vue-next';
 import { computed, onMounted } from 'vue';
 
 interface Item {
@@ -25,6 +25,7 @@ const props = defineProps<{
         id: number;
         order_no: string;
         status: string;
+        sale_type: 'customer' | 'debt' | 'myself';
         subtotal: string;
         discount_amount: string;
         total: string;
@@ -41,6 +42,8 @@ const props = defineProps<{
         customer: { id: number; name: string; phone: string | null; email: string | null } | null;
     };
     settings: { receipt_header: string; receipt_footer: string | null; currency: CurrencyDef };
+    /** What is still owed. Non-zero only for an unpaid debt. */
+    outstanding: string;
 }>();
 
 const { money } = useCurrency(() => props.settings.currency);
@@ -54,6 +57,11 @@ const soldAt = computed(() => stamp(props.order.created_offline_at ?? props.orde
 const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase() + m.slice(1));
 
 const statusTone = (s: string) => (s === 'completed' ? 'secondary' : s === 'refunded' ? 'outline' : 'destructive');
+
+/* "Still in debt" is a live balance, not a flag: it shows while money is
+   owed and vanishes the moment the debt is settled. */
+const owed = computed(() => Number(props.outstanding));
+const stillInDebt = computed(() => props.order.sale_type === 'debt' && owed.value > 0);
 
 /*
  * Arriving with ?print=1 means the printer icon in the order list was clicked,
@@ -91,6 +99,33 @@ onMounted(() => {
                     </Button>
                 </template>
             </PageHeader>
+
+            <!-- Loud on purpose: an unpaid debt is the one thing about an order
+                 that changes what you should do next. -->
+            <div
+                v-if="stillInDebt"
+                class="animate-rise mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3"
+            >
+                <HandCoins class="size-5 shrink-0 text-destructive" />
+                <div class="min-w-0 flex-1">
+                    <p class="font-semibold text-destructive">Still in debt</p>
+                    <p class="text-sm text-muted-foreground">
+                        {{ order.customer?.name ?? 'The customer' }} still owes
+                        <strong class="tabular font-mono text-foreground">{{ money(owed) }}</strong>
+                        of {{ money(order.total) }} on this sale.
+                    </p>
+                </div>
+                <Button as-child size="sm" class="press">
+                    <Link :href="route('debts.index', { search: order.order_no })">Record payment</Link>
+                </Button>
+            </div>
+            <div
+                v-else-if="order.sale_type === 'myself'"
+                class="animate-rise mb-4 flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3"
+            >
+                <Utensils class="size-5 shrink-0 text-muted-foreground" />
+                <p class="text-sm text-muted-foreground">Taken for yourself — not counted as a sale.</p>
+            </div>
 
             <div class="grid items-start gap-4 lg:grid-cols-3">
                 <!-- Line items + money -->
@@ -161,6 +196,13 @@ onMounted(() => {
                                 <span class="flex-1 text-sm text-muted-foreground">Change given</span>
                                 <Money :value="order.change_amount" />
                             </li>
+                            <li v-if="stillInDebt" class="flex items-center gap-3 bg-destructive/5 px-4 py-2.5">
+                                <span class="flex-1 text-sm font-semibold text-destructive">Still owed</span>
+                                <span class="tabular font-mono font-semibold text-destructive">{{ money(owed) }}</span>
+                            </li>
+                            <li v-if="order.sale_type === 'debt' && !order.payments.length" class="px-4 py-2.5 text-sm text-muted-foreground">
+                                Nothing paid yet.
+                            </li>
                         </ul>
                     </section>
                 </div>
@@ -175,6 +217,9 @@ onMounted(() => {
                             <dt class="text-muted-foreground">Status</dt>
                             <dd>
                                 <Badge :variant="statusTone(order.status)" class="capitalize">{{ order.status }}</Badge>
+                                <Badge v-if="stillInDebt" variant="destructive" class="ml-1">In debt</Badge>
+                                <Badge v-else-if="order.sale_type === 'debt'" variant="outline" class="ml-1">Debt · settled</Badge>
+                                <Badge v-else-if="order.sale_type === 'myself'" variant="outline" class="ml-1">Myself</Badge>
                             </dd>
                         </div>
                         <div class="flex justify-between gap-3">
@@ -282,6 +327,10 @@ onMounted(() => {
                     <div v-if="Number(order.change_amount) > 0" class="flex justify-between">
                         <dt>Change</dt>
                         <dd>{{ money(order.change_amount) }}</dd>
+                    </div>
+                    <div v-if="stillInDebt" class="flex justify-between font-bold">
+                        <dt>STILL OWED</dt>
+                        <dd>{{ money(owed) }}</dd>
                     </div>
                 </dl>
 

@@ -94,6 +94,10 @@ class OrderController extends Controller
 
         return Inertia::render('Orders/Show', [
             'order' => $order,
+            // What is still owed on this sale. Non-zero only for a debt that
+            // has not been paid off, which is exactly when the page should
+            // say so — a settled debt reads like any other completed order.
+            'outstanding' => $order->outstanding(),
             // Receipt header/footer come from settings so a reprint from here
             // matches what the till printed at the counter.
             'settings' => [

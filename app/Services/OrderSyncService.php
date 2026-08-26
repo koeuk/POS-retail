@@ -158,7 +158,18 @@ class OrderSyncService
             }
         }
 
-        foreach ($payload['payments'] ?? [] as $payment) {
+        /*
+         * A debt has no payment at the till — nothing changed hands, so there
+         * is no ledger row to write. Recording the "0.00 cash" the till sends
+         * would be harmless, but recording a real amount would be a lie that
+         * settle() later sums into paid_amount, double-counting the debt.
+         * Owner take-outs are the same: no money, no row.
+         */
+        $paymentsToRecord = $saleType->isReceivable() || ! $saleType->isRevenue()
+            ? []
+            : ($payload['payments'] ?? []);
+
+        foreach ($paymentsToRecord as $payment) {
             $order->payments()->create([
                 'method' => $payment['method'],
                 'amount' => OrderTotals::toDecimal(OrderTotals::toCents($payment['amount'])),

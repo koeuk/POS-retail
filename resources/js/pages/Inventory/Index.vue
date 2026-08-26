@@ -130,7 +130,20 @@ watch(pickerQuery, () => {
 });
 
 const adjusting = ref<StockRow | null>(null);
-const form = useForm({ stock_id: 0, mode: 'restock' as string, quantity: 0, note: '' });
+const form = useForm({
+    stock_id: 0,
+    mode: 'restock' as string,
+    quantity: 0,
+    /*
+     * How the goods were boxed. Optional and blank by default — a case of
+     * water is twelve bottles, a case of something else is not, so nothing is
+     * assumed and a bare quantity means single units.
+     */
+    units_each: '' as string | number,
+    unit_label: '',
+    loose: '' as string | number,
+    note: '',
+});
 
 function pick(stock: StockRow) {
     pickerOpen.value = false;
@@ -143,15 +156,25 @@ function openAdjust(stock: StockRow) {
     form.stock_id = stock.id;
     form.mode = 'restock';
     form.quantity = 0;
+    form.units_each = '';
+    form.unit_label = '';
+    form.loose = '';
     form.note = '';
 }
 
 /* The number the shelf will read afterwards. Shown live because a count
    correction is absolute while everything else is a delta, and getting those
    two confused is how stock goes wrong. */
+/** What was typed, in single units. */
+const typedUnits = computed(() => {
+    const each = Math.max(1, Number(form.units_each) || 1);
+
+    return (Number(form.quantity) || 0) * each + Math.max(0, Number(form.loose) || 0);
+});
+
 const resulting = computed(() => {
     if (!adjusting.value) return 0;
-    const q = Number(form.quantity) || 0;
+    const q = typedUnits.value;
 
     switch (form.mode) {
         case 'restock':
@@ -469,6 +492,49 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                             </Label>
                             <Input id="qty" v-model="form.quantity" type="number" min="0" inputmode="numeric" class="tabular font-mono" />
                             <InputError :message="form.errors.quantity" />
+                        </div>
+
+                        <!--
+                            Goods arrive, and are counted, the way they are
+                            boxed: five cases of twelve and three loose, not
+                            sixty-three. Both blank by default — case sizes vary
+                            by product, so nothing is assumed.
+                        -->
+                        <div class="grid gap-2">
+                            <Label for="units-each">Each contains <span class="text-muted-foreground">(optional)</span></Label>
+                            <div class="flex gap-2">
+                                <Input
+                                    id="units-each"
+                                    v-model="form.units_each"
+                                    type="number"
+                                    min="1"
+                                    inputmode="numeric"
+                                    placeholder="12"
+                                    class="tabular w-24 font-mono"
+                                    aria-label="Units in each container"
+                                />
+                                <Input
+                                    v-model="form.unit_label"
+                                    :placeholder="adjusting?.product?.unit ?? 'case'"
+                                    class="flex-1"
+                                    aria-label="What the container is called"
+                                />
+                            </div>
+                            <InputError :message="form.errors.units_each" />
+                        </div>
+
+                        <div v-if="Number(form.units_each) > 1" class="grid gap-2">
+                            <Label for="loose">Plus loose {{ adjusting?.product?.unit }}</Label>
+                            <Input
+                                id="loose"
+                                v-model="form.loose"
+                                type="number"
+                                min="0"
+                                inputmode="numeric"
+                                placeholder="0"
+                                class="tabular font-mono"
+                            />
+                            <InputError :message="form.errors.loose" />
                         </div>
 
                         <div class="flex items-baseline justify-between rounded-lg border border-border px-3 py-2 text-sm">

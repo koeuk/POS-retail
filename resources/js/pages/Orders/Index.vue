@@ -8,10 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useCurrency } from '@/composables/useCurrency';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Paginated } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { CloudOff, Printer, ReceiptText, Search } from 'lucide-vue-next';
+import { CloudOff, Eye, HandCoins, Printer, ReceiptText, Search, Utensils } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 interface OrderRow {
@@ -19,6 +20,8 @@ interface OrderRow {
     order_no: string;
     total: string;
     status: string;
+    sale_type: 'customer' | 'debt' | 'myself';
+    paid_amount: string;
     items_count: number;
     created_at: string;
     created_offline_at: string | null;
@@ -37,6 +40,7 @@ const props = defineProps<{
 }>();
 
 const ALL = 'all';
+const { money } = useCurrency();
 
 const search = ref(props.filters.search ?? '');
 const status = ref(props.filters.status ?? ALL);
@@ -73,6 +77,8 @@ const soldAt = (row: OrderRow) =>
         dateStyle: 'medium',
         timeStyle: 'short',
     });
+
+const owed = (o: OrderRow) => Math.max(0, Number(o.total) - Number(o.paid_amount));
 
 const statusTone = (s: string) => (s === 'completed' ? 'secondary' : s === 'refunded' ? 'outline' : 'destructive');
 
@@ -161,23 +167,45 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                                     <Money :value="order.total" :muted="false" />
                                 </TableCell>
                                 <TableCell>
-                                    <Badge :variant="statusTone(order.status)" class="capitalize">{{ order.status }}</Badge>
+                                    <div class="flex flex-wrap items-center gap-1">
+                                        <Badge :variant="statusTone(order.status)" class="capitalize">{{ order.status }}</Badge>
+                                        <!-- A live balance, not a flag: shown only while money is owed. -->
+                                        <Badge v-if="owed(order) > 0" variant="destructive" class="gap-1">
+                                            <HandCoins class="size-3" />
+                                            Owes <span class="tabular font-mono">{{ money(owed(order)) }}</span>
+                                        </Badge>
+                                        <Badge v-else-if="order.sale_type === 'debt'" variant="outline">Debt · settled</Badge>
+                                        <Badge v-else-if="order.sale_type === 'myself'" variant="outline" class="gap-1">
+                                            <Utensils class="size-3" />
+                                            Myself
+                                        </Badge>
+                                    </div>
                                 </TableCell>
                                 <TableCell>
-                                    <!--
+                                    <div class="flex items-center gap-1">
+                                        <Link
+                                            :href="route('orders.show', { order: order.id })"
+                                            class="press flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                            :aria-label="`View ${order.order_no}`"
+                                            title="View details"
+                                        >
+                                            <Eye class="size-4" />
+                                        </Link>
+                                        <!--
                                         Opens the detail with ?print=1, which prints on
                                         arrival. Printing from here directly would mean
                                         duplicating the whole receipt template into a
                                         list row that has not loaded the line items.
                                     -->
-                                    <Link
-                                        :href="route('orders.show', { order: order.id, print: 1 })"
-                                        class="press flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                                        :aria-label="`Print receipt for ${order.order_no}`"
-                                        title="Print receipt"
-                                    >
-                                        <Printer class="size-4" />
-                                    </Link>
+                                        <Link
+                                            :href="route('orders.show', { order: order.id, print: 1 })"
+                                            class="press flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                            :aria-label="`Print receipt for ${order.order_no}`"
+                                            title="Print receipt"
+                                        >
+                                            <Printer class="size-4" />
+                                        </Link>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         </tbody>

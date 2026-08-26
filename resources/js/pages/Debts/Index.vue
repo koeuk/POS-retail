@@ -11,12 +11,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Paginated } from '@/types';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { HandCoins, Search } from 'lucide-vue-next';
+import { Eye, HandCoins, Search } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 interface Debt {
@@ -29,6 +30,8 @@ interface Debt {
     created_offline_at: string | null;
     customer: { id: number; name: string; phone: string | null } | null;
     cashier: { id: number; name: string } | null;
+    items: { id: number; product_name: string; qty: number; unit_price: string; subtotal: string }[];
+    payments: { id: number; method: string; amount: string; reference_no: string | null; created_at: string }[];
 }
 
 const props = defineProps<{
@@ -60,6 +63,14 @@ watch(state, reload);
 const owed = (d: Debt) => Math.max(0, Number(d.total) - Number(d.paid_amount));
 
 const soldAt = (d: Debt) => new Date(d.created_offline_at ?? d.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' });
+
+/* Details sheet: what they took and what they have paid, without leaving
+   the list. A debt is a conversation at the counter, and the counter needs
+   the whole story on one screen. */
+const viewing = ref<Debt | null>(null);
+
+const paidAt = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase() + m.slice(1));
 
 /* Settle dialog. Defaults to the full amount owed — most people pay it off. */
 const settling = ref<Debt | null>(null);
@@ -152,7 +163,19 @@ function submitSettle() {
                                     <span v-else class="tabular font-mono font-semibold text-destructive">{{ money(owed(d)) }}</span>
                                 </TableCell>
                                 <TableCell>
-                                    <Button v-if="owed(d) > 0" size="sm" class="press" @click="openSettle(d)">Record payment</Button>
+                                    <div class="flex items-center justify-end gap-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            class="press size-8"
+                                            :aria-label="`View ${d.order_no}`"
+                                            title="View details"
+                                            @click="viewing = d"
+                                        >
+                                            <Eye class="size-4" />
+                                        </Button>
+                                        <Button v-if="owed(d) > 0" size="sm" class="press" @click="openSettle(d)">Record payment</Button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         </tbody>
@@ -169,6 +192,94 @@ function submitSettle() {
                 <Pagination :links="debts.links" :from="debts.from" :to="debts.to" :total="debts.total" :per-page="debts.per_page" />
             </div>
         </div>
+
+        <!-- Details: the items they took, and every payment so far. -->
+        <Sheet :open="!!viewing" @update:open="(v) => !v && (viewing = null)">
+            <SheetContent side="right" class="flex w-full flex-col p-0 sm:max-w-lg">
+                <SheetHeader class="shrink-0 border-b border-border px-5 pb-4 pt-5 text-left">
+                    <SheetTitle>{{ viewing?.customer?.name ?? 'Debt' }}</SheetTitle>
+                    <SheetDescription>
+                        <span class="tabular font-mono">{{ viewing?.order_no }}</span>
+                        <span v-if="viewing"> · {{ soldAt(viewing) }}</span>
+                        <span v-if="viewing?.customer?.phone" class="tabular font-mono"> · {{ viewing.customer.phone }}</span>
+                    </SheetDescription>
+                </SheetHeader>
+
+                <div v-if="viewing" class="min-h-0 flex-1 overflow-y-auto">
+                    <!-- Balance, first: it is the number the conversation is about. -->
+                    <div class="grid grid-cols-3 divide-x divide-border border-b border-border">
+                        <div class="px-4 py-3">
+                            <p class="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">Total</p>
+                            <p class="tabular font-mono text-lg font-semibold">{{ money(viewing.total) }}</p>
+                        </div>
+                        <div class="px-4 py-3">
+                            <p class="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">Paid</p>
+                            <p class="tabular font-mono text-lg font-semibold">{{ money(viewing.paid_amount) }}</p>
+                        </div>
+                        <div class="px-4 py-3" :class="owed(viewing) > 0 ? 'bg-destructive/5' : ''">
+                            <p class="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">Owed</p>
+                            <p class="tabular font-mono text-lg font-bold" :class="owed(viewing) > 0 ? 'text-destructive' : 'text-primary'">
+                                {{ owed(viewing) > 0 ? money(owed(viewing)) : 'Settled' }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- What they took. -->
+                    <section>
+                        <h3
+                            class="border-b border-border px-5 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                        >
+                            Items ({{ viewing.items.length }})
+                        </h3>
+                        <ul class="divide-y divide-border">
+                            <li v-for="item in viewing.items" :key="item.id" class="flex items-center gap-3 px-5 py-2.5">
+                                <span class="tabular w-8 shrink-0 font-mono text-sm text-muted-foreground">{{ item.qty }}×</span>
+                                <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ item.product_name }}</span>
+                                <span class="tabular shrink-0 font-mono text-xs text-muted-foreground">{{ money(item.unit_price) }}</span>
+                                <span class="tabular w-24 shrink-0 text-right font-mono text-sm font-semibold">{{ money(item.subtotal) }}</span>
+                            </li>
+                        </ul>
+                    </section>
+
+                    <!-- What they have paid so far. -->
+                    <section>
+                        <h3
+                            class="border-b border-t border-border px-5 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                        >
+                            Payments ({{ viewing.payments.length }})
+                        </h3>
+                        <ul v-if="viewing.payments.length" class="divide-y divide-border">
+                            <li v-for="pay in viewing.payments" :key="pay.id" class="flex items-center gap-3 px-5 py-2.5">
+                                <span class="min-w-0 flex-1">
+                                    <span class="block text-sm font-medium">{{ methodLabel(pay.method) }}</span>
+                                    <span class="block text-[0.7rem] text-muted-foreground">
+                                        {{ paidAt(pay.created_at)
+                                        }}<span v-if="pay.reference_no" class="tabular font-mono"> · {{ pay.reference_no }}</span>
+                                    </span>
+                                </span>
+                                <span class="tabular shrink-0 font-mono text-sm font-semibold text-primary">{{ money(pay.amount) }}</span>
+                            </li>
+                        </ul>
+                        <p v-else class="px-5 py-4 text-sm text-muted-foreground">Nothing paid yet.</p>
+                    </section>
+                </div>
+
+                <div v-if="viewing" class="flex shrink-0 items-center gap-2 border-t border-border p-4">
+                    <Button as-child variant="outline" class="press">
+                        <Link :href="route('orders.show', { order: viewing.id })">Full order</Link>
+                    </Button>
+                    <Button
+                        v-if="owed(viewing) > 0"
+                        class="press flex-1"
+                        @click="
+                            openSettle(viewing);
+                            viewing = null;
+                        "
+                        >Record payment</Button
+                    >
+                </div>
+            </SheetContent>
+        </Sheet>
 
         <Dialog :open="!!settling" @update:open="(v) => !v && (settling = null)">
             <DialogContent class="max-w-sm">

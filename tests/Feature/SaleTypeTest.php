@@ -68,7 +68,7 @@ class SaleTypeTest extends TestCase
 
         $this->assertSame(18, $this->stock(), 'the goods really left the shelf');
 
-        $summary = (new SalesReporter($this->store->id))->summaryFor(now()->startOfDay());
+        $summary = (new SalesReporter($this->store->id))->summaryFor(SalesReporter::businessNow()->startOfDay());
         $this->assertSame('0.00', $summary['sales'], 'eating a chocolate bar is not takings');
         $this->assertSame(0, $summary['orders']);
     }
@@ -77,7 +77,7 @@ class SaleTypeTest extends TestCase
     {
         $this->sync(['sale_type' => 'customer'])->assertOk();
 
-        $summary = (new SalesReporter($this->store->id))->summaryFor(now()->startOfDay());
+        $summary = (new SalesReporter($this->store->id))->summaryFor(SalesReporter::businessNow()->startOfDay());
         $this->assertSame('20.00', $summary['sales']);
     }
 
@@ -106,7 +106,7 @@ class SaleTypeTest extends TestCase
         $this->assertSame(18, $this->stock());
 
         // It still counts as a sale — the goods were sold, just not yet paid for.
-        $this->assertSame('20.00', (new SalesReporter($this->store->id))->summaryFor(now()->startOfDay())['sales']);
+        $this->assertSame('20.00', (new SalesReporter($this->store->id))->summaryFor(SalesReporter::businessNow()->startOfDay())['sales']);
     }
 
     /** Money nobody can collect is not a debt, it is a loss. */
@@ -216,6 +216,67 @@ class SaleTypeTest extends TestCase
     {
         $this->actingAs($this->cashier)->get(route('debts.index'))->assertForbidden();
         $this->actingAs($this->cashier)->get(route('consumption.index'))->assertForbidden();
+    }
+
+    /**
+     * Regression: the sync composable sends an explicit allowlist of fields,
+     * and sale_type was once left off it — every "myself" sale then landed as
+     * a paid customer sale. This pins the wire contract on the server side:
+     * whatever the till sends as sale_type is what gets stored.
+     */
+    public function test_the_sale_type_sent_by_the_till_is_the_one_stored(): void
+    {
+        $c = Customer::factory()->create();
+
+        $this->sync(['sale_type' => 'myself'])->assertOk();
+        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();
+        $this->sync(['sale_type' => 'customer'])->assertOk();
+
+        $this->assertSame(
+            ['myself', 'debt', 'customer'],
+            Order::orderBy('id')->pluck('sale_type')->map(fn ($t) => $t->value)->all(),
+        );
+    }
+
+    /**
+     * The order page must say a debt is still owed — and stop saying it the
+     * moment it is paid off. "Still in debt" is a live balance, not a flag.
+     */
+    public function test_the_order_page_shows_a_debt_only_while_something_is_owed(): void
+    {
+        $c = Customer::factory()->create(['name' => 'Sok Dara']);
+        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();
+        $order = Order::firstOrFail();
+
+        // Unpaid: the page carries the full balance.
+        $this->actingAs($this->admin)
+            ->get(route('orders.show', $order))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('order.sale_type', 'debt')
+                ->where('outstanding', '20.00'));
+
+        // Half paid: the balance follows.
+        $this->actingAs($this->admin)->post(route('debts.settle', $order), ['amount' => '12.00', 'method' => 'cash']);
+        $this->actingAs($this->admin)
+            ->get(route('orders.show', $order))
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('outstanding', '8.00'));
+
+        // Settled: nothing owed, so nothing to shout about.
+        $this->actingAs($this->admin)->post(route('debts.settle', $order), ['amount' => '8.00', 'method' => 'cash']);
+        $this->actingAs($this->admin)
+            ->get(route('orders.show', $order))
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('outstanding', '0.00'));
+    }
+
+    /** A plain sale never reports a balance, so the debt banner can never appear on it. */
+    public function test_a_customer_sale_has_nothing_outstanding(): void
+    {
+        $this->sync(['sale_type' => 'customer'])->assertOk();
+
+        $this->actingAs($this->admin)
+            ->get(route('orders.show', Order::firstOrFail()))
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('outstanding', '0.00'));
     }
 
     /** The till can look up and create the customer a debt needs. */

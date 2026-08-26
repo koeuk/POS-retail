@@ -193,6 +193,7 @@ class ProductController extends Controller
             'qty' => (int) ($data['add_stock'] ?? 0),
             'pack_id' => $data['add_stock_pack_id'] ?? null,
             'units_each' => (int) ($data['add_stock_units_each'] ?? 0),
+            'unit_label' => $data['add_stock_unit_label'] ?? null,
             'loose' => (int) ($data['add_stock_loose'] ?? 0),
             'store_id' => $data['add_stock_store_id'] ?? null,
             'note' => $data['add_stock_note'] ?? null,
@@ -204,6 +205,7 @@ class ProductController extends Controller
             $data['add_stock'],
             $data['add_stock_pack_id'],
             $data['add_stock_units_each'],
+            $data['add_stock_unit_label'],
             $data['add_stock_loose'],
             $data['add_stock_store_id'],
             $data['add_stock_note'],
@@ -259,7 +261,7 @@ class ProductController extends Controller
      * A pack has no shelf of its own, so receipts land on the parent in base
      * units — three cases of 24 adds 72.
      *
-     * @param  array{qty: int, pack_id: int|null, units_each: int, loose: int, store_id: int|null, note: string|null}  $receipt
+     * @param  array{qty: int, pack_id: int|null, units_each: int, unit_label: string|null, loose: int, store_id: int|null, note: string|null}  $receipt
      */
     private function receiveStock(Product $product, array $receipt, User $user): void
     {
@@ -269,8 +271,8 @@ class ProductController extends Controller
             return;
         }
 
-        $change = ($receipt['qty'] * $this->unitsPerReceipt($target, $product, $receipt))
-            + max(0, $receipt['loose']);
+        $unitsEach = $this->unitsPerReceipt($target, $product, $receipt);
+        $change = ($receipt['qty'] * $unitsEach) + max(0, $receipt['loose']);
 
         if ($change <= 0) {
             return;
@@ -296,9 +298,29 @@ class ProductController extends Controller
             'qty_change' => $change,
             'reference_type' => Product::class,
             'reference_id' => $product->id,
-            'note' => $receipt['note'] ?: 'Received from the product screen',
+            'note' => $receipt['note'] ?: $this->receiptNote($receipt, $unitsEach),
             'created_by' => $user->id,
         ]);
+    }
+
+    /**
+     * A note describing the delivery in the terms it arrived in, when the
+     * person receiving it did not write one: "10 × 24 cans" beats "240".
+     *
+     * @param  array{qty: int, unit_label: string|null, loose: int}  $receipt
+     */
+    private function receiptNote(array $receipt, int $unitsEach): string
+    {
+        if ($unitsEach <= 1) {
+            return 'Received from the product screen';
+        }
+
+        $container = trim((string) $receipt['unit_label']) ?: 'pack';
+        $note = sprintf('Received %d × %d per %s', $receipt['qty'], $unitsEach, $container);
+
+        return $receipt['loose'] > 0
+            ? $note.sprintf(', plus %d loose', $receipt['loose'])
+            : $note;
     }
 
     /**

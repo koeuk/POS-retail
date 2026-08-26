@@ -560,4 +560,111 @@ class ProductPackTest extends TestCase
         // Counted as singles, not 2 × 500.
         $this->assertSame(2, Stock::where('product_id', $noodle->id)->value('qty'));
     }
+
+    /**
+     * A shop that buys beer by the 24 but only sells singles should not have
+     * to invent a priced "case" on the POS grid just to book a delivery.
+     */
+    public function test_a_container_size_can_be_given_for_one_delivery_without_creating_a_pack(): void
+    {
+        $can = $this->can(0);
+
+        $this->actingAs($this->admin)
+            ->put(route('products.update', $can), $this->editPayload($can, [
+                'add_stock' => 10,
+                'add_stock_units_each' => 24,
+            ]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(240, Stock::where('product_id', $can->id)->value('qty'));
+
+        // And nothing new turned up on the grid.
+        $this->assertSame(0, $can->packs()->count());
+    }
+
+    public function test_a_one_off_container_size_combines_with_loose_units(): void
+    {
+        $can = $this->can(0);
+
+        $this->actingAs($this->admin)
+            ->put(route('products.update', $can), $this->editPayload($can, [
+                'add_stock' => 3,
+                'add_stock_units_each' => 24,
+                'add_stock_loose' => 100,
+            ]))
+            ->assertRedirect();
+
+        $this->assertSame(172, Stock::where('product_id', $can->id)->value('qty'));
+    }
+
+    /** A real pack outranks a typed size — the saved figure is the true one. */
+    public function test_a_saved_pack_wins_over_a_typed_container_size(): void
+    {
+        $can = $this->can(0);
+        $case = $this->packOf($can, 24, 'Case of 24', '16.00');
+
+        $this->actingAs($this->admin)
+            ->put(route('products.update', $can), $this->editPayload($can, [
+                'add_stock' => 2,
+                'add_stock_pack_id' => $case->id,
+                'add_stock_units_each' => 999,
+            ]))
+            ->assertRedirect();
+
+        $this->assertSame(48, Stock::where('product_id', $can->id)->value('qty'));
+    }
+
+    /**
+     * Container sizes vary by product — water is twelve bottles to a case,
+     * canned fish something else — so the pair is free-form and optional, and
+     * the movement records what was actually said.
+     */
+    public function test_the_container_pair_is_written_into_the_movement_note(): void
+    {
+        $water = Product::factory()->create(['name' => 'ទឹកសុទ្ធ 500ml', 'unit' => 'ដប']);
+        Stock::create(['product_id' => $water->id, 'store_id' => $this->store->id, 'qty' => 0]);
+
+        $this->actingAs($this->admin)
+            ->put(route('products.update', $water), $this->editPayload($water, [
+                'add_stock' => 5,
+                'add_stock_units_each' => 12,
+                'add_stock_unit_label' => 'កេស',
+            ]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(60, Stock::where('product_id', $water->id)->value('qty'));
+
+        $log = InventoryLog::where('product_id', $water->id)->latest('id')->firstOrFail();
+        $this->assertSame('Received 5 × 12 per កេស', $log->note);
+    }
+
+    /** A note the receiver actually wrote always wins over the generated one. */
+    public function test_a_written_note_is_kept(): void
+    {
+        $can = $this->can(0);
+
+        $this->actingAs($this->admin)
+            ->put(route('products.update', $can), $this->editPayload($can, [
+                'add_stock' => 2,
+                'add_stock_units_each' => 24,
+                'add_stock_note' => 'Invoice 5567',
+            ]))
+            ->assertRedirect();
+
+        $this->assertSame('Invoice 5567', InventoryLog::where('product_id', $can->id)->latest('id')->value('note'));
+    }
+
+    /** No container given means singles, however many arrive. */
+    public function test_a_blank_container_pair_counts_singles(): void
+    {
+        $can = $this->can(0);
+
+        $this->actingAs($this->admin)
+            ->put(route('products.update', $can), $this->editPayload($can, ['add_stock' => 7]))
+            ->assertRedirect();
+
+        $this->assertSame(7, Stock::where('product_id', $can->id)->value('qty'));
+    }
 }
