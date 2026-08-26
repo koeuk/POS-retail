@@ -7,6 +7,7 @@ use App\Models\InventoryLog;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -60,7 +61,7 @@ class InventoryController extends Controller
             ->when(($filters['state'] ?? null) === 'oversold', fn (Builder $q) => $q->where('qty', '<', 0))
             ->when(($filters['state'] ?? null) === 'out', fn (Builder $q) => $q->where('qty', '=', 0))
             ->orderBy('qty')
-            ->paginate(20)
+            ->paginate(PerPage::resolve($request))
             ->withQueryString();
 
         return Inertia::render('Inventory/Index', [

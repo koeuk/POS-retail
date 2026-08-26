@@ -27,9 +27,16 @@ export function initializeTheme() {
     mediaQuery.addEventListener('change', handleSystemThemeChange);
 }
 
-export function useAppearance() {
-    const appearance = ref<Appearance>('system');
+/*
+ * Module scope, not per-call: the toggle now appears in both the desktop
+ * header and the mobile app bar, and the settings page reads the same value.
+ * A ref created per caller would let those drift — change the theme on one,
+ * resize past the breakpoint, and the other still shows the old icon and
+ * cycles from the wrong position.
+ */
+const appearance = ref<Appearance>('system');
 
+export function useAppearance() {
     onMounted(() => {
         initializeTheme();
 

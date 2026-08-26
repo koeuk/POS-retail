@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\Setting;
 use App\Models\Stock;
 use App\Models\Store;
+use App\Support\PerPage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -44,7 +45,7 @@ class ProductController extends Controller
                 fn ($q) => $q->where('is_active', $filters['status'] === 'active')
             )
             ->latest('id')
-            ->paginate(15)
+            ->paginate(PerPage::resolve($request))
             ->withQueryString();
 
         return Inertia::render('Products/Index', [

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ThemeToggle from '@/components/ThemeToggle.vue';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
@@ -51,6 +52,10 @@ const props = withDefaults(
              while the content below it scrolls. -->
         <div class="ml-auto flex items-center gap-2">
             <slot name="actions" />
+
+            <!-- Always last: page chrome comes and goes, but the theme control
+                 is in the same place on every screen. -->
+            <ThemeToggle class="text-muted-foreground hover:bg-accent hover:text-foreground" />
         </div>
     </header>
 </template>

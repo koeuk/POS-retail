@@ -9,6 +9,7 @@ use App\Models\Setting;
 use App\Models\Store;
 use App\Models\User;
 use App\Services\SalesReporter;
+use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -61,7 +62,7 @@ class OrderController extends Controller
                 fn ($q, $to) => $q->whereRaw(SalesReporter::businessDay().' <= ?', [$to])
             )
             ->orderByRaw(SalesReporter::businessMoment().' DESC')
-            ->paginate(20)
+            ->paginate(PerPage::resolve($request))
             ->withQueryString();
 
         return Inertia::render('Orders/Index', [

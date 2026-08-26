@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CustomerRequest;
 use App\Models\Customer;
+use App\Support\PerPage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,7 +28,7 @@ class CustomerController extends Controller
                     });
                 })
                 ->orderBy('name')
-                ->paginate(15)
+                ->paginate(PerPage::resolve($request))
                 ->withQueryString(),
             'filters' => $request->only('search'),
         ]);

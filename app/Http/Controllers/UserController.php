@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Http\Requests\UserRequest;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\PerPage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -29,7 +30,7 @@ class UserController extends Controller
                 })
                 ->when($request->input('role'), fn ($q, $role) => $q->where('role', $role))
                 ->orderBy('name')
-                ->paginate(15)
+                ->paginate(PerPage::resolve($request))
                 ->withQueryString(),
             'stores' => Store::orderBy('name')->get(['id', 'name']),
             'roles' => collect(Role::cases())->map(fn (Role $r) => [
