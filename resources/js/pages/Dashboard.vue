@@ -111,7 +111,7 @@ const quickActions = computed(() =>
                  painted surface and should match the menu masthead. --brand
                  already goes a shade deeper in dark mode. -->
             <section class="animate-rise mb-4 rounded-3xl bg-brand p-5 text-brand-foreground shadow-lg md:hidden">
-                <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] opacity-60">Today's sales</p>
+                <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] opacity-85">Today's sales</p>
 
                 <div class="mt-1 flex items-end gap-2">
                     <p class="tabular font-mono text-4xl font-bold leading-none">{{ money(today.sales) }}</p>
@@ -124,7 +124,7 @@ const quickActions = computed(() =>
                     </span>
                 </div>
 
-                <p class="tabular mt-1 font-mono text-xs opacity-60">
+                <p class="tabular mt-1 font-mono text-xs opacity-85">
                     {{ today.orders }} order{{ today.orders === 1 ? '' : 's' }} · {{ today.items }} item{{ today.items === 1 ? '' : 's' }}
                     <span v-if="offlineToday > 0"> · {{ offlineToday }} synced offline</span>
                 </p>

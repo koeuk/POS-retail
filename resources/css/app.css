@@ -225,6 +225,49 @@
     .list-row-action {
         @apply flex w-12 shrink-0 items-center justify-center text-muted-foreground transition-colors active:text-destructive;
     }
+
+    /*
+     * Select as a bottom sheet (phones). Reka positions the popper wrapper
+     * with inline floating-ui styles, so the override has to be !important
+     * and live on the wrapper — which is also the only ancestor outside the
+     * dismissable layer, so a tap on it (the backdrop) closes the menu.
+     */
+    [data-reka-popper-content-wrapper]:has(> [data-select-sheet]) {
+        position: fixed !important;
+        inset: 0 !important;
+        transform: none !important;
+        min-width: 0 !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        pointer-events: auto;
+        background: rgb(0 0 0 / 0.5);
+        animation: fade-in var(--dur-base) var(--ease-out-quint) both;
+    }
+
+    [data-reka-popper-content-wrapper]:has(> [data-select-sheet][data-state='closed']) {
+        animation: fade-out var(--dur-base) var(--ease-out-quint) both;
+    }
+
+    /* Grab handle, purely visual — the sheet is dismissed by tapping outside. */
+    [data-select-sheet]::before {
+        content: '';
+        display: block;
+        margin: 0.5rem auto 0.25rem;
+        height: 0.25rem;
+        width: 2.5rem;
+        border-radius: 9999px;
+        background: hsl(var(--muted-foreground) / 0.3);
+    }
+
+    /* Rows at finger size: 44px+ tall and body-sized text. */
+    [data-select-sheet] [role='option'] {
+        @apply rounded-lg py-3 pl-10 text-base;
+    }
+
+    [data-select-sheet] [role='option'] > span:first-child {
+        @apply left-3;
+    }
 }
 
 /*
@@ -254,6 +297,15 @@
         }
         to {
             opacity: 1;
+        }
+    }
+
+    @keyframes fade-out {
+        from {
+            opacity: 1;
+        }
+        to {
+            opacity: 0;
         }
     }
 
