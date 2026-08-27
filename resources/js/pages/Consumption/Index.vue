@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import StatTile from '@/components/charts/StatTile.vue';
+import DateRangePicker from '@/components/DateRangePicker.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import Money from '@/components/Money.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -32,8 +33,9 @@ const props = defineProps<{
 const { money } = useCurrency();
 
 const search = ref(props.filters.search);
-const from = ref(props.filters.from);
-const to = ref(props.filters.to);
+// The picker hands back undefined when a range is cleared; '' from the server means the same thing.
+const from = ref<string | undefined>(props.filters.from || undefined);
+const to = ref<string | undefined>(props.filters.to || undefined);
 let debounce: ReturnType<typeof setTimeout>;
 
 function reload() {
@@ -77,18 +79,7 @@ const summarise = (r: Row) => r.items.map((i) => (i.qty > 1 ? `${i.product_name}
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input v-model="search" placeholder="Search by product…" class="pl-9" autocomplete="off" />
                     </div>
-                    <input
-                        v-model="from"
-                        type="date"
-                        aria-label="From date"
-                        class="tabular h-10 rounded-md border border-input bg-background px-2 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                    <input
-                        v-model="to"
-                        type="date"
-                        aria-label="To date"
-                        class="tabular h-10 rounded-md border border-input bg-background px-2 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
+                    <DateRangePicker v-model:from="from" v-model:to="to" placeholder="Any date" class="w-full sm:w-[16rem]" />
                 </div>
 
                 <div v-if="rows.data.length" class="overflow-x-auto">
