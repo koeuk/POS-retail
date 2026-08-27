@@ -5,13 +5,14 @@ namespace App\Services;
 use App\Enums\OrderStatus;
 use App\Enums\SaleType;
 use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Payment;
 use App\Models\Stock;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Contracts\Database\Query\Expression;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Query\Builder as Query;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Read models for the dashboard and reports.
@@ -23,6 +24,12 @@ use Illuminate\Support\Collection;
  *     takings to Thursday and make every daily figure wrong.
  *  2. **Only completed orders count.** Refunded and void orders stay in the
  *     table for audit, and must never inflate a sales total.
+ *
+ * The figures are built on the query builder, not Eloquent: a report is a
+ * handful of aggregates, and hydrating models to read a SUM() is work for
+ * nothing. The three dashboard lists that carry relations (low stock,
+ * oversold, recent orders) stay on Eloquent because that is what relations
+ * are for.
  */
 class SalesReporter
 {
@@ -36,9 +43,9 @@ class SalesReporter
      * morning's takings disappear from today's dashboard. The stored instant
      * is therefore shifted into the business timezone before the date is taken.
      *
-     * Returned as raw SQL text, not a DB::raw() Expression: Laravel 11 dropped
-     * Expression::__toString(), so an Expression cannot be concatenated into a
-     * whereRaw() clause the way these call sites need.
+     * Returned as SQL text so callers that still concatenate it into a raw
+     * clause can; inside this class it is wrapped as an Expression and handed
+     * to the builder's own where/group/order methods.
      */
     public static function businessDay(): string
     {
@@ -83,16 +90,98 @@ class SalesReporter
         return new self($user->isAdmin() ? null : $user->store_id);
     }
 
+    /** What a report shows when there is nothing — or when it could not be read. */
+    public static function emptyTotals(): array
+    {
+        return ['orders' => 0, 'sales' => '0.00', 'items' => 0, 'basket' => '0.00'];
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Building blocks */
+    /* ------------------------------------------------------------------ */
+
     /**
      * Only sales that are actually revenue. Owner consumption leaves the shelf
      * but never the till, so it is excluded from every figure here.
+     *
+     * Columns are table-qualified because the joins below bring in tables of
+     * their own, and an unqualified `status` would become ambiguous the day
+     * one of them grows such a column.
      */
-    private function orders(): Builder
+    private function orders(): Query
+    {
+        return DB::table('orders')
+            ->where('orders.status', OrderStatus::Completed->value)
+            ->where('orders.sale_type', '!=', SaleType::Myself->value)
+            ->when($this->storeId, fn (Query $q, int $id) => $q->where('orders.store_id', $id));
+    }
+
+    /** The lines of those orders. */
+    private function lines(): Query
+    {
+        return $this->orders()->join('order_items', 'order_items.order_id', '=', 'orders.id');
+    }
+
+    /** The money taken against those orders. */
+    private function payments(): Query
+    {
+        return $this->orders()->join('payments', 'payments.order_id', '=', 'orders.id');
+    }
+
+    /** The same revenue rule, for the Eloquent lists that need relations. */
+    private function revenueOrders(): EloquentBuilder
     {
         return Order::query()
             ->where('status', OrderStatus::Completed)
             ->where('sale_type', '!=', SaleType::Myself->value)
-            ->when($this->storeId, fn ($q, $id) => $q->where('store_id', $id));
+            ->when($this->storeId, fn (EloquentBuilder $q, int $id) => $q->where('store_id', $id));
+    }
+
+    private static function day(): Expression
+    {
+        return DB::raw(self::businessDay());
+    }
+
+    private static function moment(): Expression
+    {
+        return DB::raw(self::businessMoment());
+    }
+
+    private function onDay(Query $query, Carbon $day): Query
+    {
+        return $query->where(self::day(), $day->toDateString());
+    }
+
+    private function between(Query $query, Carbon $from, Carbon $to): Query
+    {
+        return $query->whereBetween(self::day(), [$from->toDateString(), $to->toDateString()]);
+    }
+
+    /**
+     * Orders, takings, items and average basket for whatever window `$orders`
+     * and `$lines` are already scoped to. Three small aggregate queries rather
+     * than one hand-written SELECT — the builder knows how to COUNT and SUM,
+     * and NULL-on-empty is handled for us (sum() returns 0).
+     *
+     * @return array{orders: int, sales: string, items: int, basket: string}
+     */
+    private function totals(Query $orders, Query $lines): array
+    {
+        $count = (clone $orders)->count();
+        $sales = (float) (clone $orders)->sum('orders.total');
+        $items = (int) $lines->sum('order_items.qty');
+
+        return [
+            'orders' => $count,
+            'sales' => number_format($sales, 2, '.', ''),
+            'items' => $items,
+            'basket' => number_format($count > 0 ? $sales / $count : 0, 2, '.', ''),
+        ];
+    }
+
+    private static function money(mixed $amount): string
+    {
+        return number_format((float) $amount, 2, '.', '');
     }
 
     /* ------------------------------------------------------------------ */
@@ -102,25 +191,10 @@ class SalesReporter
     /** @return array{sales: string, orders: int, basket: string, items: int} */
     public function summaryFor(Carbon $day): array
     {
-        $row = $this->orders()
-            ->whereRaw(self::businessDay().' = ?', [$day->toDateString()])
-            ->selectRaw('COUNT(*) as order_count, COALESCE(SUM(total), 0) as sales')
-            ->first();
-
-        $orders = (int) ($row->order_count ?? 0);
-        $sales = (float) ($row->sales ?? 0);
-
-        $items = (int) OrderItem::whereIn('order_id', $this->orders()
-            ->whereRaw(self::businessDay().' = ?', [$day->toDateString()])
-            ->select('id'))
-            ->sum('qty');
-
-        return [
-            'sales' => number_format($sales, 2, '.', ''),
-            'orders' => $orders,
-            'basket' => number_format($orders > 0 ? $sales / $orders : 0, 2, '.', ''),
-            'items' => $items,
-        ];
+        return $this->totals(
+            $this->onDay($this->orders(), $day),
+            $this->onDay($this->lines(), $day),
+        );
     }
 
     /** Products at or below their threshold — what to reorder. */
@@ -155,9 +229,9 @@ class SalesReporter
 
     public function recentOrders(int $limit = 8): Collection
     {
-        return $this->orders()
+        return $this->revenueOrders()
             ->with(['cashier:id,name', 'store:id,name'])
-            ->orderByRaw(self::businessMoment().' DESC')
+            ->orderByDesc(self::moment())
             ->limit($limit)
             ->get(['id', 'order_no', 'total', 'created_at', 'created_offline_at', 'cashier_id', 'store_id']);
     }
@@ -165,9 +239,8 @@ class SalesReporter
     /** Sales queued offline and not yet reconciled anywhere. */
     public function offlineOrdersToday(Carbon $day): int
     {
-        return $this->orders()
-            ->whereNotNull('created_offline_at')
-            ->whereRaw(self::businessDay().' = ?', [$day->toDateString()])
+        return $this->onDay($this->orders(), $day)
+            ->whereNotNull('orders.created_offline_at')
             ->count();
     }
 
@@ -175,12 +248,15 @@ class SalesReporter
     /* Reports */
     /* ------------------------------------------------------------------ */
 
-    /** @return Collection<int, object{day: string, orders: int, sales: string}> */
+    /** @return Collection<int, array{day: string, orders: int, sales: string}> */
     public function salesByDay(Carbon $from, Carbon $to): Collection
     {
-        $rows = $this->orders()
-            ->whereRaw(self::businessDay().' BETWEEN ? AND ?', [$from->toDateString(), $to->toDateString()])
-            ->selectRaw(self::businessDay().' as day, COUNT(*) as orders, SUM(total) as sales')
+        $rows = $this->between($this->orders(), $from, $to)
+            ->select([
+                DB::raw(self::businessDay().' as day'),
+                DB::raw('COUNT(*) as orders'),
+                DB::raw('SUM(orders.total) as sales'),
+            ])
             ->groupBy('day')
             ->orderBy('day')
             ->get()
@@ -197,7 +273,7 @@ class SalesReporter
             $out->push([
                 'day' => $key,
                 'orders' => (int) ($row->orders ?? 0),
-                'sales' => number_format((float) ($row->sales ?? 0), 2, '.', ''),
+                'sales' => self::money($row->sales ?? 0),
             ]);
         }
 
@@ -206,69 +282,49 @@ class SalesReporter
 
     public function salesByProduct(Carbon $from, Carbon $to, int $limit = 20): Collection
     {
-        return OrderItem::query()
-            ->join('orders', 'orders.id', '=', 'order_items.order_id')
-            ->where('orders.status', OrderStatus::Completed)
-            ->where('orders.sale_type', '!=', SaleType::Myself->value)
-            ->when($this->storeId, fn ($q, $id) => $q->where('orders.store_id', $id))
-            ->whereRaw(self::businessDay().' BETWEEN ? AND ?', [$from->toDateString(), $to->toDateString()])
+        return $this->between($this->lines(), $from, $to)
             // Group on the snapshot name: what the customer was actually sold,
             // even if the product has been renamed since.
-            ->selectRaw('order_items.product_name, SUM(order_items.qty) as qty, SUM(order_items.subtotal) as revenue')
+            ->select([
+                'order_items.product_name',
+                DB::raw('SUM(order_items.qty) as qty'),
+                DB::raw('SUM(order_items.subtotal) as revenue'),
+            ])
             ->groupBy('order_items.product_name')
             ->orderByDesc('revenue')
             ->limit($limit)
             ->get()
-            ->map(fn ($row) => [
+            ->map(fn (object $row) => [
                 'product_name' => $row->product_name,
                 'qty' => (int) $row->qty,
-                'revenue' => number_format((float) $row->revenue, 2, '.', ''),
+                'revenue' => self::money($row->revenue),
             ]);
     }
 
     public function paymentBreakdown(Carbon $from, Carbon $to): Collection
     {
-        return Payment::query()
-            ->join('orders', 'orders.id', '=', 'payments.order_id')
-            ->where('orders.status', OrderStatus::Completed)
-            ->where('orders.sale_type', '!=', SaleType::Myself->value)
-            ->when($this->storeId, fn ($q, $id) => $q->where('orders.store_id', $id))
-            ->whereRaw(self::businessDay().' BETWEEN ? AND ?', [$from->toDateString(), $to->toDateString()])
-            ->selectRaw('payments.method, COUNT(*) as count, SUM(payments.amount) as amount')
+        return $this->between($this->payments(), $from, $to)
+            ->select([
+                'payments.method',
+                DB::raw('COUNT(*) as count'),
+                DB::raw('SUM(payments.amount) as amount'),
+            ])
             ->groupBy('payments.method')
             ->orderByDesc('amount')
             ->get()
-            ->map(fn ($row) => [
+            ->map(fn (object $row) => [
                 'method' => $row->method,
                 'count' => (int) $row->count,
-                'amount' => number_format((float) $row->amount, 2, '.', ''),
+                'amount' => self::money($row->amount),
             ]);
     }
 
     /** @return array{orders: int, sales: string, items: int, basket: string} */
     public function rangeTotals(Carbon $from, Carbon $to): array
     {
-        $row = $this->orders()
-            ->whereRaw(self::businessDay().' BETWEEN ? AND ?', [$from->toDateString(), $to->toDateString()])
-            ->selectRaw('COUNT(*) as order_count, COALESCE(SUM(total), 0) as sales')
-            ->first();
-
-        $orders = (int) ($row->order_count ?? 0);
-        $sales = (float) ($row->sales ?? 0);
-
-        $items = (int) OrderItem::query()
-            ->join('orders', 'orders.id', '=', 'order_items.order_id')
-            ->where('orders.status', OrderStatus::Completed)
-            ->where('orders.sale_type', '!=', SaleType::Myself->value)
-            ->when($this->storeId, fn ($q, $id) => $q->where('orders.store_id', $id))
-            ->whereRaw(self::businessDay().' BETWEEN ? AND ?', [$from->toDateString(), $to->toDateString()])
-            ->sum('order_items.qty');
-
-        return [
-            'orders' => $orders,
-            'sales' => number_format($sales, 2, '.', ''),
-            'items' => $items,
-            'basket' => number_format($orders > 0 ? $sales / $orders : 0, 2, '.', ''),
-        ];
+        return $this->totals(
+            $this->between($this->orders(), $from, $to),
+            $this->between($this->lines(), $from, $to),
+        );
     }
 }

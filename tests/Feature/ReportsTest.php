@@ -9,8 +9,10 @@ use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
 use App\Services\SalesReporter;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -250,5 +252,43 @@ class ReportsTest extends TestCase
 
         $this->assertStringContainsString('CONVERT_TZ', SalesReporter::businessDay());
         $this->assertStringContainsString("'+07:00'", SalesReporter::businessDay());
+    }
+
+    /** The database goes away for the report's own tables only — everything else keeps working. */
+    private function breakTheOrdersTable(): void
+    {
+        DB::partialMock()
+            ->shouldReceive('table')
+            ->with('orders')
+            ->andThrow(new QueryException('mysql', 'select * from orders', [], new \RuntimeException('Lost connection')));
+    }
+
+    public function test_the_report_page_stays_up_with_a_message_when_the_query_fails(): void
+    {
+        $this->breakTheOrdersTable();
+
+        $this->actingAs($this->admin)
+            ->get(route('reports.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Reports/Index')
+                ->where('totals.orders', 0)
+                ->where('totals.sales', '0.00')
+                ->where('byDay', [])
+                ->where('byProduct', [])
+                ->where('byPayment', [])
+                ->where('flash.error', 'The report could not be loaded. Try again in a moment.')
+            );
+    }
+
+    public function test_a_failed_export_sends_the_user_back_rather_than_a_broken_file(): void
+    {
+        $this->breakTheOrdersTable();
+
+        $this->actingAs($this->admin)
+            ->from(route('reports.index'))
+            ->get(route('reports.export'))
+            ->assertRedirect(route('reports.index'))
+            ->assertSessionHas('error', 'The report could not be loaded. Try again in a moment.');
     }
 }

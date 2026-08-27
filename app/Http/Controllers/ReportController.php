@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Services\SalesReporter;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -11,25 +13,57 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
+    private const UNAVAILABLE = 'The report could not be loaded. Try again in a moment.';
+
     public function index(Request $request): Response
     {
         [$from, $to] = $this->range($request);
         $reporter = SalesReporter::for($request->user());
+        $filters = ['from' => $from->toDateString(), 'to' => $to->toDateString()];
 
-        return Inertia::render('Reports/Index', [
-            'filters' => ['from' => $from->toDateString(), 'to' => $to->toDateString()],
-            'totals' => $reporter->rangeTotals($from, $to),
-            'byDay' => $reporter->salesByDay($from, $to),
-            'byProduct' => $reporter->salesByProduct($from, $to),
-            'byPayment' => $reporter->paymentBreakdown($from, $to),
-        ]);
+        try {
+            return Inertia::render('Reports/Index', [
+                'filters' => $filters,
+                'totals' => $reporter->rangeTotals($from, $to),
+                'byDay' => $reporter->salesByDay($from, $to),
+                'byProduct' => $reporter->salesByProduct($from, $to),
+                'byPayment' => $reporter->paymentBreakdown($from, $to),
+            ]);
+        } catch (QueryException $e) {
+            /*
+             * A report is read-only, so a failed query has nothing to undo —
+             * the useful thing is to keep the page up. It opens empty with a
+             * reason, and the date range is kept so a retry is one click,
+             * rather than a blank 500 nobody at the till can act on. Only
+             * database failures are caught: a bug should still surface.
+             */
+            report($e);
+            $request->session()->flash('error', self::UNAVAILABLE);
+
+            return Inertia::render('Reports/Index', [
+                'filters' => $filters,
+                'totals' => SalesReporter::emptyTotals(),
+                'byDay' => [],
+                'byProduct' => [],
+                'byPayment' => [],
+            ]);
+        }
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request): StreamedResponse|RedirectResponse
     {
         [$from, $to] = $this->range($request);
         $reporter = SalesReporter::for($request->user());
-        $rows = $reporter->salesByDay($from, $to);
+
+        try {
+            // Read everything before the download starts: a failure mid-stream
+            // would hand the user a half-written CSV that looks complete.
+            $rows = $reporter->salesByDay($from, $to);
+        } catch (QueryException $e) {
+            report($e);
+
+            return back()->with('error', self::UNAVAILABLE);
+        }
 
         $filename = "sales-{$from->toDateString()}-to-{$to->toDateString()}.csv";
 
