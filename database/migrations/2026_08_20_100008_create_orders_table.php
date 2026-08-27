@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\OrderStatus;
+use App\Enums\SaleType;
+use App\Support\Currency;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -24,11 +26,17 @@ return new class extends Migration
             $table->foreignId('register_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('cashier_id')->constrained('users')->restrictOnDelete();
             $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
+            // Why the sale happened — see App\Enums\SaleType. Indexed because
+            // the reporter filters on it for every revenue figure.
+            $table->enum('sale_type', SaleType::values())->default(SaleType::Customer->value);
 
             $table->decimal('subtotal', 12, 2)->default(0);
             $table->decimal('discount_amount', 12, 2)->default(0);
             // total = subtotal - discount_amount. Nothing is added on top.
             $table->decimal('total', 12, 2)->default(0);
+            // Snapshot of the shop currency the figures are in. The shop may
+            // switch later; a past sale must not silently change what it was worth.
+            $table->char('currency', 3)->default(Currency::USD);
 
             // paid_amount = SUM(payments.amount); change_amount = paid - total, cash only.
             $table->decimal('paid_amount', 12, 2)->default(0);
@@ -47,6 +55,7 @@ return new class extends Migration
             $table->index(['store_id', 'created_at']);
             $table->index(['cashier_id', 'created_at']);
             $table->index('status');
+            $table->index('sale_type');
         });
     }
 

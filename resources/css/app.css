@@ -214,7 +214,19 @@
      * 3.5rem clears the 44px touch floor with the padding included.
      */
     .list-row {
-        @apply flex items-stretch border-b border-border last:border-b-0;
+        @apply flex items-stretch border-b border-border transition-colors last:border-b-0;
+    }
+
+    /*
+     * Hover lives on the row, not the inner button, so the trailing delete
+     * control tints with it and the row reads as one thing. Gated on a real
+     * pointer: a touch tablet has no hover, and without the gate the last
+     * row tapped would stay highlighted until the next tap somewhere else.
+     */
+    @media (hover: hover) {
+        .list-row:hover {
+            @apply bg-muted/40;
+        }
     }
 
     .list-row-main {

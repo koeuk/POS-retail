@@ -36,6 +36,9 @@ return new class extends Migration
             $table->string('image')->nullable();
             $table->string('unit')->default('pcs');
             $table->unsignedInteger('units_per_pack')->default(1);
+            // Units per case, for counting the shelf only ("18 cases + 22") — a
+            // case is how goods arrive, not something sold, so it needs no price.
+            $table->unsignedInteger('case_size')->nullable();
             $table->boolean('track_stock')->default(true);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
