@@ -227,12 +227,12 @@
     }
 
     /*
-     * Select as a bottom sheet (phones). Reka positions the popper wrapper
+     * Select / Popover as a bottom sheet (phones). Reka positions the popper wrapper
      * with inline floating-ui styles, so the override has to be !important
      * and live on the wrapper — which is also the only ancestor outside the
      * dismissable layer, so a tap on it (the backdrop) closes the menu.
      */
-    [data-reka-popper-content-wrapper]:has(> [data-select-sheet]) {
+    [data-reka-popper-content-wrapper]:has(> [data-sheet]) {
         position: fixed !important;
         inset: 0 !important;
         transform: none !important;
@@ -245,12 +245,12 @@
         animation: fade-in var(--dur-base) var(--ease-out-quint) both;
     }
 
-    [data-reka-popper-content-wrapper]:has(> [data-select-sheet][data-state='closed']) {
+    [data-reka-popper-content-wrapper]:has(> [data-sheet][data-state='closed']) {
         animation: fade-out var(--dur-base) var(--ease-out-quint) both;
     }
 
     /* Grab handle, purely visual — the sheet is dismissed by tapping outside. */
-    [data-select-sheet]::before {
+    [data-sheet]::before {
         content: '';
         display: block;
         margin: 0.5rem auto 0.25rem;
@@ -261,11 +261,11 @@
     }
 
     /* Rows at finger size: 44px+ tall and body-sized text. */
-    [data-select-sheet] [role='option'] {
+    [data-sheet] [role='option'] {
         @apply rounded-lg py-3 pl-10 text-base;
     }
 
-    [data-select-sheet] [role='option'] > span:first-child {
+    [data-sheet] [role='option'] > span:first-child {
         @apply left-3;
     }
 }

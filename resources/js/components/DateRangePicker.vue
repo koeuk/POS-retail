@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RangeCalendar } from '@/components/ui/range-calendar';
+import { useIsMobile } from '@/composables/useIsMobile';
 import { CalendarDate, DateFormatter, getLocalTimeZone, parseDate, today, type DateValue } from '@internationalized/date';
 import { CalendarDays, X } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -30,6 +31,9 @@ const emits = defineEmits<{
 }>();
 
 const open = ref(false);
+
+// Two months side by side need ~600px; on a phone the picker is a bottom sheet with room for one.
+const isMobile = useIsMobile();
 
 const toDateValue = (value?: string): DateValue | undefined => {
     if (!value) return undefined;
@@ -107,12 +111,12 @@ const placeholderDate = computed<DateValue>(() => range.value.start ?? (today(ge
             </Button>
         </PopoverTrigger>
 
-        <PopoverContent class="w-auto p-0" align="end">
+        <PopoverContent :class="isMobile ? 'flex flex-col items-center p-0 pb-[var(--safe-bottom)]' : 'w-auto p-0'" align="end">
             <RangeCalendar
                 :model-value="range"
                 :placeholder="placeholderDate"
                 :max-value="maxValue"
-                :number-of-months="2"
+                :number-of-months="isMobile ? 1 : 2"
                 @update:model-value="onUpdate"
             />
         </PopoverContent>

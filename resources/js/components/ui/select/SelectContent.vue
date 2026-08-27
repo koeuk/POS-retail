@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import type { SelectContentEmits, SelectContentProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
-import { reactiveOmit, useMediaQuery } from "@vueuse/core"
+import { reactiveOmit } from "@vueuse/core"
 import {
   SelectContent,
   SelectPortal,
   SelectViewport,
   useForwardPropsEmits,
 } from "reka-ui"
+import { useIsMobile } from "@/composables/useIsMobile"
 import { cn } from "@/lib/utils"
 import { SelectScrollDownButton, SelectScrollUpButton } from "."
 
@@ -31,17 +32,17 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
  * Below the `md` breakpoint a floating dropdown is cramped and easy to
  * mis-tap, so the same content is presented as a bottom sheet instead. The
  * markup is unchanged — reka still owns focus, typeahead and selection — only
- * the placement differs. The `data-select-sheet` attribute lets app.css pin
- * reka's popper wrapper to the viewport and paint the backdrop.
+ * the placement differs. The `data-sheet` attribute lets app.css pin reka's
+ * popper wrapper to the viewport and paint the backdrop.
  */
-const isSheet = useMediaQuery("(max-width: 767px)")
+const isSheet = useIsMobile()
 </script>
 
 <template>
   <SelectPortal>
     <SelectContent
       v-bind="{ ...forwarded, ...$attrs }"
-      :data-select-sheet="isSheet ? '' : undefined"
+      :data-sheet="isSheet ? '' : undefined"
       :class="cn(
         'relative z-50 min-w-32 overflow-hidden border bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
         isSheet
