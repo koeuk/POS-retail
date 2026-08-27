@@ -54,7 +54,7 @@ class InventoryController extends Controller
 
         $stocks = $this->scoped($user)
             ->with([
-                'product:id,name,sku,barcode,unit,is_active',
+                'product:id,name,sku,barcode,unit,case_size,is_active',
                 // Pack sizes let the page say "8 × 12 + 1" instead of a bare 97 —
                 // the way the shelf is actually counted.
                 'product.packs:id,parent_product_id,name,units_per_pack',

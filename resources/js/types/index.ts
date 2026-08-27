@@ -99,6 +99,7 @@ export interface Product {
     parent?: Pick<Product, 'id' | 'name'> | null;
     /** Base units one of these contains. 1 for a base product. */
     units_per_pack?: number;
+    case_size?: number | null;
     packs_count?: number;
     /** Cheapest and dearest pack price, for the range shown in the list. */
     pack_min_price?: string | null;

@@ -256,6 +256,20 @@ class InventoryTest extends TestCase
             );
     }
 
+    public function test_the_index_ships_the_case_size_so_stock_can_be_counted_in_cases(): void
+    {
+        $noodles = Product::factory()->create(['name' => 'Instant noodles', 'case_size' => 80]);
+        Stock::create(['product_id' => $noodles->id, 'store_id' => $this->store->id, 'qty' => 1462]);
+
+        $this->actingAs($this->admin)
+            ->get(route('inventory.index', ['search' => 'Instant noodles']))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('stocks.data.0.qty', 1462)
+                ->where('stocks.data.0.product.case_size', 80) // 18 cases + 22 loose, worked out on the page
+            );
+    }
+
     public function test_the_index_can_be_sorted_by_stock_or_name(): void
     {
         // setUp already made one product at qty 10. Add a clear spread.

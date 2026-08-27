@@ -24,6 +24,7 @@ class Product extends Model
         'image',
         'unit',
         'units_per_pack',
+        'case_size',
         'track_stock',
         'is_active',
     ];
@@ -34,6 +35,7 @@ class Product extends Model
             'cost_price' => 'decimal:2',
             'sell_price' => 'decimal:2',
             'units_per_pack' => 'integer',
+            'case_size' => 'integer',
             'track_stock' => 'boolean',
             'is_active' => 'boolean',
         ];

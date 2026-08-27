@@ -61,6 +61,8 @@ class ProductRequest extends FormRequest
             // One price, and it is what the customer pays. No cost, no tax.
             'sell_price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
             'unit' => ['required', 'string', 'max:20'],
+            // Units per case, for counting the shelf only — a case is not sold.
+            'case_size' => ['nullable', 'integer', 'min:2', 'max:100000'],
             'track_stock' => ['boolean'],
             'is_active' => ['boolean'],
             'image' => ['nullable', 'image', 'max:2048'],
@@ -119,6 +121,7 @@ class ProductRequest extends FormRequest
             'packs.*.units_per_pack.required' => 'Say how many units the pack contains.',
             'packs.*.units_per_pack.min' => 'A pack has to hold at least one.',
             'packs.*.sell_price.required' => 'Give each pack size a price.',
+            'case_size.min' => 'A case has to hold at least two, or there is nothing to count.',
         ];
     }
 
@@ -128,6 +131,8 @@ class ProductRequest extends FormRequest
             'track_stock' => $this->boolean('track_stock'),
             'is_active' => $this->boolean('is_active'),
             'barcode' => $this->input('barcode') ?: null,
+            // An emptied field arrives as '' — that means "count singles", not zero.
+            'case_size' => $this->input('case_size') ?: null,
         ]);
 
         /*

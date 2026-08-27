@@ -27,6 +27,7 @@ interface StockRow {
         sku: string;
         barcode: string | null;
         unit: string;
+        case_size: number | null;
         packs?: { id: number; name: string; units_per_pack: number }[];
     } | null;
     store: { id: number; name: string } | null;
@@ -165,8 +166,9 @@ function openAdjust(stock: StockRow) {
     form.stock_id = stock.id;
     form.mode = 'restock';
     form.quantity = 0;
-    form.units_each = '';
-    form.unit_label = '';
+    // A cased product's delivery is counted in cases — the dialog already knows the size.
+    form.units_each = stock.product?.case_size ?? '';
+    form.unit_label = stock.product?.case_size ? 'case' : '';
     form.loose = '';
     form.note = '';
 }
@@ -269,19 +271,20 @@ function clearFilters() {
 }
 
 /*
- * Stock the way it sits on the shelf: cases and loose units, counted by the
- * largest pack the product is sold in. 97 cans reads as "8 × 12 + 1" when a
- * case holds twelve. A product with no pack size just shows the number.
+ * Stock the way it sits on the shelf: cases and loose units. The product's own
+ * case size wins — it exists purely for counting. Failing that, the largest
+ * pack the product is sold in stands in. 1,462 reads as "18 cases + 22" when a
+ * case holds eighty. A product with neither just shows the number.
  */
 function packed(stock: StockRow): { count: number; each: number; label: string; loose: number } | null {
-    const pack = (stock.product?.packs ?? []).filter((p) => p.units_per_pack > 1).sort((a, b) => b.units_per_pack - a.units_per_pack)[0];
-    if (!pack || stock.qty <= 0) return null;
-    return {
-        count: Math.floor(stock.qty / pack.units_per_pack),
-        each: pack.units_per_pack,
-        label: pack.name,
-        loose: stock.qty % pack.units_per_pack,
-    };
+    if (stock.qty <= 0 || !stock.product) return null;
+
+    const pack = (stock.product.packs ?? []).filter((p) => p.units_per_pack > 1).sort((a, b) => b.units_per_pack - a.units_per_pack)[0];
+    const each = stock.product.case_size ?? pack?.units_per_pack;
+    if (!each) return null;
+
+    const count = Math.floor(stock.qty / each);
+    return { count, each, label: stock.product.case_size ? (count === 1 ? 'case' : 'cases') : pack!.name, loose: stock.qty % each };
 }
 
 function tone(stock: StockRow) {
@@ -397,7 +400,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                                         <template v-if="packed(stock)">
                                             <span class="tabular font-mono text-base">{{ packed(stock)!.count }}</span>
                                             <span class="ml-1 text-xs text-muted-foreground"
-                                                >× {{ packed(stock)!.each }} {{ packed(stock)!.label }}</span
+                                                >{{ packed(stock)!.label }} · {{ packed(stock)!.each }} each</span
                                             >
                                             <p v-if="packed(stock)!.loose" class="tabular font-mono text-xs text-muted-foreground">
                                                 + {{ packed(stock)!.loose }} loose

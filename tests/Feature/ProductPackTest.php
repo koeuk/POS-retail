@@ -740,4 +740,32 @@ class ProductPackTest extends TestCase
 
         $this->assertSame(1, Product::where('sku', 'BOXED-1')->firstOrFail()->packs()->count());
     }
+
+    public function test_a_case_size_is_saved_for_counting_and_must_hold_at_least_two(): void
+    {
+        $product = $this->can();
+        $payload = fn (mixed $caseSize) => [
+            'category_id' => $product->category_id,
+            'name' => $product->name,
+            'sku' => $product->sku,
+            'sell_price' => '0.75',
+            'unit' => 'can',
+            'track_stock' => true,
+            'is_active' => true,
+            'case_size' => $caseSize,
+        ];
+
+        $this->actingAs($this->admin)->put(route('products.update', $product), $payload(24))->assertSessionHasNoErrors();
+        $this->assertSame(24, $product->fresh()->case_size);
+
+        // A case of one is not a case — there would be nothing to count.
+        $this->actingAs($this->admin)->from(route('products.edit', $product))
+            ->put(route('products.update', $product), $payload(1))
+            ->assertSessionHasErrors('case_size');
+        $this->assertSame(24, $product->fresh()->case_size, 'a rejected value leaves the old one alone');
+
+        // Clearing the field means "count singles again", not a case of zero.
+        $this->actingAs($this->admin)->put(route('products.update', $product), $payload(''))->assertSessionHasNoErrors();
+        $this->assertNull($product->fresh()->case_size);
+    }
 }

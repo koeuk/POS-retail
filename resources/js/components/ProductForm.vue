@@ -68,6 +68,7 @@ const form = useForm({
     description: props.product?.description ?? '',
     sell_price: props.product ? forEditing(props.product.sell_price) : '',
     unit: props.product?.unit ?? 'pcs',
+    case_size: (props.product?.case_size ?? '') as string | number,
     track_stock: props.product?.track_stock ?? true,
     is_active: props.product?.is_active ?? true,
     image: null as File | null,
@@ -498,6 +499,28 @@ function submit() {
                         <Label for="unit">Unit</Label>
                         <Input id="unit" v-model="form.unit" placeholder="pcs" />
                         <InputError :message="form.errors.unit" />
+                    </div>
+
+                    <!--
+                        Counting only. A pack size below is something the shop
+                        sells; a case is how the goods arrive and how the shelf
+                        is counted, and it needs no price.
+                    -->
+                    <div class="grid gap-2">
+                        <Label for="case-size"> Counted in cases of <span class="text-muted-foreground">(optional)</span> </Label>
+                        <Input
+                            id="case-size"
+                            v-model="form.case_size"
+                            type="number"
+                            min="2"
+                            inputmode="numeric"
+                            placeholder="80"
+                            class="tabular font-mono"
+                        />
+                        <p class="text-xs text-muted-foreground">
+                            Inventory then reads "18 cases + 22 {{ form.unit || 'pcs' }}" instead of 1,462. Nothing is sold as a case.
+                        </p>
+                        <InputError :message="form.errors.case_size" />
                     </div>
 
                     <div class="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
