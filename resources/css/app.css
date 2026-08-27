@@ -344,7 +344,9 @@
     }
 
     .animate-rise {
-        animation: rise-in var(--dur-base) var(--ease-out-quint) both;
+        /* `backwards`, not `both`: the end state is the natural one, and
+           pinning it would override the .lift hover transform for good. */
+        animation: rise-in var(--dur-base) var(--ease-out-quint) backwards;
     }
 
     .animate-fade {
@@ -361,7 +363,9 @@
 
     /* Stagger: set --i on the element (or via :nth-child below). */
     .stagger > * {
-        animation: rise-in var(--dur-base) var(--ease-out-quint) both;
+        /* `backwards`, not `both`: the end state is the natural one, and
+           pinning it would override the .lift hover transform for good. */
+        animation: rise-in var(--dur-base) var(--ease-out-quint) backwards;
     }
 
     .stagger > *:nth-child(1) {
@@ -407,8 +411,16 @@
             box-shadow var(--dur-fast) var(--ease-out-quint);
     }
 
+    /*
+     * Rise, and cast the shadow that rising implies: a wide soft one for the
+     * lift and a tight one to keep the edge crisp. Low alpha so it reads as
+     * air under the card, not a border around it.
+     */
     .lift:hover {
         transform: translate3d(0, -2px, 0);
+        box-shadow:
+            0 10px 24px -10px rgb(0 0 0 / 0.18),
+            0 2px 6px -2px rgb(0 0 0 / 0.08);
     }
 
     /*
