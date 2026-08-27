@@ -107,7 +107,10 @@ const quickActions = computed(() =>
                 four separate full-width tiles this replaces pushed everything
                 else below the fold on a 390px screen.
             -->
-            <section class="animate-rise mb-4 rounded-3xl bg-foreground p-5 text-background shadow-lg md:hidden">
+            <!-- The brand green, not the foreground colour — the card is a
+                 painted surface and should match the menu masthead. --brand
+                 already goes a shade deeper in dark mode. -->
+            <section class="animate-rise mb-4 rounded-3xl bg-brand p-5 text-brand-foreground shadow-lg md:hidden">
                 <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] opacity-60">Today's sales</p>
 
                 <div class="mt-1 flex items-end gap-2">
@@ -115,7 +118,7 @@ const quickActions = computed(() =>
                     <span
                         v-if="salesDelta !== null"
                         class="mb-0.5 rounded-full px-2 py-0.5 text-[0.7rem] font-semibold"
-                        :class="salesDelta >= 0 ? 'bg-primary text-primary-foreground' : 'bg-background/15'"
+                        :class="salesDelta >= 0 ? 'bg-brand-foreground/20 text-brand-foreground' : 'bg-brand-foreground/10 text-brand-foreground/80'"
                     >
                         {{ salesDelta >= 0 ? '+' : '' }}{{ salesDelta.toFixed(0) }}%
                     </span>
@@ -133,7 +136,7 @@ const quickActions = computed(() =>
                         :href="action.href"
                         class="press flex flex-1 flex-col items-center gap-1.5"
                     >
-                        <span class="flex size-12 items-center justify-center rounded-full bg-background/15">
+                        <span class="flex size-12 items-center justify-center rounded-full bg-brand-foreground/15">
                             <component :is="action.icon" class="size-5" />
                         </span>
                         <span class="text-[0.7rem] font-medium opacity-80">{{ action.title }}</span>
