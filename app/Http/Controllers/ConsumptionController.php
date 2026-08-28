@@ -34,25 +34,24 @@ class ConsumptionController extends Controller
             ->with(['items' => fn ($q) => $q->select('id', 'order_id', 'product_name', 'qty')])
             ->when($filters['search'] ?? null, fn (Builder $q, string $s) => $q
                 ->whereHas('items', fn ($i) => $i->where('product_name', 'like', "%{$s}%")))
-            ->when($filters['from'] ?? null, fn (Builder $q, $from) => $q->whereRaw(SalesReporter::businessDay().' >= ?', [$from]))
-            ->when($filters['to'] ?? null, fn (Builder $q, $to) => $q->whereRaw(SalesReporter::businessDay().' <= ?', [$to]))
-            ->orderByRaw(SalesReporter::businessMoment().' DESC')
+            ->when($filters['from'] ?? null, fn (Builder $q, string $from) => $q->businessDayFrom($from))
+            ->when($filters['to'] ?? null, fn (Builder $q, string $to) => $q->businessDayTo($to))
+            ->latestByBusinessMoment()
             ->paginate(PerPage::resolve($request))
             ->withQueryString();
 
         // This month, so the number means something at a glance.
         $month = SalesReporter::businessNow()->startOfMonth();
-        $thisMonth = $this->scoped($user)
-            ->whereRaw(SalesReporter::businessDay().' >= ?', [$month->toDateString()])
-            ->selectRaw('COUNT(*) as n, COALESCE(SUM(total), 0) as value')
-            ->first();
+        $thisMonth = $this->scoped($user)->businessDayFrom($month->toDateString());
+        $monthCount = (clone $thisMonth)->count();
+        $monthValue = (float) $thisMonth->sum('total');
 
         return Inertia::render('Consumption/Index', [
             'rows' => $rows,
             'filters' => ['search' => $filters['search'] ?? '', 'from' => $filters['from'] ?? '', 'to' => $filters['to'] ?? ''],
             'summary' => [
-                'month_count' => (int) ($thisMonth->n ?? 0),
-                'month_value' => number_format((float) ($thisMonth->value ?? 0), 2, '.', ''),
+                'month_count' => $monthCount,
+                'month_value' => number_format($monthValue, 2, '.', ''),
                 'month_label' => $month->format('F'),
             ],
             'currency' => Currency::current()->toArray(),

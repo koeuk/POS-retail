@@ -10,6 +10,7 @@ use App\Models\Store;
 use App\Models\User;
 use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -168,95 +169,103 @@ class InventoryController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $user = $request->user();
+        try {
+            $user = $request->user();
 
-        $data = $request->validate([
-            'stock_id' => ['required', 'integer', Rule::exists('stocks', 'id')],
-            'mode' => ['required', Rule::in(['restock', 'remove', 'count', 'return'])],
-            // For restock/remove/return this is a delta; for count it is the
-            // shelf figure the counter actually saw.
-            'quantity' => ['required', 'integer', 'min:0'],
+            $data = $request->validate([
+                'stock_id' => ['required', 'integer', Rule::exists('stocks', 'id')],
+                'mode' => ['required', Rule::in(['restock', 'remove', 'count', 'return'])],
+                // For restock/remove/return this is a delta; for count it is the
+                // shelf figure the counter actually saw.
+                'quantity' => ['required', 'integer', 'min:0'],
 
-            /*
-             * Goods arrive and are counted the way they are boxed: five cases
-             * of twelve and three loose, not sixty-three. Both optional and
-             * blank by default — sizes vary by product, so nothing is assumed.
-             * `unit_label` is only a label for the note; it never becomes a
-             * pack and never reaches the POS grid.
-             */
-            'units_each' => ['nullable', 'integer', 'min:1', 'max:100000'],
-            'unit_label' => ['nullable', 'string', 'max:30'],
-            'loose' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+                /*
+                 * Goods arrive and are counted the way they are boxed: five cases
+                 * of twelve and three loose, not sixty-three. Both optional and
+                 * blank by default — sizes vary by product, so nothing is assumed.
+                 * `unit_label` is only a label for the note; it never becomes a
+                 * pack and never reaches the POS grid.
+                 */
+                'units_each' => ['nullable', 'integer', 'min:1', 'max:100000'],
+                'unit_label' => ['nullable', 'string', 'max:30'],
+                'loose' => ['nullable', 'integer', 'min:0', 'max:1000000'],
 
-            'note' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $stock = $this->scoped($user)->whereKey($data['stock_id'])->firstOrFail();
-
-        // Whatever was typed, in single units. A count of "5 cases and 3" is
-        // still one absolute figure once it is multiplied out.
-        $unitsEach = max(1, (int) ($data['units_each'] ?? 1));
-        $quantity = ($data['quantity'] * $unitsEach) + max(0, (int) ($data['loose'] ?? 0));
-
-        [$change, $type] = match ($data['mode']) {
-            'restock' => [$quantity, InventoryLogType::Restock],
-            'remove' => [-$quantity, InventoryLogType::Adjustment],
-            'return' => [$quantity, InventoryLogType::Return],
-            // A count is absolute: the delta is whatever reconciles the books
-            // to the shelf, which may well be negative.
-            'count' => [$quantity - $stock->qty, InventoryLogType::Adjustment],
-        };
-
-        if ($change === 0) {
-            return back()->with('success', 'Nothing to record — the count already matches.');
-        }
-
-        DB::transaction(function () use ($stock, $change, $type, $data, $unitsEach, $user) {
-            // A single SQL statement, so two people counting at once cannot
-            // read-modify-write over each other.
-            $stock->increment('qty', $change);
-
-            InventoryLog::create([
-                'product_id' => $stock->product_id,
-                'store_id' => $stock->store_id,
-                'type' => $type,
-                'qty_change' => $change,
-                'reference_type' => Stock::class,
-                'reference_id' => $stock->id,
-                'note' => ($data['note'] ?? null) ?: $this->movementNote($data, $unitsEach),
-                'created_by' => $user->id,
+                'note' => ['nullable', 'string', 'max:255'],
             ]);
-        });
 
-        $stock->refresh();
+            $stock = $this->scoped($user)->whereKey($data['stock_id'])->firstOrFail();
 
-        return back()->with(
-            'success',
-            sprintf(
-                '%s: %s%d %s — now %d on hand.',
-                $stock->product->name,
-                $change > 0 ? '+' : '',
-                $change,
-                $stock->product->unit,
-                $stock->qty,
-            )
-        );
+            // Whatever was typed, in single units. A count of "5 cases and 3" is
+            // still one absolute figure once it is multiplied out.
+            $unitsEach = max(1, (int) ($data['units_each'] ?? 1));
+            $quantity = ($data['quantity'] * $unitsEach) + max(0, (int) ($data['loose'] ?? 0));
+
+            [$change, $type] = match ($data['mode']) {
+                'restock' => [$quantity, InventoryLogType::Restock],
+                'remove' => [-$quantity, InventoryLogType::Adjustment],
+                'return' => [$quantity, InventoryLogType::Return],
+                // A count is absolute: the delta is whatever reconciles the books
+                // to the shelf, which may well be negative.
+                'count' => [$quantity - $stock->qty, InventoryLogType::Adjustment],
+            };
+
+            if ($change === 0) {
+                return back()->with('success', 'Nothing to record — the count already matches.');
+            }
+
+            DB::transaction(function () use ($stock, $change, $type, $data, $unitsEach, $user) {
+                // A single SQL statement, so two people counting at once cannot
+                // read-modify-write over each other.
+                $stock->increment('qty', $change);
+
+                InventoryLog::create([
+                    'product_id' => $stock->product_id,
+                    'store_id' => $stock->store_id,
+                    'type' => $type,
+                    'qty_change' => $change,
+                    'reference_type' => Stock::class,
+                    'reference_id' => $stock->id,
+                    'note' => ($data['note'] ?? null) ?: $this->movementNote($data, $unitsEach),
+                    'created_by' => $user->id,
+                ]);
+            });
+
+            $stock->refresh();
+
+            return back()->with(
+                'success',
+                sprintf(
+                    '%s: %s%d %s — now %d on hand.',
+                    $stock->product->name,
+                    $change > 0 ? '+' : '',
+                    $change,
+                    $stock->product->unit,
+                    $stock->qty,
+                )
+            );
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The stock movement could not be recorded. The shelf count is unchanged — try again.');
+        }
     }
 
     /** The low-stock threshold is a setting on the row, not a movement. */
     public function updateThreshold(Request $request): RedirectResponse
     {
-        $user = $request->user();
+        try {
+            $user = $request->user();
 
-        $data = $request->validate([
-            'stock_id' => ['required', 'integer', Rule::exists('stocks', 'id')],
-            'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
-        ]);
+            $data = $request->validate([
+                'stock_id' => ['required', 'integer', Rule::exists('stocks', 'id')],
+                'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
+            ]);
 
-        $stock = $this->scoped($user)->whereKey($data['stock_id'])->firstOrFail();
-        $stock->update(['low_stock_threshold' => $data['low_stock_threshold']]);
+            $stock = $this->scoped($user)->whereKey($data['stock_id'])->firstOrFail();
+            $stock->update(['low_stock_threshold' => $data['low_stock_threshold']]);
 
-        return back()->with('success', 'Low-stock alert updated.');
+            return back()->with('success', 'Low-stock alert updated.');
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The alert level could not be saved — try again.');
+        }
     }
 
     private function recentMovements(User $user): Collection

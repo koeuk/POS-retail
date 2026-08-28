@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Support\Currency;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -41,19 +42,23 @@ class ShopController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'receipt_header' => ['required', 'string', 'max:120'],
-            'receipt_footer' => ['nullable', 'string', 'max:255'],
-            'currency' => ['required', Rule::in(array_keys(Currency::DEFINITIONS))],
-            // A rate of 0 would turn every riel price into ៛0, and a rate in
-            // the millions is a typo, not an economy. Bound it sensibly.
-            'riel_per_usd' => ['required', 'numeric', 'min:1', 'max:100000'],
-        ]);
+        try {
+            $data = $request->validate([
+                'receipt_header' => ['required', 'string', 'max:120'],
+                'receipt_footer' => ['nullable', 'string', 'max:255'],
+                'currency' => ['required', Rule::in(array_keys(Currency::DEFINITIONS))],
+                // A rate of 0 would turn every riel price into ៛0, and a rate in
+                // the millions is a typo, not an economy. Bound it sensibly.
+                'riel_per_usd' => ['required', 'numeric', 'min:1', 'max:100000'],
+            ]);
 
-        foreach ($data as $key => $value) {
-            Setting::put($key, $value === null ? null : (string) $value);
+            foreach ($data as $key => $value) {
+                Setting::put($key, $value === null ? null : (string) $value);
+            }
+
+            return back()->with('success', 'Shop settings saved.');
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The settings could not be saved. Nothing was changed — try again.');
         }
-
-        return back()->with('success', 'Shop settings saved.');
     }
 }

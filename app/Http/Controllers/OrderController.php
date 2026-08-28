@@ -8,7 +8,6 @@ use App\Models\Order;
 use App\Models\Setting;
 use App\Models\Store;
 use App\Models\User;
-use App\Services\SalesReporter;
 use App\Support\Currency;
 use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
@@ -54,15 +53,9 @@ class OrderController extends Controller
             )
             // Filter on the business day too — the day the sale happened, not
             // the day the row reached the server.
-            ->when(
-                $filters['from'] ?? null,
-                fn ($q, $from) => $q->whereRaw(SalesReporter::businessDay().' >= ?', [$from])
-            )
-            ->when(
-                $filters['to'] ?? null,
-                fn ($q, $to) => $q->whereRaw(SalesReporter::businessDay().' <= ?', [$to])
-            )
-            ->orderByRaw(SalesReporter::businessMoment().' DESC')
+            ->when($filters['from'] ?? null, fn ($q, $from) => $q->businessDayFrom($from))
+            ->when($filters['to'] ?? null, fn ($q, $to) => $q->businessDayTo($to))
+            ->latestByBusinessMoment()
             ->paginate(PerPage::resolve($request))
             ->withQueryString();
 

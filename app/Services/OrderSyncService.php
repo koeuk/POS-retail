@@ -326,8 +326,7 @@ class OrderSyncService
          */
         $highest = (int) Order::where('store_id', $storeId)
             ->where('order_no', 'like', $prefix.'%')
-            ->selectRaw('COALESCE(MAX(CAST(SUBSTRING_INDEX(order_no, ?, -1) AS UNSIGNED)), 0) AS seq', ['-'])
-            ->value('seq');
+            ->max(DB::raw("CAST(SUBSTRING_INDEX(order_no, '-', -1) AS UNSIGNED)"));
 
         return $prefix.sprintf('%04d', $highest + $attempt);
     }

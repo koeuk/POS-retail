@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CategoryRequest;
 use App\Models\Category;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -30,34 +31,46 @@ class CategoryController extends Controller
 
     public function store(CategoryRequest $request): RedirectResponse
     {
-        $this->authorize('create', Category::class);
+        try {
+            $this->authorize('create', Category::class);
 
-        Category::create($request->validated());
+            Category::create($request->validated());
 
-        return back()->with('success', 'Category created.');
+            return back()->with('success', 'Category created.');
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The category could not be saved. Nothing was changed — try again.');
+        }
     }
 
     public function update(CategoryRequest $request, Category $category): RedirectResponse
     {
-        $this->authorize('update', $category);
+        try {
+            $this->authorize('update', $category);
 
-        $category->update($request->validated());
+            $category->update($request->validated());
 
-        return back()->with('success', 'Category updated.');
+            return back()->with('success', 'Category updated.');
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The category could not be saved. Nothing was changed — try again.');
+        }
     }
 
     public function destroy(Category $category): RedirectResponse
     {
-        $this->authorize('delete', $category);
+        try {
+            $this->authorize('delete', $category);
 
-        if ($category->products()->exists()) {
-            return back()->withErrors([
-                'category' => 'This category still has products. Move them first.',
-            ]);
+            if ($category->products()->exists()) {
+                return back()->withErrors([
+                    'category' => 'This category still has products. Move them first.',
+                ]);
+            }
+
+            $category->delete();
+
+            return back()->with('success', 'Category deleted.');
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The category could not be deleted. Nothing was changed — try again.');
         }
-
-        $category->delete();
-
-        return back()->with('success', 'Category deleted.');
     }
 }

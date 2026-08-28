@@ -7,6 +7,7 @@ use App\Http\Requests\UserRequest;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\PerPage;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -43,58 +44,70 @@ class UserController extends Controller
 
     public function store(UserRequest $request): RedirectResponse
     {
-        $this->authorize('create', User::class);
+        try {
+            $this->authorize('create', User::class);
 
-        $data = $request->validated();
-        $data['password'] = Hash::make($data['password']);
-        $data['email_verified_at'] = now(); // staff accounts are created by an admin
+            $data = $request->validated();
+            $data['password'] = Hash::make($data['password']);
+            $data['email_verified_at'] = now(); // staff accounts are created by an admin
 
-        User::create($data);
+            User::create($data);
 
-        return back()->with('success', 'Staff account created.');
+            return back()->with('success', 'Staff account created.');
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The account could not be saved. Nothing was changed — try again.');
+        }
     }
 
     public function update(UserRequest $request, User $user): RedirectResponse
     {
-        $this->authorize('update', $user);
+        try {
+            $this->authorize('update', $user);
 
-        $data = $request->validated();
+            $data = $request->validated();
 
-        if (! empty($data['password'])) {
-            $data['password'] = Hash::make($data['password']);
-        } else {
-            unset($data['password']);
+            if (! empty($data['password'])) {
+                $data['password'] = Hash::make($data['password']);
+            } else {
+                unset($data['password']);
+            }
+
+            // An admin must not be able to lock themselves out of their own
+            // account mid-session by demoting or deactivating it.
+            if ($user->id === $request->user()->id) {
+                $data['role'] = $user->role->value;
+                $data['is_active'] = true;
+            }
+
+            $user->update($data);
+
+            return back()->with('success', 'Staff account updated.');
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The account could not be saved. Nothing was changed — try again.');
         }
-
-        // An admin must not be able to lock themselves out of their own
-        // account mid-session by demoting or deactivating it.
-        if ($user->id === $request->user()->id) {
-            $data['role'] = $user->role->value;
-            $data['is_active'] = true;
-        }
-
-        $user->update($data);
-
-        return back()->with('success', 'Staff account updated.');
     }
 
     public function destroy(Request $request, User $user): RedirectResponse
     {
-        $this->authorize('delete', $user);
+        try {
+            $this->authorize('delete', $user);
 
-        if ($user->id === $request->user()->id) {
-            return back()->withErrors(['user' => 'You cannot delete your own account.']);
+            if ($user->id === $request->user()->id) {
+                return back()->withErrors(['user' => 'You cannot delete your own account.']);
+            }
+
+            if ($user->orders()->exists()) {
+                $user->update(['is_active' => false]);
+
+                return back()->with('success', "{$user->name} has sales history, so the account was deactivated instead of deleted.");
+            }
+
+            $name = $user->name;
+            $user->delete();
+
+            return back()->with('success', "{$name} was deleted.");
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The account could not be removed. Nothing was changed — try again.');
         }
-
-        if ($user->orders()->exists()) {
-            $user->update(['is_active' => false]);
-
-            return back()->with('success', "{$user->name} has sales history, so the account was deactivated instead of deleted.");
-        }
-
-        $name = $user->name;
-        $user->delete();
-
-        return back()->with('success', "{$name} was deleted.");
     }
 }

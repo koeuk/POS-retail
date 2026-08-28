@@ -13,6 +13,7 @@ use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\PerPage;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -82,59 +83,63 @@ class ProductController extends Controller
 
     public function store(ProductRequest $request): RedirectResponse
     {
-        $this->authorize('create', Product::class);
+        try {
+            $this->authorize('create', Product::class);
 
-        $data = $request->validated();
-        $openingQty = (int) ($data['opening_qty'] ?? 0);
-        $threshold = $data['low_stock_threshold'] ?? null;
-        $packs = $data['packs'] ?? [];
-        unset($data['opening_qty'], $data['low_stock_threshold'], $data['packs']);
+            $data = $request->validated();
+            $openingQty = (int) ($data['opening_qty'] ?? 0);
+            $threshold = $data['low_stock_threshold'] ?? null;
+            $packs = $data['packs'] ?? [];
+            unset($data['opening_qty'], $data['low_stock_threshold'], $data['packs']);
 
-        if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('products', 'public');
-        }
-
-        $product = DB::transaction(function () use ($data, $openingQty, $threshold, $packs, $request) {
-            $product = Product::create($data);
-
-            $this->syncPacks($product, $packs);
-
-            // A pack draws stock from its parent, so it must not own rows of
-            // its own — two shelves for one physical crate is the exact
-            // disagreement this feature exists to avoid.
-            if ($product->isPack()) {
-                return $product;
+            if ($request->hasFile('image')) {
+                $data['image'] = $request->file('image')->store('products', 'public');
             }
 
-            // Seed a stock row per store so the POS product feed always has
-            // one to read, even when opening quantity is zero.
-            foreach (Store::pluck('id') as $storeId) {
-                Stock::create([
-                    'product_id' => $product->id,
-                    'store_id' => $storeId,
-                    'qty' => $openingQty,
-                    'low_stock_threshold' => $threshold,
-                ]);
+            $product = DB::transaction(function () use ($data, $openingQty, $threshold, $packs, $request) {
+                $product = Product::create($data);
 
-                if ($openingQty > 0) {
-                    InventoryLog::create([
+                $this->syncPacks($product, $packs);
+
+                // A pack draws stock from its parent, so it must not own rows of
+                // its own — two shelves for one physical crate is the exact
+                // disagreement this feature exists to avoid.
+                if ($product->isPack()) {
+                    return $product;
+                }
+
+                // Seed a stock row per store so the POS product feed always has
+                // one to read, even when opening quantity is zero.
+                foreach (Store::pluck('id') as $storeId) {
+                    Stock::create([
                         'product_id' => $product->id,
                         'store_id' => $storeId,
-                        'type' => InventoryLogType::Restock,
-                        'qty_change' => $openingQty,
-                        'reference_type' => Product::class,
-                        'reference_id' => $product->id,
-                        'note' => 'Opening stock',
-                        'created_by' => $request->user()->id,
+                        'qty' => $openingQty,
+                        'low_stock_threshold' => $threshold,
                     ]);
+
+                    if ($openingQty > 0) {
+                        InventoryLog::create([
+                            'product_id' => $product->id,
+                            'store_id' => $storeId,
+                            'type' => InventoryLogType::Restock,
+                            'qty_change' => $openingQty,
+                            'reference_type' => Product::class,
+                            'reference_id' => $product->id,
+                            'note' => 'Opening stock',
+                            'created_by' => $request->user()->id,
+                        ]);
+                    }
                 }
-            }
 
-            return $product;
-        });
+                return $product;
+            });
 
-        return to_route('products.index')
-            ->with('success', "“{$product->name}” was created.");
+            return to_route('products.index')
+                ->with('success', "“{$product->name}” was created.");
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The product could not be saved. Nothing was changed — try again.');
+        }
     }
 
     /**
@@ -145,6 +150,12 @@ class ProductController extends Controller
     public function show(Product $product): Response
     {
         $this->authorize('view', $product);
+
+        // How it has actually sold, from the snapshotted line items.
+        $sold = OrderItem::query()
+            ->where('order_items.product_id', $product->id)
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.status', OrderStatus::Completed->value);
 
         return Inertia::render('Products/Show', [
             'product' => $product->load('category:id,name'),
@@ -159,13 +170,10 @@ class ProductController extends Controller
                 ->latest('id')
                 ->limit(10)
                 ->get(),
-            // How it has actually sold, from the snapshotted line items.
-            'sales' => OrderItem::query()
-                ->where('order_items.product_id', $product->id)
-                ->join('orders', 'orders.id', '=', 'order_items.order_id')
-                ->where('orders.status', OrderStatus::Completed)
-                ->selectRaw('COALESCE(SUM(order_items.qty), 0) as qty, COALESCE(SUM(order_items.subtotal), 0) as revenue')
-                ->first(),
+            'sales' => [
+                'qty' => (int) (clone $sold)->sum('order_items.qty'),
+                'revenue' => number_format((float) $sold->sum('order_items.subtotal'), 2, '.', ''),
+            ],
         ]);
     }
 
@@ -185,55 +193,59 @@ class ProductController extends Controller
 
     public function update(ProductRequest $request, Product $product): RedirectResponse
     {
-        $this->authorize('update', $product);
+        try {
+            $this->authorize('update', $product);
 
-        $data = $request->validated();
-        $packs = $data['packs'] ?? [];
-        $receipt = [
-            'qty' => (int) ($data['add_stock'] ?? 0),
-            'pack_id' => $data['add_stock_pack_id'] ?? null,
-            'units_each' => (int) ($data['add_stock_units_each'] ?? 0),
-            'unit_label' => $data['add_stock_unit_label'] ?? null,
-            'loose' => (int) ($data['add_stock_loose'] ?? 0),
-            'store_id' => $data['add_stock_store_id'] ?? null,
-            'note' => $data['add_stock_note'] ?? null,
-        ];
-        unset(
-            $data['opening_qty'],
-            $data['low_stock_threshold'],
-            $data['packs'],
-            $data['add_stock'],
-            $data['add_stock_pack_id'],
-            $data['add_stock_units_each'],
-            $data['add_stock_unit_label'],
-            $data['add_stock_loose'],
-            $data['add_stock_store_id'],
-            $data['add_stock_note'],
-        );
+            $data = $request->validated();
+            $packs = $data['packs'] ?? [];
+            $receipt = [
+                'qty' => (int) ($data['add_stock'] ?? 0),
+                'pack_id' => $data['add_stock_pack_id'] ?? null,
+                'units_each' => (int) ($data['add_stock_units_each'] ?? 0),
+                'unit_label' => $data['add_stock_unit_label'] ?? null,
+                'loose' => (int) ($data['add_stock_loose'] ?? 0),
+                'store_id' => $data['add_stock_store_id'] ?? null,
+                'note' => $data['add_stock_note'] ?? null,
+            ];
+            unset(
+                $data['opening_qty'],
+                $data['low_stock_threshold'],
+                $data['packs'],
+                $data['add_stock'],
+                $data['add_stock_pack_id'],
+                $data['add_stock_units_each'],
+                $data['add_stock_unit_label'],
+                $data['add_stock_loose'],
+                $data['add_stock_store_id'],
+                $data['add_stock_note'],
+            );
 
-        if ($request->hasFile('image')) {
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
+            if ($request->hasFile('image')) {
+                if ($product->image) {
+                    Storage::disk('public')->delete($product->image);
+                }
+                $data['image'] = $request->file('image')->store('products', 'public');
+            } else {
+                unset($data['image']);
             }
-            $data['image'] = $request->file('image')->store('products', 'public');
-        } else {
-            unset($data['image']);
+
+            DB::transaction(function () use ($product, $data, $packs, $receipt, $request) {
+                $product->update($data);
+
+                // A pack has no packs of its own, so the list is only meaningful on
+                // a base product and is ignored entirely on a pack.
+                if (! $product->isPack() && $request->has('packs')) {
+                    $this->syncPacks($product, $packs);
+                }
+
+                $this->receiveStock($product, $receipt, $request->user());
+            });
+
+            return to_route('products.index')
+                ->with('success', "“{$product->name}” was updated.");
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The product could not be saved. Nothing was changed — try again.');
         }
-
-        DB::transaction(function () use ($product, $data, $packs, $receipt, $request) {
-            $product->update($data);
-
-            // A pack has no packs of its own, so the list is only meaningful on
-            // a base product and is ignored entirely on a pack.
-            if (! $product->isPack() && $request->has('packs')) {
-                $this->syncPacks($product, $packs);
-            }
-
-            $this->receiveStock($product, $receipt, $request->user());
-        });
-
-        return to_route('products.index')
-            ->with('success', "“{$product->name}” was updated.");
     }
 
     /**
@@ -431,37 +443,41 @@ class ProductController extends Controller
 
     public function destroy(Product $product): RedirectResponse
     {
-        $this->authorize('delete', $product);
+        try {
+            $this->authorize('delete', $product);
 
-        // Products that have been sold are restricted by a foreign key on
-        // order_items. Deactivate rather than delete — the sales history
-        // must keep pointing at a real row.
-        // The foreign key would refuse this anyway; saying so plainly beats a
-        // 500 from the database.
-        if ($product->packs()->exists()) {
-            return back()->withErrors([
-                'product' => 'This product has pack sizes. Delete those first.',
-            ]);
+            // Products that have been sold are restricted by a foreign key on
+            // order_items. Deactivate rather than delete — the sales history
+            // must keep pointing at a real row.
+            // The foreign key would refuse this anyway; saying so plainly beats a
+            // 500 from the database.
+            if ($product->packs()->exists()) {
+                return back()->withErrors([
+                    'product' => 'This product has pack sizes. Delete those first.',
+                ]);
+            }
+
+            if ($product->orderItems()->exists()) {
+                $product->update(['is_active' => false]);
+
+                return back()->with('success', "“{$product->name}” has sales history, so it was deactivated instead of deleted.");
+            }
+
+            $name = $product->name;
+
+            DB::transaction(function () use ($product) {
+                $product->stocks()->delete();
+                $product->inventoryLogs()->delete();
+                $product->delete();
+            });
+
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+
+            return back()->with('success', "“{$name}” was deleted.");
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The product could not be deleted. Nothing was changed — try again.');
         }
-
-        if ($product->orderItems()->exists()) {
-            $product->update(['is_active' => false]);
-
-            return back()->with('success', "“{$product->name}” has sales history, so it was deactivated instead of deleted.");
-        }
-
-        $name = $product->name;
-
-        DB::transaction(function () use ($product) {
-            $product->stocks()->delete();
-            $product->inventoryLogs()->delete();
-            $product->delete();
-        });
-
-        if ($product->image) {
-            Storage::disk('public')->delete($product->image);
-        }
-
-        return back()->with('success', "“{$name}” was deleted.");
     }
 }

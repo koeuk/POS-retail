@@ -137,12 +137,13 @@ class SalesReporter
             ->when($this->storeId, fn (EloquentBuilder $q, int $id) => $q->where('store_id', $id));
     }
 
-    private static function day(): Expression
+    /** The business day, as an expression the builder's own where/group/order methods accept. */
+    public static function day(): Expression
     {
         return DB::raw(self::businessDay());
     }
 
-    private static function moment(): Expression
+    public static function moment(): Expression
     {
         return DB::raw(self::businessMoment());
     }

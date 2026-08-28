@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\CustomerRequest;
 use App\Models\Customer;
 use App\Support\PerPage;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -36,34 +37,46 @@ class CustomerController extends Controller
 
     public function store(CustomerRequest $request): RedirectResponse
     {
-        $this->authorize('create', Customer::class);
+        try {
+            $this->authorize('create', Customer::class);
 
-        Customer::create($request->validated());
+            Customer::create($request->validated());
 
-        return back()->with('success', 'Customer added.');
+            return back()->with('success', 'Customer added.');
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The customer could not be saved. Nothing was changed — try again.');
+        }
     }
 
     public function update(CustomerRequest $request, Customer $customer): RedirectResponse
     {
-        $this->authorize('update', $customer);
+        try {
+            $this->authorize('update', $customer);
 
-        $customer->update($request->validated());
+            $customer->update($request->validated());
 
-        return back()->with('success', 'Customer updated.');
+            return back()->with('success', 'Customer updated.');
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The customer could not be saved. Nothing was changed — try again.');
+        }
     }
 
     public function destroy(Customer $customer): RedirectResponse
     {
-        $this->authorize('delete', $customer);
+        try {
+            $this->authorize('delete', $customer);
 
-        if ($customer->orders()->exists()) {
-            return back()->withErrors([
-                'customer' => 'This customer has order history and cannot be deleted.',
-            ]);
+            if ($customer->orders()->exists()) {
+                return back()->withErrors([
+                    'customer' => 'This customer has order history and cannot be deleted.',
+                ]);
+            }
+
+            $customer->delete();
+
+            return back()->with('success', 'Customer deleted.');
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The customer could not be deleted. Nothing was changed — try again.');
         }
-
-        $customer->delete();
-
-        return back()->with('success', 'Customer deleted.');
     }
 }

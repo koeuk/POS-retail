@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\OrderStatus;
 use App\Enums\SaleType;
+use App\Services\SalesReporter;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -81,5 +83,27 @@ class Order extends Model
     public function outstanding(): string
     {
         return number_format(max(0, (float) $this->total - (float) $this->paid_amount), 2, '.', '');
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Business-day filtering — see SalesReporter::businessDay() for why. */
+    /* ------------------------------------------------------------------ */
+
+    /** Sales on or after the shop's day `$date` (Y-m-d). */
+    public function scopeBusinessDayFrom(Builder $query, string $date): Builder
+    {
+        return $query->where(SalesReporter::day(), '>=', $date);
+    }
+
+    /** Sales on or before the shop's day `$date` (Y-m-d). */
+    public function scopeBusinessDayTo(Builder $query, string $date): Builder
+    {
+        return $query->where(SalesReporter::day(), '<=', $date);
+    }
+
+    /** Newest sale first, by when it happened — not when it reached the server. */
+    public function scopeLatestByBusinessMoment(Builder $query): Builder
+    {
+        return $query->orderByDesc(SalesReporter::moment());
     }
 }

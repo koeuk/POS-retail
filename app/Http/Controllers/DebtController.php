@@ -7,10 +7,10 @@ use App\Enums\PaymentMethod;
 use App\Enums\SaleType;
 use App\Models\Order;
 use App\Models\User;
-use App\Services\SalesReporter;
 use App\Support\Currency;
 use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -57,21 +57,20 @@ class DebtController extends Controller
                 fn (Builder $q) => $q->whereColumn('paid_amount', '<', 'total'),
                 fn (Builder $q) => $q->whereColumn('paid_amount', '>=', 'total'),
             )
-            ->orderByRaw(SalesReporter::businessMoment().' DESC')
+            ->latestByBusinessMoment()
             ->paginate(PerPage::resolve($request))
             ->withQueryString();
 
-        $outstanding = $this->scoped($user)
-            ->whereColumn('paid_amount', '<', 'total')
-            ->selectRaw('COUNT(*) as n, COALESCE(SUM(total - paid_amount), 0) as owed')
-            ->first();
+        $open = $this->scoped($user)->whereColumn('paid_amount', '<', 'total');
+        $openCount = (clone $open)->count();
+        $owed = (float) $open->sum(DB::raw('total - paid_amount'));
 
         return Inertia::render('Debts/Index', [
             'debts' => $debts,
             'filters' => ['search' => $filters['search'] ?? '', 'state' => $filters['state'] ?? 'open'],
             'summary' => [
-                'open_count' => (int) ($outstanding->n ?? 0),
-                'owed' => number_format((float) ($outstanding->owed ?? 0), 2, '.', ''),
+                'open_count' => $openCount,
+                'owed' => number_format($owed, 2, '.', ''),
             ],
             'methods' => collect(PaymentMethod::cases())
                 ->reject(fn (PaymentMethod $m) => $m === PaymentMethod::Credit) // paying a debt on credit is circular
@@ -84,39 +83,43 @@ class DebtController extends Controller
     /** Record money received against a debt. */
     public function settle(Request $request, Order $order): RedirectResponse
     {
-        $this->scoped($request->user())->whereKey($order->id)->firstOrFail();
+        try {
+            $this->scoped($request->user())->whereKey($order->id)->firstOrFail();
 
-        $owed = (float) $order->total - (float) $order->paid_amount;
+            $owed = (float) $order->total - (float) $order->paid_amount;
 
-        $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:0.01', "max:{$owed}"],
-            'method' => ['required', Rule::in([PaymentMethod::Cash->value, PaymentMethod::Card->value, PaymentMethod::Qr->value])],
-            'reference_no' => ['nullable', 'string', 'max:255'],
-        ], [
-            'amount.max' => 'That is more than is owed.',
-        ]);
-
-        DB::transaction(function () use ($order, $data) {
-            $order->payments()->create([
-                'method' => $data['method'],
-                'amount' => number_format((float) $data['amount'], 2, '.', ''),
-                'reference_no' => $data['reference_no'] ?? null,
+            $data = $request->validate([
+                'amount' => ['required', 'numeric', 'min:0.01', "max:{$owed}"],
+                'method' => ['required', Rule::in([PaymentMethod::Cash->value, PaymentMethod::Card->value, PaymentMethod::Qr->value])],
+                'reference_no' => ['nullable', 'string', 'max:255'],
+            ], [
+                'amount.max' => 'That is more than is owed.',
             ]);
 
-            // Recompute from the ledger rather than adding, so a double-submit
-            // cannot drift paid_amount away from what the payments say.
-            $order->update(['paid_amount' => $order->payments()->sum('amount')]);
-        });
+            DB::transaction(function () use ($order, $data) {
+                $order->payments()->create([
+                    'method' => $data['method'],
+                    'amount' => number_format((float) $data['amount'], 2, '.', ''),
+                    'reference_no' => $data['reference_no'] ?? null,
+                ]);
 
-        $order->refresh();
-        $left = (float) $order->outstanding();
+                // Recompute from the ledger rather than adding, so a double-submit
+                // cannot drift paid_amount away from what the payments say.
+                $order->update(['paid_amount' => $order->payments()->sum('amount')]);
+            });
 
-        return back()->with(
-            'success',
-            $left > 0
-                ? "Payment recorded. {$order->customer?->name} still owes ".Currency::current()->format($left).'.'
-                : "Debt settled — {$order->customer?->name} is paid up.",
-        );
+            $order->refresh();
+            $left = (float) $order->outstanding();
+
+            return back()->with(
+                'success',
+                $left > 0
+                    ? "Payment recorded. {$order->customer?->name} still owes ".Currency::current()->format($left).'.'
+                    : "Debt settled — {$order->customer?->name} is paid up.",
+            );
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The payment could not be recorded. The debt is unchanged — try again.');
+        }
     }
 
     private function scoped(User $user): Builder

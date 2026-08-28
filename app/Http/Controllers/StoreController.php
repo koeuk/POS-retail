@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Register;
 use App\Models\Stock;
 use App\Models\Store;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,65 +32,73 @@ class StoreController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $this->authorize('create', Store::class);
+        try {
+            $this->authorize('create', Store::class);
 
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:32'],
-        ]);
+            $data = $request->validate([
+                'name' => ['required', 'string', 'max:255'],
+                'address' => ['nullable', 'string', 'max:255'],
+                'phone' => ['nullable', 'string', 'max:32'],
+            ]);
 
-        $store = DB::transaction(function () use ($data) {
-            $store = Store::create($data);
+            $store = DB::transaction(function () use ($data) {
+                $store = Store::create($data);
 
-            /*
-             * Backfill a stock row for every existing product.
-             *
-             * Creating a product already seeds a row per store, but a store
-             * created afterwards would have none — its POS would show zero
-             * for the whole catalogue and its shelves would never appear in
-             * the low-stock report. Quantities start at 0; goods are received
-             * through an inventory movement, not by creating a store.
-             */
-            $rows = Product::query()
-                // Packs draw stock from their parent, so they get no row here
-                // either — see the products table's parent_product_id.
-                ->base()
-                ->pluck('id')
-                ->map(fn (int $productId) => [
-                    'product_id' => $productId,
-                    'store_id' => $store->id,
-                    'qty' => 0,
-                    'low_stock_threshold' => null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ])
-                ->all();
+                /*
+                 * Backfill a stock row for every existing product.
+                 *
+                 * Creating a product already seeds a row per store, but a store
+                 * created afterwards would have none — its POS would show zero
+                 * for the whole catalogue and its shelves would never appear in
+                 * the low-stock report. Quantities start at 0; goods are received
+                 * through an inventory movement, not by creating a store.
+                 */
+                $rows = Product::query()
+                    // Packs draw stock from their parent, so they get no row here
+                    // either — see the products table's parent_product_id.
+                    ->base()
+                    ->pluck('id')
+                    ->map(fn (int $productId) => [
+                        'product_id' => $productId,
+                        'store_id' => $store->id,
+                        'qty' => 0,
+                        'low_stock_threshold' => null,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ])
+                    ->all();
 
-            if ($rows !== []) {
-                Stock::insert($rows);
-            }
+                if ($rows !== []) {
+                    Stock::insert($rows);
+                }
 
-            return $store;
-        });
+                return $store;
+            });
 
-        return back()->with(
-            'success',
-            "“{$store->name}” created with {$store->stocks()->count()} product rows at zero stock."
-        );
+            return back()->with(
+                'success',
+                "“{$store->name}” created with {$store->stocks()->count()} product rows at zero stock."
+            );
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The store could not be saved. Nothing was changed — try again.');
+        }
     }
 
     public function update(Request $request, Store $store): RedirectResponse
     {
-        $this->authorize('update', $store);
+        try {
+            $this->authorize('update', $store);
 
-        $store->update($request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:32'],
-        ]));
+            $store->update($request->validate([
+                'name' => ['required', 'string', 'max:255'],
+                'address' => ['nullable', 'string', 'max:255'],
+                'phone' => ['nullable', 'string', 'max:32'],
+            ]));
 
-        return back()->with('success', 'Store updated.');
+            return back()->with('success', 'Store updated.');
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The store could not be saved. Nothing was changed — try again.');
+        }
     }
 
     /**
@@ -103,61 +112,73 @@ class StoreController extends Controller
      */
     public function destroy(Request $request, Store $store): RedirectResponse
     {
-        $this->authorize('delete', $store);
+        try {
+            $this->authorize('delete', $store);
 
-        if (Store::count() <= 1) {
-            return back()->withErrors([
-                'store' => 'This is the only store. The app needs at least one to sell anything.',
-            ]);
+            if (Store::count() <= 1) {
+                return back()->withErrors([
+                    'store' => 'This is the only store. The app needs at least one to sell anything.',
+                ]);
+            }
+
+            if ($store->orders()->exists()) {
+                return back()->withErrors([
+                    'store' => "“{$store->name}” has sales history and cannot be deleted. Its orders must keep pointing at a real store.",
+                ]);
+            }
+
+            // A cashier without a store cannot open the POS at all, so make the
+            // operator reassign people deliberately rather than silently orphan
+            // them via the nullOnDelete foreign key.
+            $staff = $store->users()->count();
+
+            if ($staff > 0) {
+                return back()->withErrors([
+                    'store' => "Move the {$staff} staff member(s) assigned to “{$store->name}” to another store first.",
+                ]);
+            }
+
+            $name = $store->name;
+            $store->delete();
+
+            return back()->with('success', "“{$name}” was deleted.");
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The store could not be deleted. Nothing was changed — try again.');
         }
-
-        if ($store->orders()->exists()) {
-            return back()->withErrors([
-                'store' => "“{$store->name}” has sales history and cannot be deleted. Its orders must keep pointing at a real store.",
-            ]);
-        }
-
-        // A cashier without a store cannot open the POS at all, so make the
-        // operator reassign people deliberately rather than silently orphan
-        // them via the nullOnDelete foreign key.
-        $staff = $store->users()->count();
-
-        if ($staff > 0) {
-            return back()->withErrors([
-                'store' => "Move the {$staff} staff member(s) assigned to “{$store->name}” to another store first.",
-            ]);
-        }
-
-        $name = $store->name;
-        $store->delete();
-
-        return back()->with('success', "“{$name}” was deleted.");
     }
 
     public function storeRegister(Request $request, Store $store): RedirectResponse
     {
-        $this->authorize('update', $store);
+        try {
+            $this->authorize('update', $store);
 
-        $store->registers()->create($request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'is_active' => ['boolean'],
-        ]));
+            $store->registers()->create($request->validate([
+                'name' => ['required', 'string', 'max:255'],
+                'is_active' => ['boolean'],
+            ]));
 
-        return back()->with('success', 'Register added.');
+            return back()->with('success', 'Register added.');
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The register could not be added. Nothing was changed — try again.');
+        }
     }
 
     public function updateRegister(Request $request, Store $store, Register $register): RedirectResponse
     {
-        $this->authorize('update', $store);
+        try {
+            $this->authorize('update', $store);
 
-        abort_unless($register->store_id === $store->id, 404);
+            abort_unless($register->store_id === $store->id, 404);
 
-        $register->update($request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'is_active' => ['boolean'],
-            'store_id' => ['sometimes', Rule::in([$store->id])],
-        ]));
+            $register->update($request->validate([
+                'name' => ['required', 'string', 'max:255'],
+                'is_active' => ['boolean'],
+                'store_id' => ['sometimes', Rule::in([$store->id])],
+            ]));
 
-        return back()->with('success', 'Register updated.');
+            return back()->with('success', 'Register updated.');
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The register could not be saved. Nothing was changed — try again.');
+        }
     }
 }

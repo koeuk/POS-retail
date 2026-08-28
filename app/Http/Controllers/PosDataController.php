@@ -12,6 +12,7 @@ use App\Models\Setting;
 use App\Models\Store;
 use App\Services\OrderSyncService;
 use App\Support\Currency;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -162,14 +163,21 @@ class PosDataController extends Controller
     /** Create a customer from the till, so a debt never has to be turned away. */
     public function storeCustomer(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:32'],
-        ]);
+        try {
+            $data = $request->validate([
+                'name' => ['required', 'string', 'max:255'],
+                'phone' => ['nullable', 'string', 'max:32'],
+            ]);
 
-        $customer = Customer::create($data + ['loyalty_points' => 0]);
+            $customer = Customer::create($data + ['loyalty_points' => 0]);
 
-        return response()->json($customer->only('id', 'name', 'phone'), 201);
+            return response()->json($customer->only('id', 'name', 'phone'), 201);
+        } catch (QueryException $e) {
+            // The checkout is waiting on this answer: say so in the shape it expects.
+            report($e);
+
+            return response()->json(['message' => 'The customer could not be saved — try again.'], 503);
+        }
     }
 
     /** Lets the client confirm a flush it never saw the response to. */
