@@ -34,8 +34,8 @@ const form = useForm({
     riel_per_usd: String(props.shop.riel_per_usd),
     logo: null as File | null,
     favicon: null as File | null,
-    remove_logo: false,
-    remove_favicon: false,
+    remove_logo: false as boolean,
+    remove_favicon: false as boolean,
 });
 
 /*
