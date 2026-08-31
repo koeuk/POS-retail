@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { LucideIcon } from 'lucide-vue-next';
 import { TrendingDown, TrendingUp } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = defineProps<{
     label: string;
@@ -28,26 +28,109 @@ const delta = computed(() => {
 
     return ((now - before) / before) * 100;
 });
+
+/*
+ * The number rolls to its value instead of appearing — on mount, and again
+ * whenever the value changes under the reader (recording a debt payment
+ * glides "Still owed" down to the new figure). The currency symbol and
+ * grouping are kept by re-formatting each frame, so "៛165,500" counts in
+ * riel, not in raw digits. Anything unparseable, and anyone who asked the
+ * OS for less motion, simply gets the value as-is.
+ */
+const parsed = (raw: string) => {
+    const m = /^([^0-9-]*)(-?[\d,]+(?:\.(\d+))?)(.*)$/.exec(raw.trim());
+    if (!m) return null;
+
+    const target = Number(m[2].replace(/,/g, ''));
+    if (!Number.isFinite(target)) return null;
+
+    return { prefix: m[1], target, decimals: m[3]?.length ?? 0, suffix: m[4] };
+};
+
+const stillness = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const shown = ref(props.value);
+let frame = 0;
+let current = 0;
+
+function rollTo(raw: string) {
+    cancelAnimationFrame(frame);
+
+    const part = parsed(raw);
+    if (!part || stillness()) {
+        shown.value = raw;
+        current = part?.target ?? 0;
+        return;
+    }
+
+    const from = current;
+    const start = performance.now();
+    const duration = 700;
+
+    const tick = (now: number) => {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - t, 4); // ease-out-quart, settles gently
+        current = from + (part.target - from) * eased;
+
+        shown.value =
+            t >= 1
+                ? raw // the exact server string, always, at the end
+                : part.prefix +
+                  current.toLocaleString('en-US', { minimumFractionDigits: part.decimals, maximumFractionDigits: part.decimals }) +
+                  part.suffix;
+
+        if (t < 1) frame = requestAnimationFrame(tick);
+    };
+
+    frame = requestAnimationFrame(tick);
+}
+
+onMounted(() => rollTo(props.value));
+watch(
+    () => props.value,
+    (v) => rollTo(v),
+);
+onBeforeUnmount(() => cancelAnimationFrame(frame));
 </script>
 
 <template>
-    <article class="lift rounded-xl border bg-card p-4 shadow-sm" :class="tone === 'warning' ? 'border-destructive/40' : 'border-border'">
-        <div class="flex items-center justify-between gap-2">
+    <article
+        class="lift relative overflow-hidden rounded-xl border bg-card p-4 shadow-sm"
+        :class="tone === 'warning' ? 'border-destructive/40' : 'border-border'"
+    >
+        <!-- A quiet wash of the tile's own colour behind the icon — depth, not decoration. -->
+        <div
+            aria-hidden="true"
+            class="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full blur-2xl"
+            :class="tone === 'warning' ? 'bg-destructive/10' : 'bg-primary/10'"
+        />
+
+        <div class="relative flex items-start justify-between gap-2">
             <p class="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
                 {{ label }}
             </p>
-            <component :is="icon" v-if="icon" class="size-4" :class="tone === 'warning' ? 'text-destructive' : 'text-primary'" />
+            <span
+                v-if="icon"
+                class="grid size-8 shrink-0 place-items-center rounded-lg transition-transform duration-300 ease-out"
+                :class="tone === 'warning' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'"
+            >
+                <component :is="icon" class="size-4" />
+            </span>
         </div>
 
-        <p class="tabular mt-2 font-mono text-2xl font-bold leading-none" :class="tone === 'warning' ? 'text-destructive' : ''">
-            {{ value }}
+        <p class="tabular relative mt-1 font-mono text-2xl font-bold leading-none" :class="tone === 'warning' ? 'text-destructive' : ''">
+            {{ shown }}
         </p>
 
-        <p v-if="delta !== null" class="mt-1.5 flex items-center gap-1 text-xs" :class="delta >= 0 ? 'text-primary' : 'text-muted-foreground'">
+        <p
+            v-if="delta !== null"
+            class="relative mt-1.5 flex items-center gap-1 text-xs"
+            :class="delta >= 0 ? 'text-primary' : 'text-muted-foreground'"
+        >
             <component :is="delta >= 0 ? TrendingUp : TrendingDown" class="size-3" />
             <span class="tabular font-mono">{{ Math.abs(delta).toFixed(0) }}%</span>
             <span class="text-muted-foreground">vs yesterday</span>
         </p>
-        <p v-else-if="hint" class="mt-1.5 text-xs text-muted-foreground">{{ hint }}</p>
+        <p v-else-if="hint" class="relative mt-1.5 text-xs text-muted-foreground">{{ hint }}</p>
     </article>
 </template>

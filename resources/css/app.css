@@ -406,9 +406,10 @@
     }
 
     .lift {
+        /* base-speed, not fast: a card is a surface, and surfaces glide. */
         transition:
-            transform var(--dur-fast) var(--ease-out-quint),
-            box-shadow var(--dur-fast) var(--ease-out-quint);
+            transform var(--dur-base) var(--ease-out-quint),
+            box-shadow var(--dur-base) var(--ease-out-quint);
     }
 
     /*
