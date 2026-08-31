@@ -7,6 +7,7 @@ use App\Http\Requests\UserRequest;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\PerPage;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class UserController extends Controller
 {
@@ -22,15 +25,17 @@ class UserController extends Controller
         $this->authorize('viewAny', User::class);
 
         return Inertia::render('Users/Index', [
-            'users' => User::query()
+            'users' => QueryBuilder::for(User::class)
                 ->with('store:id,name')
-                ->when($request->input('search'), function ($query, string $search) {
-                    $query->where(function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%");
-                    });
-                })
-                ->when($request->input('role'), fn ($q, $role) => $q->where('role', $role))
+                ->allowedFilters(...[
+                    AllowedFilter::callback('search', function (Builder $query, string $search) {
+                        $query->where(function (Builder $q) use ($search) {
+                            $q->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        });
+                    }),
+                    AllowedFilter::exact('role'),
+                ])
                 ->orderBy('name')
                 ->paginate(PerPage::resolve($request))
                 ->withQueryString(),
@@ -39,7 +44,7 @@ class UserController extends Controller
                 'value' => $r->value,
                 'label' => $r->label(),
             ]),
-            'filters' => $request->only('search', 'role'),
+            'filters' => ['search' => (string) $request->input('filter.search', ''), 'role' => (string) $request->input('filter.role', '')],
         ]);
     }
 

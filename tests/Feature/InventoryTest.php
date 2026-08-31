@@ -247,7 +247,7 @@ class InventoryTest extends TestCase
         Stock::create(['product_id' => $base->id, 'store_id' => $this->store->id, 'qty' => 97]);
 
         $this->actingAs($this->admin)
-            ->get(route('inventory.index', ['search' => 'Cola can']))
+            ->get(route('inventory.index', ['filter' => ['search' => 'Cola can']]))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('stocks.data.0.qty', 97)
@@ -262,7 +262,7 @@ class InventoryTest extends TestCase
         Stock::create(['product_id' => $noodles->id, 'store_id' => $this->store->id, 'qty' => 1462]);
 
         $this->actingAs($this->admin)
-            ->get(route('inventory.index', ['search' => 'Instant noodles']))
+            ->get(route('inventory.index', ['filter' => ['search' => 'Instant noodles']]))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('stocks.data.0.qty', 1462)
@@ -283,9 +283,11 @@ class InventoryTest extends TestCase
             ->assertOk()
             ->viewData('page')['props']['stocks']['data'])->pluck('qty')->all();
 
-        $this->assertSame([1, 10, 99], $qtys('low'), 'lowest stock first');
-        $this->assertSame([99, 10, 1], $qtys('high'), 'highest stock first');
-        $this->assertSame([1, 10, 99], $qtys('bogus'), 'an unknown sort falls back to lowest-first');
+        $this->assertSame([1, 10, 99], $qtys('qty'), 'lowest stock first');
+        $this->assertSame([99, 10, 1], $qtys('-qty'), 'highest stock first');
+
+        // Spatie's query builder refuses a sort that was never allowed.
+        $this->actingAs($this->admin)->get(route('inventory.index', ['sort' => 'bogus']))->assertStatus(400);
 
         $names = collect($this->actingAs($this->admin)
             ->get(route('inventory.index', ['sort' => 'name']))
@@ -313,11 +315,11 @@ class InventoryTest extends TestCase
             );
 
         $this->actingAs($this->admin)
-            ->get(route('inventory.index', ['state' => 'oversold']))
+            ->get(route('inventory.index', ['filter' => ['state' => 'oversold']]))
             ->assertInertia(fn (AssertableInertia $p) => $p->has('stocks.data', 1)->where('stocks.data.0.id', $oversold->id));
 
         $this->actingAs($this->admin)
-            ->get(route('inventory.index', ['state' => 'low']))
+            ->get(route('inventory.index', ['filter' => ['state' => 'low']]))
             ->assertInertia(fn (AssertableInertia $p) => $p->has('stocks.data', 1)->where('stocks.data.0.id', $low->id));
     }
 

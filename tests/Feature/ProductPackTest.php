@@ -410,7 +410,7 @@ class ProductPackTest extends TestCase
         $case = $this->packOf($can, 24, 'Case of 24', '16.00');
 
         $this->actingAs($this->admin)
-            ->get(route('products.index', ['search' => $case->sku]))
+            ->get(route('products.index', ['filter' => ['search' => $case->sku]]))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('products.data', 1)

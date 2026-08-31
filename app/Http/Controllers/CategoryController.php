@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CategoryRequest;
 use App\Models\Category;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class CategoryController extends Controller
 {
@@ -18,15 +21,14 @@ class CategoryController extends Controller
         $this->authorize('viewAny', Category::class);
 
         return Inertia::render('Categories/Index', [
-            'categories' => Category::query()
+            'categories' => QueryBuilder::for(Category::class)
                 ->withCount('products')
-                ->when(
-                    $request->input('search'),
-                    fn ($q, $search) => $q->where('name', 'like', "%{$search}%")
-                )
+                ->allowedFilters(...[
+                    AllowedFilter::callback('search', fn (Builder $q, string $search) => $q->where('name', 'like', "%{$search}%")),
+                ])
                 ->orderBy('name')
                 ->get(),
-            'filters' => $request->only('search'),
+            'filters' => ['search' => (string) $request->input('filter.search', '')],
         ]);
     }
 

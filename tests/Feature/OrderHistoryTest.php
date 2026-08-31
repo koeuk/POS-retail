@@ -132,15 +132,15 @@ class OrderHistoryTest extends TestCase
         $this->sale(['order_no' => 'OTHER-1']);
 
         $this->actingAs($this->admin)
-            ->get(route('orders.index', ['search' => 'FINDME']))
+            ->get(route('orders.index', ['filter' => ['search' => 'FINDME']]))
             ->assertInertia(fn (AssertableInertia $p) => $p->has('orders.data', 1)->where('orders.data.0.id', $byNumber->id));
 
         $this->actingAs($this->admin)
-            ->get(route('orders.index', ['search' => 'Ada']))
+            ->get(route('orders.index', ['filter' => ['search' => 'Ada']]))
             ->assertInertia(fn (AssertableInertia $p) => $p->has('orders.data', 1)->where('orders.data.0.id', $byCustomer->id));
 
         $this->actingAs($this->admin)
-            ->get(route('orders.index', ['search' => $this->manager->name]))
+            ->get(route('orders.index', ['filter' => ['search' => $this->manager->name]]))
             ->assertInertia(fn (AssertableInertia $p) => $p->has('orders.data', 3));
     }
 
@@ -154,11 +154,11 @@ class OrderHistoryTest extends TestCase
         $card->payments()->create(['method' => 'card', 'amount' => '11.00']);
 
         $this->actingAs($this->admin)
-            ->get(route('orders.index', ['status' => 'refunded']))
+            ->get(route('orders.index', ['filter' => ['status' => 'refunded']]))
             ->assertInertia(fn (AssertableInertia $p) => $p->has('orders.data', 1)->where('orders.data.0.id', $refunded->id));
 
         $this->actingAs($this->admin)
-            ->get(route('orders.index', ['method' => 'card']))
+            ->get(route('orders.index', ['filter' => ['method' => 'card']]))
             ->assertInertia(fn (AssertableInertia $p) => $p->has('orders.data', 1)->where('orders.data.0.id', $card->id));
     }
 

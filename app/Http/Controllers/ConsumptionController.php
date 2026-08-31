@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 /**
  * What the owner took for themselves.
@@ -27,15 +29,21 @@ class ConsumptionController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $filters = $request->only('search', 'from', 'to');
+        $filters = [
+            'search' => (string) $request->input('filter.search', ''),
+            'from' => (string) $request->input('filter.from', ''),
+            'to' => (string) $request->input('filter.to', ''),
+        ];
 
-        $rows = $this->scoped($user)
+        $rows = QueryBuilder::for($this->scoped($user))
             ->with(['cashier:id,name'])
             ->with(['items' => fn ($q) => $q->select('id', 'order_id', 'product_name', 'qty')])
-            ->when($filters['search'] ?? null, fn (Builder $q, string $s) => $q
-                ->whereHas('items', fn ($i) => $i->where('product_name', 'like', "%{$s}%")))
-            ->when($filters['from'] ?? null, fn (Builder $q, string $from) => $q->businessDayFrom($from))
-            ->when($filters['to'] ?? null, fn (Builder $q, string $to) => $q->businessDayTo($to))
+            ->allowedFilters(...[
+                AllowedFilter::callback('search', fn (Builder $q, string $s) => $q
+                    ->whereHas('items', fn ($i) => $i->where('product_name', 'like', "%{$s}%"))),
+                AllowedFilter::callback('from', fn (Builder $q, string $from) => $q->businessDayFrom($from)),
+                AllowedFilter::callback('to', fn (Builder $q, string $to) => $q->businessDayTo($to)),
+            ])
             ->latestByBusinessMoment()
             ->paginate(PerPage::resolve($request))
             ->withQueryString();
@@ -48,7 +56,7 @@ class ConsumptionController extends Controller
 
         return Inertia::render('Consumption/Index', [
             'rows' => $rows,
-            'filters' => ['search' => $filters['search'] ?? '', 'from' => $filters['from'] ?? '', 'to' => $filters['to'] ?? ''],
+            'filters' => $filters,
             'summary' => [
                 'month_count' => $monthCount,
                 'month_value' => number_format($monthValue, 2, '.', ''),

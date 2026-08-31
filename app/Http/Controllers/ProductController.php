@@ -13,6 +13,7 @@ use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\PerPage;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class ProductController extends Controller
 {
@@ -27,9 +30,13 @@ class ProductController extends Controller
     {
         $this->authorize('viewAny', Product::class);
 
-        $filters = $request->only('search', 'category_id', 'status');
+        $filters = [
+            'search' => (string) $request->input('filter.search', ''),
+            'category_id' => (string) $request->input('filter.category_id', ''),
+            'status' => (string) $request->input('filter.status', ''),
+        ];
 
-        $products = Product::query()
+        $products = QueryBuilder::for(Product::class)
             /*
              * Base products only. A pack is a way of buying this product, not a
              * product of its own — it owns no stock, so listing it puts rows
@@ -43,24 +50,23 @@ class ProductController extends Controller
             // Cheapest and dearest way to buy it, for the range in the list.
             ->withMin('packs as pack_min_price', 'sell_price')
             ->withMax('packs as pack_max_price', 'sell_price')
-            ->when($filters['search'] ?? null, function ($query, string $search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('sku', 'like', "%{$search}%")
-                        ->orWhere('barcode', 'like', "%{$search}%")
-                        // Scanning a case's barcode should find the product it
-                        // belongs to, not nothing.
-                        ->orWhereHas('packs', fn ($p) => $p
-                            ->where('name', 'like', "%{$search}%")
+            ->allowedFilters(...[
+                AllowedFilter::callback('search', function (Builder $query, string $search) {
+                    $query->where(function (Builder $q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
                             ->orWhere('sku', 'like', "%{$search}%")
-                            ->orWhere('barcode', 'like', "%{$search}%"));
-                });
-            })
-            ->when($filters['category_id'] ?? null, fn ($q, $id) => $q->where('category_id', $id))
-            ->when(
-                ($filters['status'] ?? null) !== null && $filters['status'] !== '',
-                fn ($q) => $q->where('is_active', $filters['status'] === 'active')
-            )
+                            ->orWhere('barcode', 'like', "%{$search}%")
+                            // Scanning a case's barcode should find the product it
+                            // belongs to, not nothing.
+                            ->orWhereHas('packs', fn ($p) => $p
+                                ->where('name', 'like', "%{$search}%")
+                                ->orWhere('sku', 'like', "%{$search}%")
+                                ->orWhere('barcode', 'like', "%{$search}%"));
+                    });
+                }),
+                AllowedFilter::exact('category_id'),
+                AllowedFilter::callback('status', fn (Builder $q, string $status) => $q->where('is_active', $status === 'active')),
+            ])
             ->latest('id')
             ->paginate(PerPage::resolve($request))
             ->withQueryString();

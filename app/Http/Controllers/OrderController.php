@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 /**
  * Store-wide sales history.
@@ -28,9 +30,15 @@ class OrderController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $filters = $request->only('search', 'status', 'method', 'from', 'to');
+        $filters = [
+            'search' => (string) $request->input('filter.search', ''),
+            'status' => (string) $request->input('filter.status', ''),
+            'method' => (string) $request->input('filter.method', ''),
+            'from' => (string) $request->input('filter.from', ''),
+            'to' => (string) $request->input('filter.to', ''),
+        ];
 
-        $orders = $this->scoped($user)
+        $orders = QueryBuilder::for($this->scoped($user))
             ->with([
                 'cashier:id,name',
                 'store:id,name',
@@ -39,22 +47,21 @@ class OrderController extends Controller
                 'payments:id,order_id,method,amount',
             ])
             ->withCount('items')
-            ->when($filters['search'] ?? null, function (Builder $query, string $search) {
-                $query->where(function (Builder $q) use ($search) {
-                    $q->where('order_no', 'like', "%{$search}%")
-                        ->orWhereHas('cashier', fn ($c) => $c->where('name', 'like', "%{$search}%"))
-                        ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$search}%"));
-                });
-            })
-            ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
-            ->when(
-                $filters['method'] ?? null,
-                fn ($q, $method) => $q->whereHas('payments', fn ($p) => $p->where('method', $method))
-            )
-            // Filter on the business day too — the day the sale happened, not
-            // the day the row reached the server.
-            ->when($filters['from'] ?? null, fn ($q, $from) => $q->businessDayFrom($from))
-            ->when($filters['to'] ?? null, fn ($q, $to) => $q->businessDayTo($to))
+            ->allowedFilters(...[
+                AllowedFilter::callback('search', function (Builder $query, string $search) {
+                    $query->where(function (Builder $q) use ($search) {
+                        $q->where('order_no', 'like', "%{$search}%")
+                            ->orWhereHas('cashier', fn ($c) => $c->where('name', 'like', "%{$search}%"))
+                            ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$search}%"));
+                    });
+                }),
+                AllowedFilter::exact('status'),
+                AllowedFilter::callback('method', fn (Builder $q, string $method) => $q->whereHas('payments', fn ($p) => $p->where('method', $method))),
+                // Filter on the business day too — the day the sale happened,
+                // not the day the row reached the server.
+                AllowedFilter::callback('from', fn (Builder $q, string $from) => $q->businessDayFrom($from)),
+                AllowedFilter::callback('to', fn (Builder $q, string $to) => $q->businessDayTo($to)),
+            ])
             ->latestByBusinessMoment()
             ->paginate(PerPage::resolve($request))
             ->withQueryString();

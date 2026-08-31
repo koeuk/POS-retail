@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 /**
  * Money owed to the shop.
@@ -32,9 +34,12 @@ class DebtController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $filters = $request->only('search', 'state');
+        $filters = [
+            'search' => (string) $request->input('filter.search', ''),
+            'state' => (string) $request->input('filter.state', 'open'),
+        ];
 
-        $debts = $this->scoped($user)
+        $debts = QueryBuilder::for($this->scoped($user))
             ->with([
                 'customer:id,name,phone',
                 'cashier:id,name',
@@ -44,19 +49,19 @@ class DebtController extends Controller
                 'payments:id,order_id,method,amount,reference_no,created_at',
             ])
             ->withCount('items')
-            ->when($filters['search'] ?? null, function (Builder $q, string $search) {
-                $q->where(function (Builder $w) use ($search) {
-                    $w->where('order_no', 'like', "%{$search}%")
-                        ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$search}%")
-                            ->orWhere('phone', 'like', "%{$search}%"));
-                });
-            })
-            // Default to what is still owed; "settled" shows the paid-off history.
-            ->when(
-                ($filters['state'] ?? 'open') === 'open',
-                fn (Builder $q) => $q->whereColumn('paid_amount', '<', 'total'),
-                fn (Builder $q) => $q->whereColumn('paid_amount', '>=', 'total'),
-            )
+            ->allowedFilters(...[
+                AllowedFilter::callback('search', function (Builder $q, string $search) {
+                    $q->where(function (Builder $w) use ($search) {
+                        $w->where('order_no', 'like', "%{$search}%")
+                            ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$search}%")
+                                ->orWhere('phone', 'like', "%{$search}%"));
+                    });
+                }),
+                // Default to what is still owed; "settled" shows the paid-off history.
+                AllowedFilter::callback('state', fn (Builder $q, string $state) => $state === 'open'
+                    ? $q->whereColumn('paid_amount', '<', 'total')
+                    : $q->whereColumn('paid_amount', '>=', 'total'))->default('open'),
+            ])
             ->latestByBusinessMoment()
             ->paginate(PerPage::resolve($request))
             ->withQueryString();
@@ -67,7 +72,7 @@ class DebtController extends Controller
 
         return Inertia::render('Debts/Index', [
             'debts' => $debts,
-            'filters' => ['search' => $filters['search'] ?? '', 'state' => $filters['state'] ?? 'open'],
+            'filters' => $filters,
             'summary' => [
                 'open_count' => $openCount,
                 'owed' => number_format($owed, 2, '.', ''),

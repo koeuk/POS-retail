@@ -54,11 +54,13 @@ function reload() {
     router.get(
         route('orders.index'),
         {
-            search: search.value || undefined,
-            status: status.value === ALL ? undefined : status.value,
-            method: method.value === ALL ? undefined : method.value,
-            from: from.value || undefined,
-            to: to.value || undefined,
+            filter: {
+                search: search.value || undefined,
+                status: status.value === ALL ? undefined : status.value,
+                method: method.value === ALL ? undefined : method.value,
+                from: from.value || undefined,
+                to: to.value || undefined,
+            },
         },
         { preserveState: true, preserveScroll: true, replace: true },
     );

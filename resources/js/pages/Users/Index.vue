@@ -38,8 +38,10 @@ function reload() {
     router.get(
         route('users.index'),
         {
-            search: search.value || undefined,
-            role: roleFilter.value === ALL ? undefined : roleFilter.value,
+            filter: {
+                search: search.value || undefined,
+                role: roleFilter.value === ALL ? undefined : roleFilter.value,
+            },
         },
         { preserveState: true, preserveScroll: true, replace: true },
     );

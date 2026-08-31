@@ -56,17 +56,19 @@ const ALL = 'all';
 const search = ref(props.filters.search ?? '');
 const storeId = ref(props.filters.store_id ?? ALL);
 const state = ref(props.filters.state ?? ALL);
-const sort = ref(props.filters.sort ?? 'low');
+const sort = ref(props.filters.sort ?? 'qty');
 let debounce: ReturnType<typeof setTimeout>;
 
 function reload() {
     router.get(
         route('inventory.index'),
         {
-            search: search.value || undefined,
-            store_id: storeId.value === ALL ? undefined : storeId.value,
-            state: state.value === ALL ? undefined : state.value,
-            sort: sort.value === 'low' ? undefined : sort.value,
+            filter: {
+                search: search.value || undefined,
+                store_id: storeId.value === ALL ? undefined : storeId.value,
+                state: state.value === ALL ? undefined : state.value,
+            },
+            sort: sort.value === 'qty' ? undefined : sort.value,
         },
         { preserveState: true, preserveScroll: true, replace: true },
     );
@@ -369,8 +371,8 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                         <Select v-model="sort">
                             <SelectTrigger class="w-[11.5rem]" aria-label="Sort by"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="low">Stock: low to high</SelectItem>
-                                <SelectItem value="high">Stock: high to low</SelectItem>
+                                <SelectItem value="qty">Stock: low to high</SelectItem>
+                                <SelectItem value="-qty">Stock: high to low</SelectItem>
                                 <SelectItem value="name">Name A–Z</SelectItem>
                             </SelectContent>
                         </Select>

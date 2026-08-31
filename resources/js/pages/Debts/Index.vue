@@ -54,7 +54,7 @@ let debounce: ReturnType<typeof setTimeout>;
 function reload() {
     router.get(
         route('debts.index'),
-        { search: search.value || undefined, state: state.value },
+        { filter: { search: search.value || undefined, state: state.value } },
         { preserveState: true, preserveScroll: true, replace: true },
     );
 }

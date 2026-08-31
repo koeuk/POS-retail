@@ -41,7 +41,7 @@ let debounce: ReturnType<typeof setTimeout>;
 function reload() {
     router.get(
         route('consumption.index'),
-        { search: search.value || undefined, from: from.value || undefined, to: to.value || undefined },
+        { filter: { search: search.value || undefined, from: from.value || undefined, to: to.value || undefined } },
         { preserveState: true, preserveScroll: true, replace: true },
     );
 }

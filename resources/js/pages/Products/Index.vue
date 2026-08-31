@@ -41,9 +41,11 @@ function applyFilters() {
     router.get(
         route('products.index'),
         {
-            search: search.value || undefined,
-            category_id: categoryId.value === ALL ? undefined : categoryId.value,
-            status: status.value === ALL ? undefined : status.value,
+            filter: {
+                search: search.value || undefined,
+                category_id: categoryId.value === ALL ? undefined : categoryId.value,
+                status: status.value === ALL ? undefined : status.value,
+            },
         },
         { preserveState: true, preserveScroll: true, replace: true },
     );

@@ -27,7 +27,11 @@ let debounce: ReturnType<typeof setTimeout>;
 watch(search, () => {
     clearTimeout(debounce);
     debounce = setTimeout(() => {
-        router.get(route('customers.index'), { search: search.value || undefined }, { preserveState: true, preserveScroll: true, replace: true });
+        router.get(
+            route('customers.index'),
+            { filter: { search: search.value || undefined } },
+            { preserveState: true, preserveScroll: true, replace: true },
+        );
     }, 300);
 });
 

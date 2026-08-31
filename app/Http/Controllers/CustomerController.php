@@ -5,12 +5,15 @@ namespace App\Http\Controllers;
 use App\Http\Requests\CustomerRequest;
 use App\Models\Customer;
 use App\Support\PerPage;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class CustomerController extends Controller
 {
@@ -19,20 +22,22 @@ class CustomerController extends Controller
         $this->authorize('viewAny', Customer::class);
 
         return Inertia::render('Customers/Index', [
-            'customers' => Customer::query()
+            'customers' => QueryBuilder::for(Customer::class)
                 ->withCount('orders')
                 ->withSum('orders as spent_total', 'total')
-                ->when($request->input('search'), function ($query, string $search) {
-                    $query->where(function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('phone', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%");
-                    });
-                })
+                ->allowedFilters(...[
+                    AllowedFilter::callback('search', function (Builder $query, string $search) {
+                        $query->where(function (Builder $q) use ($search) {
+                            $q->where('name', 'like', "%{$search}%")
+                                ->orWhere('phone', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        });
+                    }),
+                ])
                 ->orderBy('name')
                 ->paginate(PerPage::resolve($request))
                 ->withQueryString(),
-            'filters' => $request->only('search'),
+            'filters' => ['search' => (string) $request->input('filter.search', '')],
         ]);
     }
 
