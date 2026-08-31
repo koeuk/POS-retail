@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Enums\SaleType;
 use App\Models\Customer;
 use App\Models\Order;
+use App\Models\Product;
 use App\Models\Setting;
+use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
 use App\Services\SalesReporter;
@@ -128,5 +130,106 @@ class ManualDebtTest extends TestCase
             'customer_id' => $this->customer->id,
             'amount' => '5000',
         ])->assertForbidden();
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Debt with a real product on the line */
+    /* ------------------------------------------------------------------ */
+
+    private function beer(int $stock = 100): Product
+    {
+        $beer = Product::factory()->create(['name' => 'Hanuman', 'unit' => 'can', 'sell_price' => '2500']);
+        Stock::create(['product_id' => $beer->id, 'store_id' => $this->store->id, 'qty' => $stock]);
+
+        return $beer;
+    }
+
+    /** Beer on credit is real cans off the shelf — the amount path never moves stock, this must. */
+    public function test_a_product_debt_moves_stock_like_a_till_sale(): void
+    {
+        $beer = $this->beer(100);
+
+        $this->actingAs($this->admin)->post(route('debts.store'), [
+            'customer_id' => $this->customer->id,
+            'product_id' => $beer->id,
+            'qty' => 6,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $order = Order::firstOrFail();
+
+        $this->assertSame('15000.00', $order->total);
+        $this->assertSame('15000.00', $order->outstanding());
+        $this->assertSame($beer->id, $order->items()->value('product_id'));
+        $this->assertSame('Hanuman', $order->items()->value('product_name'));
+
+        // 100 − 6. The shelf tells the truth about credit sales too.
+        $this->assertSame(94, Stock::where('product_id', $beer->id)->value('qty'));
+    }
+
+    /** A pack on the line drains the parent in base units, exactly as the till does. */
+    public function test_a_pack_debt_drains_the_parent_shelf(): void
+    {
+        $beer = $this->beer(100);
+        $six = Product::factory()->create([
+            'name' => '6 cans', 'parent_product_id' => $beer->id, 'units_per_pack' => 6,
+            'unit' => 'can', 'sell_price' => '15000',
+        ]);
+
+        $this->actingAs($this->admin)->post(route('debts.store'), [
+            'customer_id' => $this->customer->id,
+            'product_id' => $six->id,
+            'qty' => 2,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame('30000.00', Order::firstOrFail()->total);
+        $this->assertSame(88, Stock::where('product_id', $beer->id)->value('qty'));
+    }
+
+    /** The catalogue prices the line. A client-sent amount must not override it. */
+    public function test_the_price_comes_from_the_catalogue_not_the_client(): void
+    {
+        $beer = $this->beer();
+
+        $this->actingAs($this->admin)->post(route('debts.store'), [
+            'customer_id' => $this->customer->id,
+            'product_id' => $beer->id,
+            'qty' => 1,
+            'amount' => '1',
+        ])->assertRedirect();
+
+        $this->assertSame('2500.00', Order::firstOrFail()->total);
+    }
+
+    public function test_a_product_needs_a_quantity_and_an_amountless_form_needs_an_amount(): void
+    {
+        $beer = $this->beer();
+
+        $this->actingAs($this->admin)->post(route('debts.store'), [
+            'customer_id' => $this->customer->id,
+            'product_id' => $beer->id,
+        ])->assertSessionHasErrors('qty');
+
+        $this->actingAs($this->admin)->post(route('debts.store'), [
+            'customer_id' => $this->customer->id,
+        ])->assertSessionHasErrors('amount');
+    }
+
+    public function test_the_product_lookup_finds_packs_by_their_parents_name(): void
+    {
+        $beer = $this->beer();
+        Product::factory()->create([
+            'name' => '6 cans', 'parent_product_id' => $beer->id, 'units_per_pack' => 6,
+            'unit' => 'can', 'sell_price' => '15000',
+        ]);
+
+        $results = $this->actingAs($this->admin)
+            ->getJson(route('debts.products', ['q' => 'Hanuman']))
+            ->assertOk()
+            ->json('results');
+
+        $names = collect($results)->pluck('name');
+        $this->assertTrue($names->contains('Hanuman'));
+        $this->assertTrue($names->contains('6 cans'));
+        $this->assertSame('Hanuman', collect($results)->firstWhere('name', '6 cans')['parent_name']);
     }
 }

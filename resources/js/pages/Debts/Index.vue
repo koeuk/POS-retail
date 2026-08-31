@@ -109,7 +109,70 @@ interface PickedCustomer {
 }
 
 const adding = ref(false);
-const addForm = useForm({ customer_id: '' as string | number, amount: '', note: '' });
+const addForm = useForm({
+    customer_id: '' as string | number,
+    product_id: '' as string | number,
+    qty: 1,
+    amount: '',
+    note: '',
+});
+
+/*
+ * What they took, when it is a real product. Priced by the catalogue and it
+ * moves stock like a till sale — beer on credit is still cans off the shelf.
+ * Left unpicked, the dialog falls back to a typed amount, which moves nothing.
+ */
+interface PickedProduct {
+    id: number;
+    name: string;
+    sell_price: string;
+    unit: string;
+    units_per_pack: number;
+    parent_name: string | null;
+}
+
+const pickedProduct = ref<PickedProduct | null>(null);
+const productQuery = ref('');
+const productResults = ref<PickedProduct[]>([]);
+let productDebounce: ReturnType<typeof setTimeout>;
+let productSeq = 0;
+
+async function searchProducts() {
+    const seq = ++productSeq;
+
+    try {
+        const response = await fetch(`${route('debts.products')}?q=${encodeURIComponent(productQuery.value)}`, {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        });
+        if (!response.ok) throw new Error(String(response.status));
+        const data = await response.json();
+        if (seq === productSeq) productResults.value = data.results ?? [];
+    } catch {
+        if (seq === productSeq) productResults.value = [];
+    }
+}
+
+watch(productQuery, () => {
+    clearTimeout(productDebounce);
+    productDebounce = setTimeout(searchProducts, 250);
+});
+
+function pickProduct(product: PickedProduct) {
+    pickedProduct.value = product;
+    addForm.product_id = product.id;
+    addForm.qty = 1;
+}
+
+function unpickProduct() {
+    pickedProduct.value = null;
+    addForm.product_id = '';
+    void searchProducts();
+}
+
+const lineTotal = computed(() =>
+    pickedProduct.value ? Number(pickedProduct.value.sell_price) * Math.max(1, Number(addForm.qty) || 1) : 0,
+);
 
 /** Who the debt lands on. Set by the row's + button, or searched for. */
 const picked = ref<PickedCustomer | null>(null);
@@ -148,8 +211,12 @@ function openAdd(customer: PickedCustomer | null = null) {
     addForm.customer_id = customer?.id ?? '';
     customerQuery.value = '';
     customerResults.value = [];
+    pickedProduct.value = null;
+    productQuery.value = '';
+    productResults.value = [];
 
     if (!customer) void searchCustomers();
+    void searchProducts();
 }
 
 function pickCustomer(customer: PickedCustomer) {
@@ -158,7 +225,16 @@ function pickCustomer(customer: PickedCustomer) {
 }
 
 function submitAdd() {
-    addForm.post(route('debts.store'), {
+    addForm
+        .transform((data) => ({
+            ...data,
+            // One path or the other, never a blend the server has to untangle.
+            product_id: pickedProduct.value ? data.product_id : null,
+            qty: pickedProduct.value ? data.qty : null,
+            amount: pickedProduct.value ? null : data.amount,
+            note: pickedProduct.value ? null : data.note,
+        }))
+        .post(route('debts.store'), {
         preserveScroll: true,
         onSuccess: () => (adding.value = false),
     });

@@ -185,6 +185,15 @@ const typedUnits = computed(() => {
     return (Number(form.quantity) || 0) * each + Math.max(0, Number(form.loose) || 0);
 });
 
+/*
+ * The first field is "how many cases" the moment a case size is entered —
+ * an unlabeled "Quantity" left people guessing whether they were typing
+ * cases or units. Falls back to the product's own words when they name
+ * the container something else (កេស, pack, box…).
+ */
+const container = computed(() => form.unit_label.trim() || 'case');
+const caseEntry = computed(() => Number(form.units_each) > 1);
+
 const resulting = computed(() => {
     if (!adjusting.value) return 0;
     const q = typedUnits.value;
@@ -543,7 +552,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
 
                         <div class="grid gap-2">
                             <Label for="qty">
-                                {{ form.mode === 'count' ? 'Counted on the shelf' : 'Quantity' }}
+                                {{ form.mode === 'count' ? 'Counted on the shelf' : caseEntry ? `Number of ${form.unit_label.trim() || 'cases'}` : 'Quantity' }}
                             </Label>
                             <Input id="qty" v-model="form.quantity" type="number" min="0" inputmode="numeric" class="tabular font-mono" />
                             <InputError :message="form.errors.quantity" />
@@ -556,7 +565,10 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                             by product, so nothing is assumed.
                         -->
                         <div class="grid gap-2">
-                            <Label for="units-each">Each contains <span class="text-muted-foreground">(optional)</span></Label>
+                            <Label for="units-each">
+                                {{ adjusting?.product?.unit ?? 'Units' }} in each {{ container }}
+                                <span class="text-muted-foreground">(optional)</span>
+                            </Label>
                             <div class="flex gap-2">
                                 <Input
                                     id="units-each"

@@ -7,12 +7,14 @@ use App\Enums\PaymentMethod;
 use App\Enums\SaleType;
 use App\Models\Customer;
 use App\Models\Order;
+use App\Models\Product;
 use App\Models\User;
 use App\Services\OrderSyncService;
 use App\Support\Currency;
 use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -90,6 +92,41 @@ class DebtController extends Controller
 
     /** Record money received against a debt. */
     /**
+     * The one line a manual debt carries.
+     *
+     * With a product, the catalogue prices it — the client sends only an id
+     * and a quantity, never a price, so a hand-edited request cannot put beer
+     * on the book at ៛1. The sync service then moves stock exactly as a till
+     * sale would, packs included. Without one, it is the typed amount under
+     * the shopkeeper's own words, and no shelf moves.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function debtLine(array $data): array
+    {
+        if ($data['product_id'] ?? null) {
+            $product = Product::query()->active()->findOrFail($data['product_id']);
+
+            return [
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'qty' => (int) $data['qty'],
+                'unit_price' => $product->sell_price,
+                'discount' => 0,
+            ];
+        }
+
+        return [
+            'product_id' => null,
+            'product_name' => trim((string) ($data['note'] ?? '')) ?: 'Goods on credit',
+            'qty' => 1,
+            'unit_price' => $data['amount'],
+            'discount' => 0,
+        ];
+    }
+
+    /**
      * Put more on the book without a trip through the till.
      *
      * A customer who already owes takes more goods — rice, oil, whatever was
@@ -106,7 +143,15 @@ class DebtController extends Controller
     {
         $data = $request->validate([
             'customer_id' => ['required', 'integer', Rule::exists('customers', 'id')],
-            'amount' => ['required', 'numeric', 'min:0.01', 'max:99999999'],
+
+            /*
+             * Two ways onto the book: a real product (they took beer — the
+             * shelf must move), or a typed amount (a scribbled total — no
+             * shelf involved). Exactly one of the two.
+             */
+            'product_id' => ['nullable', 'integer', Rule::exists('products', 'id')],
+            'qty' => ['required_with:product_id', 'integer', 'min:1', 'max:100000'],
+            'amount' => ['required_without:product_id', 'nullable', 'numeric', 'min:0.01', 'max:99999999'],
             'note' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -116,13 +161,7 @@ class DebtController extends Controller
                 'customer_id' => (int) $data['customer_id'],
                 'sale_type' => SaleType::Debt->value,
                 'discount_amount' => 0,
-                'items' => [[
-                    'product_id' => null,
-                    'product_name' => trim((string) ($data['note'] ?? '')) ?: 'Goods on credit',
-                    'qty' => 1,
-                    'unit_price' => $data['amount'],
-                    'discount' => 0,
-                ]],
+                'items' => [$this->debtLine($data)],
                 // Nothing has been paid — that is the point of a debt.
                 'payments' => [],
             ], $request->user());
@@ -144,6 +183,40 @@ class DebtController extends Controller
         } catch (QueryException $e) {
             return $this->failed($e, 'The debt could not be recorded. Nothing was added — try again.');
         }
+    }
+
+    /**
+     * Products for the add-debt picker, packs included.
+     *
+     * Packs are product rows of their own, so "Hanuman" and "6 cans" both
+     * come back — each carries its own price, and picking the pack later
+     * moves the parent's stock in base units, exactly as the till does.
+     */
+    public function productLookup(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->input('q'));
+
+        $rows = Product::query()
+            ->active()
+            ->with('parent:id,name')
+            ->when($q !== '', fn (Builder $query) => $query->where(fn (Builder $w) => $w
+                ->where('name', 'like', "%{$q}%")
+                ->orWhere('sku', 'like', "%{$q}%")
+                ->orWhere('barcode', 'like', "%{$q}%")
+                ->orWhereHas('parent', fn ($p) => $p->where('name', 'like', "%{$q}%"))))
+            ->orderBy('name')
+            ->limit(20)
+            ->get()
+            ->map(fn (Product $p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'sell_price' => $p->sell_price,
+                'unit' => $p->unit,
+                'units_per_pack' => $p->units_per_pack,
+                'parent_name' => $p->parent?->name,
+            ]);
+
+        return response()->json(['results' => $rows]);
     }
 
     public function settle(Request $request, Order $order): RedirectResponse
