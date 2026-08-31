@@ -124,10 +124,14 @@ class OrderSyncService
             'subtotal' => $totals->subtotal(),
             'discount_amount' => $totals->discountAmount(),
             'total' => $totals->total(),
-            // A debt is recorded as owed in full: whatever the till sent as
-            // "paid" is ignored, because nothing changed hands.
-            'paid_amount' => $saleType->isReceivable() ? '0.00' : OrderTotals::toDecimal($paid),
-            'change_amount' => OrderTotals::toDecimal($change),
+            // A debt may carry a deposit — money that really crossed the
+            // counter — and the rest is owed. Capped at the bill because sync
+            // never rejects a completed sale: a till that somehow sends more
+            // simply produces a debt born settled, not a stuck queue.
+            'paid_amount' => OrderTotals::toDecimal(
+                $saleType->isReceivable() ? min($paid, OrderTotals::toMinor($totals->total())) : $paid
+            ),
+            'change_amount' => OrderTotals::toDecimal($saleType->isReceivable() ? 0 : $change),
             'status' => OrderStatus::Completed,
             'synced_at' => now(),
             'created_offline_at' => $offlineAt,
@@ -161,15 +165,20 @@ class OrderSyncService
         }
 
         /*
-         * A debt has no payment at the till — nothing changed hands, so there
-         * is no ledger row to write. Recording the "0.00 cash" the till sends
-         * would be harmless, but recording a real amount would be a lie that
-         * settle() later sums into paid_amount, double-counting the debt.
-         * Owner take-outs are the same: no money, no row.
+         * What lands in the payments ledger. A deposit on a debt is real money
+         * and gets its row — settle() sums this ledger into paid_amount, so
+         * the row IS the deposit's paper trail. The "0.00 cash" a till sends
+         * for an all-in-debt sale is not a payment and is skipped, and owner
+         * take-outs move no money at all.
          */
-        $paymentsToRecord = $saleType->isReceivable() || ! $saleType->isRevenue()
-            ? []
-            : ($payload['payments'] ?? []);
+        $paymentsToRecord = match (true) {
+            ! $saleType->isRevenue() => [],
+            $saleType->isReceivable() => array_values(array_filter(
+                $payload['payments'] ?? [],
+                fn (array $payment) => OrderTotals::toMinor($payment['amount'] ?? 0) > 0,
+            )),
+            default => $payload['payments'] ?? [],
+        };
 
         foreach ($paymentsToRecord as $payment) {
             $order->payments()->create([

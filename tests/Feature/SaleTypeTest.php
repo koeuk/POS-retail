@@ -53,6 +53,15 @@ class SaleTypeTest extends TestCase
         ], $overrides)]]);
     }
 
+    /** A debt sale; the payment sent along is the deposit taken at the till. */
+    private function debt(Customer $customer, string $deposit = '0.00'): TestResponse
+    {
+        return $this->sync([
+            'sale_type' => 'debt',
+            'payments' => [['method' => 'cash', 'amount' => $deposit, 'reference_no' => null]],
+        ], $customer->id);
+    }
+
     private function stock(): int
     {
         return (int) Stock::where('product_id', $this->product->id)->where('store_id', $this->store->id)->value('qty');
@@ -92,21 +101,55 @@ class SaleTypeTest extends TestCase
     /* Debt: revenue AND a receivable, and it needs a name */
     /* ------------------------------------------------------------------ */
 
-    public function test_a_debt_is_recorded_as_owed_in_full_regardless_of_what_the_till_sent(): void
+    public function test_a_debt_with_no_deposit_is_owed_in_full_and_writes_no_payment_row(): void
     {
         $c = Customer::factory()->create();
 
-        // The till sends a "payment" of 20.00; nothing actually changed hands.
-        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();
+        $this->debt($c)->assertOk();
 
         $order = Order::firstOrFail();
         $this->assertSame('20.00', $order->total);
-        $this->assertSame('0.00', $order->paid_amount, 'a debt is unpaid by definition');
+        $this->assertSame('0.00', $order->paid_amount);
         $this->assertSame('20.00', $order->outstanding());
+        $this->assertSame(0, $order->payments()->count(), 'the till\'s "0.00 cash" is not a payment');
         $this->assertSame(18, $this->stock());
 
         // It still counts as a sale — the goods were sold, just not yet paid for.
         $this->assertSame('20.00', (new SalesReporter($this->store->id))->summaryFor(SalesReporter::businessNow()->startOfDay())['sales']);
+    }
+
+    public function test_a_deposit_on_a_debt_is_recorded_and_the_rest_is_owed(): void
+    {
+        $c = Customer::factory()->create();
+
+        $this->debt($c, '5.00')->assertOk();
+
+        $order = Order::firstOrFail();
+        $this->assertSame('5.00', $order->paid_amount, 'the deposit really changed hands');
+        $this->assertSame('15.00', $order->outstanding());
+        $this->assertSame('0.00', $order->change_amount);
+        $this->assertSame(1, $order->payments()->count(), 'the deposit has its ledger row, so settle() can sum it');
+        $this->assertSame('5.00', $order->payments()->first()->amount);
+
+        // Settling the remainder closes the debt — the deposit already counted.
+        $this->actingAs($this->admin)
+            ->post(route('debts.settle', $order), ['amount' => '15.00', 'method' => 'cash'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('0.00', $order->fresh()->outstanding());
+    }
+
+    public function test_a_deposit_can_never_exceed_the_bill(): void
+    {
+        $c = Customer::factory()->create();
+
+        // Sync never rejects a completed sale, so an over-payment is capped:
+        // the debt is simply born settled rather than stuck in the queue.
+        $this->debt($c, '25.00')->assertOk();
+
+        $order = Order::firstOrFail();
+        $this->assertSame('20.00', $order->paid_amount);
+        $this->assertSame('0.00', $order->outstanding());
+        $this->assertSame('0.00', $order->change_amount, 'a debt never gives change');
     }
 
     /** Money nobody can collect is not a debt, it is a loss. */
@@ -130,7 +173,7 @@ class SaleTypeTest extends TestCase
     public function test_a_debt_can_be_paid_off_in_parts_and_is_settled_when_paid_in_full(): void
     {
         $c = Customer::factory()->create(['name' => 'Ada']);
-        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();
+        $this->debt($c)->assertOk();
         $order = Order::firstOrFail();
 
         $this->actingAs($this->admin)
@@ -152,7 +195,7 @@ class SaleTypeTest extends TestCase
     public function test_you_cannot_pay_more_than_is_owed(): void
     {
         $c = Customer::factory()->create();
-        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();
+        $this->debt($c)->assertOk();
         $order = Order::firstOrFail();
 
         $this->actingAs($this->admin)
@@ -166,7 +209,7 @@ class SaleTypeTest extends TestCase
     public function test_a_debt_cannot_be_settled_on_credit(): void
     {
         $c = Customer::factory()->create();
-        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();
+        $this->debt($c)->assertOk();
 
         $this->actingAs($this->admin)
             ->post(route('debts.settle', Order::firstOrFail()), ['amount' => '20.00', 'method' => 'credit'])
@@ -181,8 +224,8 @@ class SaleTypeTest extends TestCase
     {
         $a = Customer::factory()->create(['name' => 'Ada']);
         $b = Customer::factory()->create(['name' => 'Bob']);
-        $this->sync(['sale_type' => 'debt'], $a->id)->assertOk();
-        $this->sync(['sale_type' => 'debt'], $b->id)->assertOk();
+        $this->debt($a)->assertOk();
+        $this->debt($b)->assertOk();
         $this->sync(['sale_type' => 'customer'])->assertOk(); // must not appear
 
         $this->actingAs($this->admin)
@@ -204,7 +247,7 @@ class SaleTypeTest extends TestCase
     public function test_each_debt_row_carries_its_items_and_payments(): void
     {
         $c = Customer::factory()->create(['name' => 'Ada']);
-        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();
+        $this->debt($c)->assertOk();
         $order = Order::firstOrFail();
         $this->actingAs($this->admin)->post(route('debts.settle', $order), ['amount' => '5.00', 'method' => 'cash']);
 
@@ -258,7 +301,7 @@ class SaleTypeTest extends TestCase
         $c = Customer::factory()->create();
 
         $this->sync(['sale_type' => 'myself'])->assertOk();
-        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();
+        $this->debt($c)->assertOk();
         $this->sync(['sale_type' => 'customer'])->assertOk();
 
         $this->assertSame(
@@ -274,7 +317,7 @@ class SaleTypeTest extends TestCase
     public function test_the_order_page_shows_a_debt_only_while_something_is_owed(): void
     {
         $c = Customer::factory()->create(['name' => 'Sok Dara']);
-        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();
+        $this->debt($c)->assertOk();
         $order = Order::firstOrFail();
 
         // Unpaid: the page carries the full balance.
@@ -325,7 +368,7 @@ class SaleTypeTest extends TestCase
     public function test_the_dashboard_shows_the_receivable_and_the_owners_own_take(): void
     {
         $c = Customer::factory()->create();
-        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();   // 20.00 out on credit
+        $this->debt($c)->assertOk();   // 20.00 out on credit
         $this->sync(['sale_type' => 'myself'])->assertOk();          // 20.00 taken for myself
         $this->sync(['sale_type' => 'customer'])->assertOk();        // ordinary sale — in neither card
 

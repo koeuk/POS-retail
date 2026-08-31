@@ -5,6 +5,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import Cart from '@/Pos/components/Cart.vue';
 import Checkout from '@/Pos/components/Checkout.vue';
 import CustomerPicker from '@/Pos/components/CustomerPicker.vue';
+import DepositDialog from '@/Pos/components/DepositDialog.vue';
 import PaymentModal from '@/Pos/components/PaymentModal.vue';
 import ProductGrid from '@/Pos/components/ProductGrid.vue';
 import SyncStatusBadge from '@/Pos/components/SyncStatusBadge.vue';
@@ -40,6 +41,7 @@ const registerId = ref<number | null>(null);
 const paying = ref(false);
 const paymentOpen = ref(false);
 const pickerOpen = ref(false);
+const depositOpen = ref(false);
 
 /*
  * Only a customer sale takes money at the till, so only it opens the
@@ -52,7 +54,21 @@ function startCheckout() {
         paymentOpen.value = true;
         return;
     }
+
+    // A debt often starts with some money down, so it gets its own ask.
+    // Owner take-outs stay silent: no money moves, nothing to key in.
+    if (cart.saleType === 'debt') {
+        depositOpen.value = true;
+        return;
+    }
+
     void completeSale({ method: 'cash', amount: 0, reference: null });
+}
+
+/** The deposit is ordinary cash — it flows through the same payment path. */
+function takeDeposit(deposit: number) {
+    depositOpen.value = false;
+    void completeSale({ method: 'cash', amount: deposit, reference: null });
 }
 
 function attachCustomer(c: { id: number; name: string }) {
@@ -363,6 +379,14 @@ onMounted(loadFeed);
         </Sheet>
 
         <CustomerPicker :open="pickerOpen" @close="pickerOpen = false" @pick="attachCustomer" />
+        <DepositDialog
+            :open="depositOpen"
+            :total="cart.totals.total"
+            :currency="currency"
+            :customer-name="cart.customerName"
+            @close="depositOpen = false"
+            @confirm="takeDeposit"
+        />
 
         <PaymentModal
             :open="paymentOpen"
