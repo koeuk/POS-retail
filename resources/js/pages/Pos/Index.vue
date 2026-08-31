@@ -5,7 +5,6 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import Cart from '@/Pos/components/Cart.vue';
 import Checkout from '@/Pos/components/Checkout.vue';
 import CustomerPicker from '@/Pos/components/CustomerPicker.vue';
-import DepositDialog from '@/Pos/components/DepositDialog.vue';
 import PaymentModal from '@/Pos/components/PaymentModal.vue';
 import ProductGrid from '@/Pos/components/ProductGrid.vue';
 import SyncStatusBadge from '@/Pos/components/SyncStatusBadge.vue';
@@ -41,7 +40,8 @@ const registerId = ref<number | null>(null);
 const paying = ref(false);
 const paymentOpen = ref(false);
 const pickerOpen = ref(false);
-const depositOpen = ref(false);
+// True when the picker was opened by "Record debt": same form, plus the money step.
+const pickerAsksDeposit = ref(false);
 
 /*
  * Only a customer sale takes money at the till, so only it opens the
@@ -55,10 +55,12 @@ function startCheckout() {
         return;
     }
 
-    // A debt often starts with some money down, so it gets its own ask.
+    // A debt often starts with some money down. The picker handles both
+    // halves in one form: who owes, and how much of it is paid right now.
     // Owner take-outs stay silent: no money moves, nothing to key in.
     if (cart.saleType === 'debt') {
-        depositOpen.value = true;
+        pickerAsksDeposit.value = true;
+        pickerOpen.value = true;
         return;
     }
 
@@ -66,8 +68,10 @@ function startCheckout() {
 }
 
 /** The deposit is ordinary cash — it flows through the same payment path. */
-function takeDeposit(deposit: number) {
-    depositOpen.value = false;
+function recordDebt(c: { id: number; name: string }, deposit: number) {
+    cart.customerId = c.id;
+    cart.customerName = c.name;
+    pickerOpen.value = false;
     void completeSale({ method: 'cash', amount: deposit, reference: null });
 }
 
@@ -326,7 +330,7 @@ onMounted(loadFeed);
                 <!-- Desktop keeps the cart permanently alongside the grid. -->
                 <aside class="hidden min-h-0 w-[24rem] shrink-0 flex-col lg:flex">
                     <Cart :currency="currency" />
-                    <Checkout :currency="currency" @pay="startCheckout" @pick-customer="pickerOpen = true" />
+                    <Checkout :currency="currency" @pay="startCheckout" @pick-customer="((pickerAsksDeposit = false), (pickerOpen = true))" />
                 </aside>
             </main>
 
@@ -374,18 +378,19 @@ onMounted(loadFeed);
                 </SheetHeader>
 
                 <Cart :currency="currency" />
-                <Checkout :currency="currency" @pay="startCheckout" @pick-customer="pickerOpen = true" />
+                <Checkout :currency="currency" @pay="startCheckout" @pick-customer="((pickerAsksDeposit = false), (pickerOpen = true))" />
             </SheetContent>
         </Sheet>
 
-        <CustomerPicker :open="pickerOpen" @close="pickerOpen = false" @pick="attachCustomer" />
-        <DepositDialog
-            :open="depositOpen"
+        <CustomerPicker
+            :open="pickerOpen"
+            :with-deposit="pickerAsksDeposit"
             :total="cart.totals.total"
             :currency="currency"
-            :customer-name="cart.customerName"
-            @close="depositOpen = false"
-            @confirm="takeDeposit"
+            :preselected="cart.customerId ? { id: cart.customerId, name: cart.customerName ?? '', phone: null } : null"
+            @close="pickerOpen = false"
+            @pick="attachCustomer"
+            @confirm="recordDebt"
         />
 
         <PaymentModal

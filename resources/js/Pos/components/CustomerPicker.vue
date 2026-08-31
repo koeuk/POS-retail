@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import type { CurrencyDef } from '@/composables/useCurrency';
 import { http } from '@/Pos/lib/http';
-import { Plus, Search, UserRound } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { formatMoney } from '@/Pos/lib/money';
+import { HandCoins, Plus, Search, UserRound } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 
 interface Customer {
     id: number;
@@ -14,8 +16,23 @@ interface Customer {
     phone: string | null;
 }
 
-const props = defineProps<{ open: boolean }>();
-const emit = defineEmits<{ close: []; pick: [customer: Customer] }>();
+/*
+ * One form, two moments. Opened from the "In debt" chip it only picks who
+ * owes (the bill is still growing, so money talk is premature). Opened from
+ * "Record debt" (`withDeposit`) the same dialog carries on to the money:
+ * pick the name, then say how much of the bill is paid right now — plenty
+ * of customers put SOMETHING down — and the rest is the debt.
+ */
+const props = defineProps<{
+    open: boolean;
+    withDeposit?: boolean;
+    total?: number;
+    currency?: CurrencyDef;
+    /** Already attached to the cart — the deposit step starts from them. */
+    preselected?: Customer | null;
+}>();
+
+const emit = defineEmits<{ close: []; pick: [customer: Customer]; confirm: [customer: Customer, deposit: number] }>();
 
 const query = ref('');
 const results = ref<Customer[]>([]);
@@ -50,13 +67,30 @@ watch(
         if (!open) return;
         query.value = '';
         creating.value = false;
-        void search();
+        raw.value = '';
+        chosen.value = props.withDeposit ? (props.preselected ?? null) : null;
+        if (!chosen.value) void search();
     },
 );
 watch(query, () => {
     clearTimeout(debounce);
     debounce = setTimeout(search, 250);
 });
+
+function choose(c: Customer) {
+    if (!props.withDeposit) {
+        emit('pick', c);
+        return;
+    }
+    chosen.value = c;
+}
+
+/** Back from the money step to the list — wrong name happens. */
+function changeCustomer() {
+    chosen.value = null;
+    raw.value = '';
+    void search();
+}
 
 /* Inline create. */
 const creating = ref(false);
@@ -69,7 +103,7 @@ async function create() {
     saving.value = true;
     try {
         const { data } = await http.post<Customer>('/customers', { name: query.value.trim(), phone: newPhone.value.trim() || null });
-        emit('pick', data);
+        choose(data);
     } catch (e: unknown) {
         const msg = (e as { response?: { data?: { message?: string } } }).response?.data?.message;
         createError.value = msg ?? 'Could not save the customer.';
@@ -77,6 +111,19 @@ async function create() {
         saving.value = false;
     }
 }
+
+/* The money step. */
+const chosen = ref<Customer | null>(null);
+const raw = ref('');
+
+const deposit = computed(() => Number(raw.value) || 0);
+const owed = computed(() => Math.max(0, (props.total ?? 0) - deposit.value));
+
+/* A deposit that covers the bill is not a debt — that sale is a customer sale. */
+const coversEverything = computed(() => (props.total ?? 0) > 0 && deposit.value >= (props.total ?? 0));
+const validDeposit = computed(() => deposit.value > 0 && !coversEverything.value);
+
+const money = (v: number) => (props.currency ? formatMoney(v, props.currency) : String(v));
 </script>
 
 <template>
@@ -84,10 +131,51 @@ async function create() {
         <DialogContent class="max-w-sm">
             <DialogHeader>
                 <DialogTitle>Who owes this?</DialogTitle>
-                <DialogDescription>A debt has to have a name on it, or there is nobody to collect from.</DialogDescription>
+                <DialogDescription>
+                    <template v-if="withDeposit && chosen">
+                        <strong class="text-foreground">{{ chosen.name }}</strong> owes
+                        <strong class="tabular font-mono text-foreground">{{ money(total ?? 0) }}</strong> — take part of it now, or put the whole
+                        bill in debt.
+                    </template>
+                    <template v-else>A debt has to have a name on it, or there is nobody to collect from.</template>
+                </DialogDescription>
             </DialogHeader>
 
-            <div class="space-y-3 py-2">
+            <!-- Step 2: the money, in the same form. -->
+            <div v-if="withDeposit && chosen" class="space-y-3 py-2">
+                <div class="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+                    <span class="flex min-w-0 items-center gap-3">
+                        <UserRound class="size-4 shrink-0 text-muted-foreground" />
+                        <span class="truncate text-sm font-medium">{{ chosen.name }}</span>
+                    </span>
+                    <button type="button" class="press text-xs font-medium text-primary" @click="changeCustomer">Change</button>
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="deposit">Paying now</Label>
+                    <Input
+                        id="deposit"
+                        v-model="raw"
+                        type="number"
+                        min="0"
+                        :step="(currency?.decimals ?? 0) > 0 ? '0.01' : '1'"
+                        inputmode="decimal"
+                        placeholder="0"
+                        class="tabular font-mono text-lg"
+                        autofocus
+                    />
+
+                    <p v-if="coversEverything" class="text-xs text-destructive">
+                        That covers the whole bill — ring it up as a Customer sale instead.
+                    </p>
+                    <p v-else class="tabular font-mono text-xs text-muted-foreground">
+                        Still owed: <strong class="text-foreground">{{ money(owed) }}</strong>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 1: the name. -->
+            <div v-else class="space-y-3 py-2">
                 <div class="relative">
                     <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                     <Input v-model="query" placeholder="Name or phone…" class="pl-9" autofocus autocomplete="off" />
@@ -100,7 +188,7 @@ async function create() {
                         <button
                             type="button"
                             class="press flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-accent"
-                            @click="emit('pick', c)"
+                            @click="choose(c)"
                         >
                             <UserRound class="size-4 shrink-0 text-muted-foreground" />
                             <span class="min-w-0 flex-1">
@@ -135,8 +223,15 @@ async function create() {
                 </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter class="gap-2">
                 <Button type="button" variant="ghost" class="press" @click="emit('close')">Cancel</Button>
+                <template v-if="withDeposit && chosen">
+                    <Button type="button" variant="outline" class="press" @click="emit('confirm', chosen, 0)">All in debt</Button>
+                    <Button type="button" class="press" :disabled="!validDeposit" @click="emit('confirm', chosen, deposit)">
+                        <HandCoins class="size-4" />
+                        Take {{ money(deposit) }}
+                    </Button>
+                </template>
             </DialogFooter>
         </DialogContent>
     </Dialog>
