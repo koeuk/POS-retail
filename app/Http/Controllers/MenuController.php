@@ -31,6 +31,9 @@ class MenuController extends Controller
             ->base()
             ->with('category:id,name')
             ->with(['packs' => fn ($q) => $q->active()->orderBy('units_per_pack')])
+            // The menu is public and store-less, so "sold out" means no store
+            // anywhere has it — the total across shelves, not one shop's count.
+            ->withSum('stocks as stock_sum', 'qty')
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -40,34 +43,40 @@ class MenuController extends Controller
             ->when($categoryId, fn ($q, $id) => $q->where('category_id', $id))
             ->orderBy('name')
             ->get()
-            ->map(fn (Product $p) => [
-                'id' => $p->id,
-                'name' => $p->name,
-                'description' => $p->description,
-                'image' => $p->image,
-                'unit' => $p->unit,
-                'category_id' => $p->category_id,
-                'category_name' => $p->category?->name,
+            ->map(function (Product $p) {
+                $shelf = (int) ($p->stock_sum ?? 0);
 
-                /*
-                 * Every way this item can be bought, cheapest first. The base
-                 * product is always the first entry — it is the single unit.
-                 */
-                'packs' => $p->packs
-                    ->map(fn (Product $pack) => [
-                        'id' => $pack->id,
-                        'name' => $pack->name,
-                        'units' => $pack->units_per_pack,
-                        'price' => (float) $pack->sell_price,
-                        'sold_out' => $pack->track_stock && $pack->stock_qty <= 0,
-                    ])
-                    ->values(),
+                return [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'description' => $p->description,
+                    'image' => $p->image,
+                    'unit' => $p->unit,
+                    'category_id' => $p->category_id,
+                    'category_name' => $p->category?->name,
 
-                'price' => (float) $p->sell_price,
+                    /*
+                     * Every way this item can be bought, cheapest first. The base
+                     * product is always the first entry — it is the single unit.
+                     */
+                    'packs' => $p->packs
+                        // A pack sells off the parent's shelf: a case is gone
+                        // once the loose count can no longer fill one.
+                        ->map(fn (Product $pack) => [
+                            'id' => $pack->id,
+                            'name' => $pack->name,
+                            'units' => $pack->units_per_pack,
+                            'price' => (float) $pack->sell_price,
+                            'sold_out' => $pack->track_stock && intdiv($shelf, max(1, $pack->units_per_pack)) <= 0,
+                        ])
+                        ->values(),
 
-                // A boolean only — actual quantities stay off this public page.
-                'sold_out' => $p->track_stock && $p->stock_qty <= 0,
-            ])
+                    'price' => (float) $p->sell_price,
+
+                    // A boolean only — actual quantities stay off this public page.
+                    'sold_out' => $p->track_stock && $shelf <= 0,
+                ];
+            })
             ->values();
 
         // Only categories that actually have something to show.

@@ -10,8 +10,8 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import type { BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/vue3';
-import { Check } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { Check, ImageIcon } from 'lucide-vue-next';
+import { computed, onBeforeUnmount, ref } from 'vue';
 
 const props = defineProps<{
     shop: {
@@ -19,6 +19,8 @@ const props = defineProps<{
         receipt_footer: string | null;
         currency: string;
         riel_per_usd: number;
+        logo: string | null;
+        favicon: string | null;
     };
     currencies: { code: string; symbol: string; name: string }[];
 }>();
@@ -30,6 +32,60 @@ const form = useForm({
     receipt_footer: props.shop.receipt_footer ?? '',
     currency: props.shop.currency,
     riel_per_usd: String(props.shop.riel_per_usd),
+    logo: null as File | null,
+    favicon: null as File | null,
+    remove_logo: false,
+    remove_favicon: false,
+});
+
+/*
+ * Branding previews. A freshly-chosen file shows immediately via a blob URL;
+ * otherwise the saved image shows, unless the person hit Remove — then the
+ * tile goes back to the placeholder until they save.
+ */
+type BrandField = 'logo' | 'favicon';
+const blobUrls = ref<Record<BrandField, string | null>>({ logo: null, favicon: null });
+const logoInput = ref<HTMLInputElement>();
+const faviconInput = ref<HTMLInputElement>();
+
+const logoPreview = computed(() => previewFor('logo'));
+const faviconPreview = computed(() => previewFor('favicon'));
+
+function previewFor(field: BrandField): string | null {
+    if (blobUrls.value[field]) return blobUrls.value[field];
+    if (field === 'logo' ? form.remove_logo : form.remove_favicon) return null;
+    const saved = props.shop[field];
+    return saved ? `/storage/${saved}` : null;
+}
+
+function pick(field: BrandField, event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    dropBlob(field);
+    blobUrls.value[field] = URL.createObjectURL(file);
+    form[field] = file;
+    if (field === 'logo') form.remove_logo = false;
+    else form.remove_favicon = false;
+    input.value = '';
+}
+
+function removeImage(field: BrandField) {
+    dropBlob(field);
+    form[field] = null;
+    if (field === 'logo') form.remove_logo = true;
+    else form.remove_favicon = true;
+}
+
+function dropBlob(field: BrandField) {
+    const url = blobUrls.value[field];
+    if (url) URL.revokeObjectURL(url);
+    blobUrls.value[field] = null;
+}
+
+onBeforeUnmount(() => {
+    dropBlob('logo');
+    dropBlob('favicon');
 });
 
 /*
@@ -48,7 +104,16 @@ const preview = computed(() => {
 });
 
 function submit() {
-    form.put(route('shop.update'), { preserveScroll: true });
+    // Browsers cannot send files in a real PUT, so Inertia posts with the
+    // method spoofed. Laravel still routes it to update() as a PUT.
+    form.transform((data) => ({ ...data, _method: 'put' })).post(route('shop.update'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            dropBlob('logo');
+            dropBlob('favicon');
+            form.reset('logo', 'favicon', 'remove_logo', 'remove_favicon');
+        },
+    });
 }
 </script>
 
@@ -111,6 +176,82 @@ function submit() {
                         A <span class="tabular font-mono">$10.00</span> item will show as
                         <strong class="tabular font-mono text-primary">{{ preview }}</strong>
                     </p>
+                </div>
+
+                <!-- Branding -->
+                <div class="space-y-6">
+                    <HeadingSmall
+                        title="Branding"
+                        description="The logo shown in the app, and the icon on the browser tab. Square images look best."
+                    />
+
+                    <div class="grid gap-6 sm:grid-cols-2">
+                        <div class="grid content-start gap-2">
+                            <Label>Logo</Label>
+                            <div class="flex items-center gap-3">
+                                <span
+                                    class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40"
+                                >
+                                    <img v-if="logoPreview" :src="logoPreview" alt="Shop logo" class="size-full object-cover" />
+                                    <ImageIcon v-else class="size-6 text-muted-foreground" aria-hidden="true" />
+                                </span>
+                                <div class="flex flex-col items-start gap-1.5">
+                                    <Button type="button" variant="outline" size="sm" class="press" @click="logoInput?.click()">
+                                        Choose image
+                                    </Button>
+                                    <Button
+                                        v-if="logoPreview"
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        class="press text-destructive hover:text-destructive"
+                                        @click="removeImage('logo')"
+                                    >
+                                        Remove
+                                    </Button>
+                                </div>
+                                <input ref="logoInput" type="file" accept="image/*" class="hidden" @change="pick('logo', $event)" />
+                            </div>
+                            <p class="text-xs text-muted-foreground">Up to 2 MB. Appears in the sidebar next to the shop name.</p>
+                            <InputError :message="form.errors.logo" />
+                        </div>
+
+                        <div class="grid content-start gap-2">
+                            <Label>App icon · favicon</Label>
+                            <div class="flex items-center gap-3">
+                                <span
+                                    class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40"
+                                >
+                                    <img v-if="faviconPreview" :src="faviconPreview" alt="App icon" class="size-full object-cover" />
+                                    <ImageIcon v-else class="size-6 text-muted-foreground" aria-hidden="true" />
+                                </span>
+                                <div class="flex flex-col items-start gap-1.5">
+                                    <Button type="button" variant="outline" size="sm" class="press" @click="faviconInput?.click()">
+                                        Choose image
+                                    </Button>
+                                    <Button
+                                        v-if="faviconPreview"
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        class="press text-destructive hover:text-destructive"
+                                        @click="removeImage('favicon')"
+                                    >
+                                        Remove
+                                    </Button>
+                                </div>
+                                <input
+                                    ref="faviconInput"
+                                    type="file"
+                                    accept="image/png,image/webp,image/jpeg,image/x-icon,image/vnd.microsoft.icon,.ico"
+                                    class="hidden"
+                                    @change="pick('favicon', $event)"
+                                />
+                            </div>
+                            <p class="text-xs text-muted-foreground">PNG or ICO up to 512 KB. Shown on the browser tab.</p>
+                            <InputError :message="form.errors.favicon" />
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Receipt -->

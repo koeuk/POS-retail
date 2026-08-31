@@ -5,10 +5,15 @@ import { computed } from 'vue';
 
 const page = usePage<SharedData>();
 const appName = computed(() => page.props.name ?? 'POS Retail');
+const logoUrl = computed(() => {
+    const path = page.props.branding?.logo;
+    return path ? `/storage/${path}` : null;
+});
 </script>
 
 <template>
-    <div class="flex aspect-square size-8 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+    <img v-if="logoUrl" :src="logoUrl" alt="" class="aspect-square size-8 shrink-0 rounded-md object-cover shadow-sm" />
+    <div v-else class="flex aspect-square size-8 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
         <svg
             viewBox="0 0 24 24"
             class="size-4"
