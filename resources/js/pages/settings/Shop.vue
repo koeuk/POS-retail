@@ -189,12 +189,15 @@ function submit() {
                         <div class="grid content-start gap-2">
                             <Label>Logo</Label>
                             <div class="flex items-center gap-3">
-                                <span
-                                    class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40"
+                                <button
+                                    type="button"
+                                    class="press flex size-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-input bg-muted/40 transition-colors hover:border-primary/60 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                    aria-label="Choose logo image"
+                                    @click="logoInput?.click()"
                                 >
                                     <img v-if="logoPreview" :src="logoPreview" alt="Shop logo" class="size-full object-cover" />
                                     <ImageIcon v-else class="size-6 text-muted-foreground" aria-hidden="true" />
-                                </span>
+                                </button>
                                 <div class="flex flex-col items-start gap-1.5">
                                     <Button type="button" variant="outline" size="sm" class="press" @click="logoInput?.click()">
                                         Choose image
@@ -219,12 +222,15 @@ function submit() {
                         <div class="grid content-start gap-2">
                             <Label>App icon · favicon</Label>
                             <div class="flex items-center gap-3">
-                                <span
-                                    class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40"
+                                <button
+                                    type="button"
+                                    class="press flex size-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-input bg-muted/40 transition-colors hover:border-primary/60 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                    aria-label="Choose app icon image"
+                                    @click="faviconInput?.click()"
                                 >
                                     <img v-if="faviconPreview" :src="faviconPreview" alt="App icon" class="size-full object-cover" />
                                     <ImageIcon v-else class="size-6 text-muted-foreground" aria-hidden="true" />
-                                </span>
+                                </button>
                                 <div class="flex flex-col items-start gap-1.5">
                                     <Button type="button" variant="outline" size="sm" class="press" @click="faviconInput?.click()">
                                         Choose image
