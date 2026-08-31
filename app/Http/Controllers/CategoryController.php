@@ -7,6 +7,7 @@ use App\Models\Category;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -34,7 +35,7 @@ class CategoryController extends Controller
         try {
             $this->authorize('create', Category::class);
 
-            Category::create($request->validated());
+            DB::transaction(fn () => Category::create($request->validated()));
 
             return back()->with('success', 'Category created.');
         } catch (QueryException $e) {
@@ -47,7 +48,7 @@ class CategoryController extends Controller
         try {
             $this->authorize('update', $category);
 
-            $category->update($request->validated());
+            DB::transaction(fn () => $category->update($request->validated()));
 
             return back()->with('success', 'Category updated.');
         } catch (QueryException $e) {
@@ -66,7 +67,7 @@ class CategoryController extends Controller
                 ]);
             }
 
-            $category->delete();
+            DB::transaction(fn () => $category->delete());
 
             return back()->with('success', 'Category deleted.');
         } catch (QueryException $e) {

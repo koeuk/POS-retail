@@ -8,6 +8,7 @@ use App\Support\Currency;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -52,9 +53,13 @@ class ShopController extends Controller
                 'riel_per_usd' => ['required', 'numeric', 'min:1', 'max:100000'],
             ]);
 
-            foreach ($data as $key => $value) {
-                Setting::put($key, $value === null ? null : (string) $value);
-            }
+            // All four settings land together or not at all — a currency
+            // saved without its rate would misprice every screen at once.
+            DB::transaction(function () use ($data) {
+                foreach ($data as $key => $value) {
+                    Setting::put($key, $value === null ? null : (string) $value);
+                }
+            });
 
             return back()->with('success', 'Shop settings saved.');
         } catch (QueryException $e) {

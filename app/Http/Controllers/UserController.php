@@ -10,6 +10,7 @@ use App\Support\PerPage;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -51,7 +52,7 @@ class UserController extends Controller
             $data['password'] = Hash::make($data['password']);
             $data['email_verified_at'] = now(); // staff accounts are created by an admin
 
-            User::create($data);
+            DB::transaction(fn () => User::create($data));
 
             return back()->with('success', 'Staff account created.');
         } catch (QueryException $e) {
@@ -79,7 +80,7 @@ class UserController extends Controller
                 $data['is_active'] = true;
             }
 
-            $user->update($data);
+            DB::transaction(fn () => $user->update($data));
 
             return back()->with('success', 'Staff account updated.');
         } catch (QueryException $e) {
@@ -97,13 +98,13 @@ class UserController extends Controller
             }
 
             if ($user->orders()->exists()) {
-                $user->update(['is_active' => false]);
+                DB::transaction(fn () => $user->update(['is_active' => false]));
 
                 return back()->with('success', "{$user->name} has sales history, so the account was deactivated instead of deleted.");
             }
 
             $name = $user->name;
-            $user->delete();
+            DB::transaction(fn () => $user->delete());
 
             return back()->with('success', "{$name} was deleted.");
         } catch (QueryException $e) {

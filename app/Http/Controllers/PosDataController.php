@@ -15,6 +15,7 @@ use App\Support\Currency;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * JSON endpoints for the /pos screen.
@@ -169,7 +170,7 @@ class PosDataController extends Controller
                 'phone' => ['nullable', 'string', 'max:32'],
             ]);
 
-            $customer = Customer::create($data + ['loyalty_points' => 0]);
+            $customer = DB::transaction(fn () => Customer::create($data + ['loyalty_points' => 0]));
 
             return response()->json($customer->only('id', 'name', 'phone'), 201);
         } catch (QueryException $e) {

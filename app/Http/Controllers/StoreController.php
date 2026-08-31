@@ -89,11 +89,13 @@ class StoreController extends Controller
         try {
             $this->authorize('update', $store);
 
-            $store->update($request->validate([
+            $data = $request->validate([
                 'name' => ['required', 'string', 'max:255'],
                 'address' => ['nullable', 'string', 'max:255'],
                 'phone' => ['nullable', 'string', 'max:32'],
-            ]));
+            ]);
+
+            DB::transaction(fn () => $store->update($data));
 
             return back()->with('success', 'Store updated.');
         } catch (QueryException $e) {
@@ -139,7 +141,10 @@ class StoreController extends Controller
             }
 
             $name = $store->name;
-            $store->delete();
+
+            // Registers, stock rows and the ledger cascade with the store —
+            // one transaction so a failure part-way leaves the shop whole.
+            DB::transaction(fn () => $store->delete());
 
             return back()->with('success', "“{$name}” was deleted.");
         } catch (QueryException $e) {
@@ -152,10 +157,12 @@ class StoreController extends Controller
         try {
             $this->authorize('update', $store);
 
-            $store->registers()->create($request->validate([
+            $data = $request->validate([
                 'name' => ['required', 'string', 'max:255'],
                 'is_active' => ['boolean'],
-            ]));
+            ]);
+
+            DB::transaction(fn () => $store->registers()->create($data));
 
             return back()->with('success', 'Register added.');
         } catch (QueryException $e) {
@@ -170,11 +177,13 @@ class StoreController extends Controller
 
             abort_unless($register->store_id === $store->id, 404);
 
-            $register->update($request->validate([
+            $data = $request->validate([
                 'name' => ['required', 'string', 'max:255'],
                 'is_active' => ['boolean'],
                 'store_id' => ['sometimes', Rule::in([$store->id])],
-            ]));
+            ]);
+
+            DB::transaction(fn () => $register->update($data));
 
             return back()->with('success', 'Register updated.');
         } catch (QueryException $e) {

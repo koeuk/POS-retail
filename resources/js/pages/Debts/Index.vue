@@ -141,7 +141,7 @@ function submitSettle() {
                             <TableRow class="hover:bg-transparent">
                                 <TableHead>Customer</TableHead>
                                 <TableHead>Order</TableHead>
-                                <TableHead>When</TableHead>
+                                <TableHead>Date</TableHead>
                                 <TableHead data-numeric class="text-right">Total</TableHead>
                                 <TableHead data-numeric class="text-right">Paid</TableHead>
                                 <TableHead data-numeric class="text-right">Owed</TableHead>

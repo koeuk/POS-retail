@@ -8,6 +8,7 @@ use App\Support\PerPage;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -40,7 +41,7 @@ class CustomerController extends Controller
         try {
             $this->authorize('create', Customer::class);
 
-            Customer::create($request->validated());
+            DB::transaction(fn () => Customer::create($request->validated()));
 
             return back()->with('success', 'Customer added.');
         } catch (QueryException $e) {
@@ -53,7 +54,7 @@ class CustomerController extends Controller
         try {
             $this->authorize('update', $customer);
 
-            $customer->update($request->validated());
+            DB::transaction(fn () => $customer->update($request->validated()));
 
             return back()->with('success', 'Customer updated.');
         } catch (QueryException $e) {
@@ -72,7 +73,7 @@ class CustomerController extends Controller
                 ]);
             }
 
-            $customer->delete();
+            DB::transaction(fn () => $customer->delete());
 
             return back()->with('success', 'Customer deleted.');
         } catch (QueryException $e) {

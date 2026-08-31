@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { CurrencyDef } from '@/composables/useCurrency';
 import { formatMoney } from '@/Pos/lib/money';
 import type { PosCategory, PosProduct } from '@/Pos/types';
-import { Layers, PackageOpen, Search } from 'lucide-vue-next';
+import { ChevronRight, Layers, PackageOpen, Search } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 const props = defineProps<{
@@ -70,25 +71,21 @@ function dearest(product: PosProduct): string | null {
     return Number(top.sell_price) > Number(product.sell_price) ? top.sell_price : null;
 }
 
-/* Which tile has its chooser open. Null means none — only one at a time, so a
-   mis-tap never leaves two panels covering the grid. */
-const choosing = ref<number | null>(null);
+/*
+ * The tile itself always sells one single — the overwhelming case at a till,
+ * so it must stay one tap. Every other way to buy lives behind the "See more"
+ * button, which opens a dialog (a bottom sheet on a phone) rather than the old
+ * overlay squeezed inside a 180px tile, where long Khmer pack names had no
+ * room to breathe.
+ */
+const viewing = ref<PosProduct | null>(null);
 
 function tap(product: PosProduct) {
-    const options = sellableAs(product);
-
-    // Nothing to choose between: straight into the cart, same as before.
-    if (options.length === 1) {
-        emit('add', product);
-
-        return;
-    }
-
-    choosing.value = choosing.value === product.id ? null : product.id;
+    emit('add', product);
 }
 
 function choose(option: PosProduct) {
-    choosing.value = null;
+    viewing.value = null;
     emit('add', option);
 }
 
@@ -154,7 +151,6 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                     <button
                         type="button"
                         class="press flex h-full w-full flex-col overflow-hidden rounded-xl border border-border bg-card text-left transition-colors hover:border-primary/50 active:border-primary"
-                        :aria-expanded="sellableAs(product).length > 1 ? choosing === product.id : undefined"
                         @click="tap(product)"
                     >
                         <div class="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-muted/40">
@@ -191,37 +187,22 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                         </div>
                     </button>
 
-                    <!-- Pack chooser. Overlays its own tile rather than opening a
-                         dialog: the cashier's thumb is already here. -->
-                    <div
-                        v-if="choosing === product.id"
-                        class="animate-scale absolute inset-y-0 left-0 z-10 flex w-max min-w-full max-w-[15rem] flex-col overflow-hidden rounded-xl border border-primary bg-card shadow-lg"
+                    <!--
+                        Not nested in the tile button — a button inside a button
+                        is invalid HTML and the browsers disagree on which one
+                        the tap belongs to. A sibling, absolutely placed over
+                        the price corner.
+                    -->
+                    <button
+                        v-if="sellableAs(product).length > 1"
+                        type="button"
+                        class="press absolute bottom-2 right-2 z-10 flex items-center gap-0.5 rounded-full border border-border bg-card/95 py-1 pl-2 pr-1 text-[0.7rem] font-medium text-muted-foreground shadow-sm backdrop-blur transition-colors hover:border-primary/50 hover:text-foreground"
+                        :aria-label="`See every price for ${product.name}`"
+                        @click.stop="viewing = product"
                     >
-                        <p class="truncate border-b border-border px-2.5 py-2 text-xs font-medium text-muted-foreground">
-                            {{ product.name }}
-                        </p>
-
-                        <div class="min-h-0 flex-1 overflow-y-auto">
-                            <button
-                                v-for="option in sellableAs(product)"
-                                :key="option.id"
-                                type="button"
-                                class="row-press flex w-full items-baseline justify-between gap-2 px-2.5 py-2 text-left"
-                                @click="choose(option)"
-                            >
-                                <span class="min-w-0 flex-1 text-sm leading-snug">
-                                    {{ option.id === product.id ? `1 ${product.unit}` : option.name }}
-                                </span>
-                                <span class="tabular shrink-0 font-mono text-sm font-semibold text-primary">
-                                    {{ formatMoney(Number(option.sell_price), currency) }}
-                                </span>
-                            </button>
-                        </div>
-
-                        <button type="button" class="border-t border-border py-1.5 text-xs text-muted-foreground" @click="choosing = null">
-                            Cancel
-                        </button>
-                    </div>
+                        See more
+                        <ChevronRight class="size-3.5" />
+                    </button>
                 </div>
             </div>
 
@@ -231,5 +212,37 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                 <p class="text-sm text-muted-foreground">Try another word, or clear the filter.</p>
             </div>
         </div>
+
+        <!-- Every way to buy, as a real dialog — a bottom sheet on a phone. -->
+        <Dialog :open="!!viewing" @update:open="(v) => !v && (viewing = null)">
+            <DialogContent class="sm:max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>{{ viewing?.name }}</DialogTitle>
+                    <DialogDescription>Tap a size to add it to the cart.</DialogDescription>
+                </DialogHeader>
+
+                <ul v-if="viewing" class="-mx-1 divide-y divide-border">
+                    <li v-for="option in sellableAs(viewing)" :key="option.id">
+                        <button
+                            type="button"
+                            class="row-press flex w-full items-baseline justify-between gap-3 rounded-lg px-3 py-3 text-left"
+                            @click="choose(option)"
+                        >
+                            <span class="min-w-0 flex-1">
+                                <span class="block text-sm font-medium leading-snug">
+                                    {{ option.id === viewing.id ? `1 ${viewing.unit}` : option.name }}
+                                </span>
+                                <span v-if="option.id !== viewing.id" class="tabular font-mono text-xs text-muted-foreground">
+                                    ×{{ option.units_per_pack }} {{ viewing.unit }}
+                                </span>
+                            </span>
+                            <span class="tabular shrink-0 font-mono text-base font-semibold text-primary">
+                                {{ formatMoney(Number(option.sell_price), currency) }}
+                            </span>
+                        </button>
+                    </li>
+                </ul>
+            </DialogContent>
+        </Dialog>
     </div>
 </template>

@@ -260,7 +260,7 @@ class InventoryController extends Controller
             ]);
 
             $stock = $this->scoped($user)->whereKey($data['stock_id'])->firstOrFail();
-            $stock->update(['low_stock_threshold' => $data['low_stock_threshold']]);
+            DB::transaction(fn () => $stock->update(['low_stock_threshold' => $data['low_stock_threshold']]));
 
             return back()->with('success', 'Low-stock alert updated.');
         } catch (QueryException $e) {
