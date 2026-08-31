@@ -129,7 +129,7 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                         <TableHeader>
                             <TableRow class="hover:bg-transparent">
                                 <TableHead>Order</TableHead>
-                                <TableHead>When</TableHead>
+                                <TableHead>Date</TableHead>
                                 <TableHead>Cashier</TableHead>
                                 <TableHead>Payment</TableHead>
                                 <TableHead data-numeric class="text-right">Items</TableHead>

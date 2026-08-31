@@ -71,6 +71,7 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
     */
     Route::middleware('role:admin,manager')->group(function () {
         Route::get('debts', [DebtController::class, 'index'])->name('debts.index');
+        Route::post('debts', [DebtController::class, 'store'])->name('debts.store');
         Route::post('debts/{order}/settle', [DebtController::class, 'settle'])->name('debts.settle');
         Route::get('consumption', [ConsumptionController::class, 'index'])->name('consumption.index');
 

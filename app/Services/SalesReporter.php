@@ -320,6 +320,56 @@ class SalesReporter
             ]);
     }
 
+    /**
+     * Money out on credit and not yet collected — the receivable book.
+     * Not revenue timing: the sale already counted; this is who still owes.
+     *
+     * @return array{count: int, owed: string}
+     */
+    public function outstandingDebts(): array
+    {
+        $debts = DB::table('orders')
+            ->where('orders.status', OrderStatus::Completed->value)
+            ->where('orders.sale_type', SaleType::Debt->value)
+            ->whereColumn('paid_amount', '<', 'total')
+            ->when($this->storeId, fn (Query $q, int $id) => $q->where('orders.store_id', $id));
+
+        return [
+            'count' => (clone $debts)->count(),
+            'owed' => self::money($debts->sum(DB::raw('total - paid_amount'))),
+        ];
+    }
+
+    /**
+     * What the owner took for themselves, at shelf price — week, month, year.
+     * Kept out of every revenue figure; this is the habit's own scoreboard.
+     *
+     * @return array<string, array{count: int, value: string}>
+     */
+    public function myselfSpent(): array
+    {
+        $taken = function (Carbon $since): array {
+            $q = DB::table('orders')
+                ->where('orders.status', OrderStatus::Completed->value)
+                ->where('orders.sale_type', SaleType::Myself->value)
+                ->when($this->storeId, fn (Query $query, int $id) => $query->where('orders.store_id', $id))
+                ->where(self::day(), '>=', $since->toDateString());
+
+            return [
+                'count' => (clone $q)->count(),
+                'value' => self::money($q->sum('orders.total')),
+            ];
+        };
+
+        $now = self::businessNow();
+
+        return [
+            'week' => $taken($now->copy()->startOfWeek()),
+            'month' => $taken($now->copy()->startOfMonth()),
+            'year' => $taken($now->copy()->startOfYear()),
+        ];
+    }
+
     /** @return array{orders: int, sales: string, items: int, basket: string} */
     public function rangeTotals(Carbon $from, Carbon $to): array
     {

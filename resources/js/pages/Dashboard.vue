@@ -9,7 +9,19 @@ import { useCurrency } from '@/composables/useCurrency';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { Boxes, ChartNoAxesColumn, ChevronRight, CloudOff, PackageSearch, Receipt, ScanBarcode, TrendingUp, TriangleAlert } from 'lucide-vue-next';
+import {
+    Boxes,
+    ChartNoAxesColumn,
+    ChevronRight,
+    CloudOff,
+    HandCoins,
+    PackageSearch,
+    Receipt,
+    ScanBarcode,
+    TrendingUp,
+    TriangleAlert,
+    Utensils,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 
 interface Summary {
@@ -27,6 +39,11 @@ interface StockRow {
     store: { id: number; name: string } | null;
 }
 
+interface Spent {
+    count: number;
+    value: string;
+}
+
 const props = defineProps<{
     today: Summary;
     yesterday: Summary;
@@ -41,8 +58,12 @@ const props = defineProps<{
         cashier: { id: number; name: string } | null;
     }[];
     offlineToday: number;
+    debts: { count: number; owed: string };
+    myself: { week: Spent; month: Spent; year: Spent };
     canSeeReports: boolean;
 }>();
+
+const times = (n: number) => `${n} time${n === 1 ? '' : 's'}, at shelf price`;
 
 const page = usePage<SharedData>();
 const user = computed(() => page.props.auth.user);
@@ -154,6 +175,21 @@ const quickActions = computed(() =>
                     :hint="`${today.items} item${today.items === 1 ? '' : 's'} sold`"
                 />
                 <StatTile label="Synced from offline" :value="String(offlineToday)" :icon="CloudOff" hint="Sales rung up without a connection" />
+            </div>
+
+            <!-- The owner's own money: what is still out on credit, and what
+                 the shop fed its keeper. Manager eyes only, like the pages. -->
+            <div v-if="canSeeReports" class="stagger mt-4 hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-4">
+                <StatTile
+                    label="Owed to you"
+                    :value="money(debts.owed)"
+                    :icon="HandCoins"
+                    :tone="debts.count > 0 ? 'warning' : 'default'"
+                    :hint="`${debts.count} sale${debts.count === 1 ? '' : 's'} on credit, not yet paid`"
+                />
+                <StatTile label="Myself · week" :value="money(myself.week.value)" :icon="Utensils" :hint="times(myself.week.count)" />
+                <StatTile label="Myself · month" :value="money(myself.month.value)" :icon="Utensils" :hint="times(myself.month.count)" />
+                <StatTile label="Myself · year" :value="money(myself.year.value)" :icon="Utensils" :hint="times(myself.year.count)" />
             </div>
 
             <!-- items-start: panels size to their own content rather than

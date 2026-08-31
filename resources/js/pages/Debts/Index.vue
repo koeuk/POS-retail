@@ -17,7 +17,7 @@ import { useCurrency } from '@/composables/useCurrency';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Paginated } from '@/types';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { Eye, HandCoins, Search } from 'lucide-vue-next';
+import { Eye, HandCoins, Plus, Search, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 interface Debt {
@@ -97,6 +97,72 @@ function submitSettle() {
         onSuccess: () => (settling.value = null),
     });
 }
+
+/* ------------------------------------------------------------------ */
+/* Add debt — more on the book without a trip through the till.        */
+/* ------------------------------------------------------------------ */
+
+interface PickedCustomer {
+    id: number;
+    name: string;
+    phone: string | null;
+}
+
+const adding = ref(false);
+const addForm = useForm({ customer_id: '' as string | number, amount: '', note: '' });
+
+/** Who the debt lands on. Set by the row's + button, or searched for. */
+const picked = ref<PickedCustomer | null>(null);
+
+const customerQuery = ref('');
+const customerResults = ref<PickedCustomer[]>([]);
+let customerDebounce: ReturnType<typeof setTimeout>;
+let customerSeq = 0;
+
+async function searchCustomers() {
+    const seq = ++customerSeq;
+
+    try {
+        const response = await fetch(`${route('pos.data.customers')}?q=${encodeURIComponent(customerQuery.value)}`, {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        });
+        if (!response.ok) throw new Error(String(response.status));
+        const data = await response.json();
+        if (seq === customerSeq) customerResults.value = data ?? [];
+    } catch {
+        if (seq === customerSeq) customerResults.value = [];
+    }
+}
+
+watch(customerQuery, () => {
+    clearTimeout(customerDebounce);
+    customerDebounce = setTimeout(searchCustomers, 250);
+});
+
+function openAdd(customer: PickedCustomer | null = null) {
+    adding.value = true;
+    addForm.clearErrors();
+    addForm.reset();
+    picked.value = customer;
+    addForm.customer_id = customer?.id ?? '';
+    customerQuery.value = '';
+    customerResults.value = [];
+
+    if (!customer) void searchCustomers();
+}
+
+function pickCustomer(customer: PickedCustomer) {
+    picked.value = customer;
+    addForm.customer_id = customer.id;
+}
+
+function submitAdd() {
+    addForm.post(route('debts.store'), {
+        preserveScroll: true,
+        onSuccess: () => (adding.value = false),
+    });
+}
 </script>
 
 <template>
@@ -108,7 +174,14 @@ function submitSettle() {
                 eyebrow="Selling"
                 title="In Debt"
                 description="Sales made on credit. Record money as it comes in; a debt is settled once it is paid in full."
-            />
+            >
+                <template #actions>
+                    <Button class="press" @click="openAdd()">
+                        <Plus class="size-4" />
+                        Add debt
+                    </Button>
+                </template>
+            </PageHeader>
 
             <div class="stagger mb-4 grid gap-4 sm:grid-cols-2">
                 <StatTile
@@ -177,6 +250,17 @@ function submitSettle() {
                                             @click="viewing = d"
                                         >
                                             <Eye class="size-4" />
+                                        </Button>
+                                        <Button
+                                            v-if="d.customer"
+                                            variant="outline"
+                                            size="sm"
+                                            class="press"
+                                            :aria-label="`Add more debt for ${d.customer.name}`"
+                                            @click="openAdd(d.customer)"
+                                        >
+                                            <Plus class="size-3.5" />
+                                            Add
                                         </Button>
                                         <Button v-if="owed(d) > 0" size="sm" class="press" @click="openSettle(d)">Record payment</Button>
                                     </div>
@@ -284,6 +368,100 @@ function submitSettle() {
                 </div>
             </SheetContent>
         </Sheet>
+
+        <!-- Add debt: an amount straight onto the book. -->
+        <Dialog v-model:open="adding">
+            <DialogContent class="sm:max-w-sm">
+                <form @submit.prevent="submitAdd">
+                    <DialogHeader>
+                        <DialogTitle>Add debt</DialogTitle>
+                        <DialogDescription>
+                            Goods taken on credit, typed as an amount. It counts as a sale today and is settled with Record payment like any other
+                            debt.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div class="grid gap-4 py-5">
+                        <div class="grid gap-2">
+                            <Label>Customer</Label>
+
+                            <!-- Picked: show who, allow changing. -->
+                            <div v-if="picked" class="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-medium">{{ picked.name }}</p>
+                                    <p v-if="picked.phone" class="tabular truncate font-mono text-xs text-muted-foreground">{{ picked.phone }}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="press rounded p-1 text-muted-foreground hover:text-foreground"
+                                    aria-label="Choose a different customer"
+                                    @click="((picked = null), (addForm.customer_id = ''), searchCustomers())"
+                                >
+                                    <X class="size-4" />
+                                </button>
+                            </div>
+
+                            <!-- Not picked: search. -->
+                            <template v-else>
+                                <div class="relative">
+                                    <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                                    <Input v-model="customerQuery" placeholder="Name or phone…" class="pl-9" autocomplete="off" autofocus />
+                                </div>
+                                <ul v-if="customerResults.length" class="max-h-40 overflow-y-auto rounded-lg border border-border">
+                                    <li v-for="c in customerResults" :key="c.id" class="border-b border-border last:border-b-0">
+                                        <button
+                                            type="button"
+                                            class="row-press flex w-full items-baseline justify-between gap-2 px-3 py-2 text-left"
+                                            @click="pickCustomer(c)"
+                                        >
+                                            <span class="truncate text-sm">{{ c.name }}</span>
+                                            <span v-if="c.phone" class="tabular shrink-0 font-mono text-xs text-muted-foreground">{{ c.phone }}</span>
+                                        </button>
+                                    </li>
+                                </ul>
+                                <p v-else class="text-xs text-muted-foreground">
+                                    No match. New customers are created from the till or the Customers page.
+                                </p>
+                            </template>
+                            <InputError :message="addForm.errors.customer_id" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="debt-amount">Amount</Label>
+                            <div class="relative">
+                                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                    {{ currency.symbol }}
+                                </span>
+                                <Input
+                                    id="debt-amount"
+                                    v-model="addForm.amount"
+                                    type="number"
+                                    :step="amountStep"
+                                    :min="amountStep"
+                                    inputmode="decimal"
+                                    class="tabular pl-7 font-mono"
+                                />
+                            </div>
+                            <InputError :message="addForm.errors.amount" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="debt-note">What for</Label>
+                            <Input id="debt-note" v-model="addForm.note" placeholder="Optional — rice, oil, cigarettes…" />
+                            <p class="text-xs text-muted-foreground">Shown on the debt so both sides remember what it was.</p>
+                            <InputError :message="addForm.errors.note" />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button type="button" variant="ghost" class="press" @click="adding = false">Cancel</Button>
+                        <Button type="submit" class="press" :disabled="addForm.processing || !addForm.customer_id || !addForm.amount">
+                            Add to debt
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
 
         <Dialog :open="!!settling" @update:open="(v) => !v && (settling = null)">
             <DialogContent class="max-w-sm">

@@ -35,6 +35,8 @@ class DashboardController extends Controller
 
                 'recentOrders' => $reporter->recentOrders(),
                 'offlineToday' => $reporter->offlineOrdersToday($today),
+                'debts' => $reporter->outstandingDebts(),
+                'myself' => $reporter->myselfSpent(),
                 'canSeeReports' => $user->role->canAccessAdmin(),
             ]);
         } catch (QueryException $e) {
@@ -51,6 +53,8 @@ class DashboardController extends Controller
                 'oversold' => [],
                 'recentOrders' => [],
                 'offlineToday' => 0,
+                'debts' => ['count' => 0, 'owed' => '0.00'],
+                'myself' => ['week' => ['count' => 0, 'value' => '0.00'], 'month' => ['count' => 0, 'value' => '0.00'], 'year' => ['count' => 0, 'value' => '0.00']],
                 'canSeeReports' => $user->role->canAccessAdmin(),
             ]);
         }

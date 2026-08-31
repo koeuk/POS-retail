@@ -48,20 +48,12 @@ class ConsumptionController extends Controller
             ->paginate(PerPage::resolve($request))
             ->withQueryString();
 
-        // This month, so the number means something at a glance.
-        $month = SalesReporter::businessNow()->startOfMonth();
-        $thisMonth = $this->scoped($user)->businessDayFrom($month->toDateString());
-        $monthCount = (clone $thisMonth)->count();
-        $monthValue = (float) $thisMonth->sum('total');
-
         return Inertia::render('Consumption/Index', [
             'rows' => $rows,
             'filters' => $filters,
-            'summary' => [
-                'month_count' => $monthCount,
-                'month_value' => number_format($monthValue, 2, '.', ''),
-                'month_label' => $month->format('F'),
-            ],
+            // Week, month and year, so the habit is visible at every scale —
+            // the same figures the dashboard shows, from the same reporter.
+            'summary' => SalesReporter::for($user)->myselfSpent(),
             'currency' => Currency::current()->toArray(),
         ]);
     }

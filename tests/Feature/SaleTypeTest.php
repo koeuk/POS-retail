@@ -232,8 +232,12 @@ class SaleTypeTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Consumption/Index')
                 ->has('rows.data', 1)
-                ->where('summary.month_count', 1)
-                ->where('summary.month_value', '20.00')
+                ->where('summary.week.count', 1)
+                ->where('summary.week.value', '20.00')
+                ->where('summary.month.count', 1)
+                ->where('summary.month.value', '20.00')
+                ->where('summary.year.count', 1)
+                ->where('summary.year.value', '20.00')
             );
     }
 
@@ -316,5 +320,30 @@ class SaleTypeTest extends TestCase
             ->assertCreated()->assertJsonPath('name', 'New Person');
 
         $this->assertDatabaseHas('customers', ['name' => 'New Person']);
+    }
+
+    public function test_the_dashboard_shows_the_receivable_and_the_owners_own_take(): void
+    {
+        $c = Customer::factory()->create();
+        $this->sync(['sale_type' => 'debt'], $c->id)->assertOk();   // 20.00 out on credit
+        $this->sync(['sale_type' => 'myself'])->assertOk();          // 20.00 taken for myself
+        $this->sync(['sale_type' => 'customer'])->assertOk();        // ordinary sale — in neither card
+
+        $this->actingAs($this->admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('debts.count', 1)
+                ->where('debts.owed', '20.00')
+                ->where('myself.week.count', 1)
+                ->where('myself.week.value', '20.00')
+                ->where('myself.month.value', '20.00')
+                ->where('myself.year.value', '20.00')
+            );
+
+        // A cashier's dashboard carries neither card nor its numbers' gate.
+        $this->actingAs($this->cashier)
+            ->get(route('dashboard'))
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('canSeeReports', false));
     }
 }

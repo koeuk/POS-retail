@@ -27,10 +27,17 @@ interface Row {
 const props = defineProps<{
     rows: Paginated<Row>;
     filters: { search: string; from: string; to: string };
-    summary: { month_count: number; month_value: string; month_label: string };
+    summary: { week: Spent; month: Spent; year: Spent };
 }>();
 
+interface Spent {
+    count: number;
+    value: string;
+}
+
 const { money } = useCurrency();
+
+const times = (n: number) => `${n} time${n === 1 ? '' : 's'}, at shelf price`;
 
 const search = ref(props.filters.search);
 // The picker hands back undefined when a range is cleared; '' from the server means the same thing.
@@ -68,9 +75,10 @@ const summarise = (r: Row) => r.items.map((i) => (i.qty > 1 ? `${i.product_name}
                 description="Things you took for yourself. Stock goes down but nothing counts as a sale — the value shown is what it would have sold for."
             />
 
-            <div class="stagger mb-4 grid gap-4 sm:grid-cols-2">
-                <StatTile :label="`Taken in ${summary.month_label}`" :value="money(summary.month_value)" :icon="Utensils" hint="At shelf price" />
-                <StatTile label="Times this month" :value="String(summary.month_count)" :icon="Utensils" />
+            <div class="stagger mb-4 grid gap-4 sm:grid-cols-3">
+                <StatTile label="This week" :value="money(summary.week.value)" :icon="Utensils" :hint="times(summary.week.count)" />
+                <StatTile label="This month" :value="money(summary.month.value)" :icon="Utensils" :hint="times(summary.month.count)" />
+                <StatTile label="This year" :value="money(summary.year.value)" :icon="Utensils" :hint="times(summary.year.count)" />
             </div>
 
             <div class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 60ms">
@@ -87,7 +95,7 @@ const summarise = (r: Row) => r.items.map((i) => (i.qty > 1 ? `${i.product_name}
                         <TableHeader>
                             <TableRow class="hover:bg-transparent">
                                 <TableHead>What</TableHead>
-                                <TableHead>When</TableHead>
+                                <TableHead>Date</TableHead>
                                 <TableHead>By</TableHead>
                                 <TableHead data-numeric class="text-right">Value</TableHead>
                             </TableRow>

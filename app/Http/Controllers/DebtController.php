@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\SaleType;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\OrderSyncService;
 use App\Support\Currency;
 use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,6 +16,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -86,6 +89,63 @@ class DebtController extends Controller
     }
 
     /** Record money received against a debt. */
+    /**
+     * Put more on the book without a trip through the till.
+     *
+     * A customer who already owes takes more goods — rice, oil, whatever was
+     * grabbed — and the shopkeeper types the amount rather than ringing lines.
+     * It goes through the same sync service a POS debt sale does, so it gets a
+     * real order number, the currency stamp, and a place in that day's sales,
+     * and it is settled by the very same Record payment flow.
+     *
+     * The one line it carries has no product behind it; its name is the note,
+     * so the debt detail — and the by-product report, which groups on the
+     * snapshot name — say what the money was for in the shopkeeper's words.
+     */
+    public function store(Request $request, OrderSyncService $sync): RedirectResponse
+    {
+        $data = $request->validate([
+            'customer_id' => ['required', 'integer', Rule::exists('customers', 'id')],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:99999999'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        try {
+            $result = $sync->syncOne([
+                'client_uuid' => (string) Str::uuid(),
+                'customer_id' => (int) $data['customer_id'],
+                'sale_type' => SaleType::Debt->value,
+                'discount_amount' => 0,
+                'items' => [[
+                    'product_id' => null,
+                    'product_name' => trim((string) ($data['note'] ?? '')) ?: 'Goods on credit',
+                    'qty' => 1,
+                    'unit_price' => $data['amount'],
+                    'discount' => 0,
+                ]],
+                // Nothing has been paid — that is the point of a debt.
+                'payments' => [],
+            ], $request->user());
+
+            if ($result['status'] !== 'created') {
+                return back()->withErrors(['amount' => $result['message'] ?? 'The debt could not be recorded.']);
+            }
+
+            $customer = Customer::find($data['customer_id']);
+            $owedNow = $this->scoped($request->user())
+                ->where('customer_id', $data['customer_id'])
+                ->get()
+                ->sum(fn (Order $o) => (float) $o->outstanding());
+
+            return back()->with(
+                'success',
+                "Added to the book — {$customer?->name} now owes ".Currency::current()->format($owedNow).'.',
+            );
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The debt could not be recorded. Nothing was added — try again.');
+        }
+    }
+
     public function settle(Request $request, Order $order): RedirectResponse
     {
         try {
