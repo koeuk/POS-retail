@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { CurrencyDef } from '@/composables/useCurrency';
+import { useCart } from '@/Pos/composables/useCart';
 import { formatMoney } from '@/Pos/lib/money';
 import type { PosCategory, PosProduct } from '@/Pos/types';
 import { ChevronRight, Layers, PackageOpen, Search } from 'lucide-vue-next';
@@ -102,7 +103,15 @@ function stockTone(product: PosProduct): string {
     return 'text-muted-foreground';
 }
 
-const outOfStock = (product: PosProduct) => product.track_stock && product.stock_qty <= 0;
+/*
+ * A tile goes dark not only at zero stock, but as soon as the cart already
+ * holds everything the shelf has — otherwise a cashier could keep tapping a
+ * 15-pc item up to 34 and only find out at the stock report.
+ */
+const cart = useCart();
+const inCart = (productId: number) => cart.lines.find((l) => l.productId === productId)?.qty ?? 0;
+
+const outOfStock = (product: PosProduct) => product.track_stock && product.stock_qty - inCart(product.id) <= 0;
 
 /** Nothing on this tile can be sold — not the single, not any pack. */
 const fullySoldOut = (product: PosProduct) => sellableAs(product).every(outOfStock);

@@ -20,6 +20,10 @@
             html.dark { background-color: hsl(28 9% 8%); }
         </style>
 
+        @if ($favicon = \App\Models\Setting::get('shop_favicon'))
+            <link rel="icon" href="{{ asset('storage/'.$favicon) }}">
+        @endif
+
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link
             href="https://fonts.bunny.net/css?family=bricolage-grotesque:600,700|ibm-plex-sans:400,500,600|ibm-plex-mono:400,500"

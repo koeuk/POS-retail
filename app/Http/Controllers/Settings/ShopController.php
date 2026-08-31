@@ -9,6 +9,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -30,6 +31,8 @@ class ShopController extends Controller
                 'receipt_footer' => Setting::get('receipt_footer'),
                 'currency' => Currency::current()->code,
                 'riel_per_usd' => Currency::current()->rielPerUsd,
+                'logo' => Setting::get('shop_logo'),
+                'favicon' => Setting::get('shop_favicon'),
             ],
             'currencies' => collect(Currency::DEFINITIONS)
                 ->map(fn (array $def, string $code) => [
@@ -51,7 +54,22 @@ class ShopController extends Controller
                 // A rate of 0 would turn every riel price into ៛0, and a rate in
                 // the millions is a typo, not an economy. Bound it sensibly.
                 'riel_per_usd' => ['required', 'numeric', 'min:1', 'max:100000'],
+
+                /*
+                 * Branding. The favicon stays small and square-ish because the
+                 * browser will render it at 16–32px — a 2MB photograph there
+                 * is bandwidth spent on something nobody can see.
+                 */
+                'logo' => ['nullable', 'image', 'max:2048'],
+                'favicon' => ['nullable', 'image', 'mimes:png,ico,webp,jpg,jpeg', 'max:512'],
+                'remove_logo' => ['boolean'],
+                'remove_favicon' => ['boolean'],
             ]);
+
+            foreach (['logo' => 'shop_logo', 'favicon' => 'shop_favicon'] as $field => $key) {
+                $this->applyBrandingFile($request, $field, $key);
+                unset($data[$field], $data['remove_'.$field]);
+            }
 
             // All four settings land together or not at all — a currency
             // saved without its rate would misprice every screen at once.
@@ -64,6 +82,34 @@ class ShopController extends Controller
             return back()->with('success', 'Shop settings saved.');
         } catch (QueryException $e) {
             return $this->failed($e, 'The settings could not be saved. Nothing was changed — try again.');
+        }
+    }
+
+    /**
+     * Store, replace or remove one branding file.
+     *
+     * The old file is deleted only after the new path is safely in settings —
+     * a failed upload must never leave the shop logo-less. Removal is its own
+     * explicit flag; an empty file input on an ordinary save means "keep".
+     */
+    private function applyBrandingFile(Request $request, string $field, string $settingKey): void
+    {
+        $current = Setting::get($settingKey);
+
+        if ($request->hasFile($field)) {
+            $path = $request->file($field)->store('branding', 'public');
+            Setting::put($settingKey, $path);
+
+            if ($current && $current !== $path) {
+                Storage::disk('public')->delete($current);
+            }
+
+            return;
+        }
+
+        if ($request->boolean('remove_'.$field) && $current) {
+            Setting::put($settingKey, null);
+            Storage::disk('public')->delete($current);
         }
     }
 }

@@ -12,6 +12,7 @@ interface MenuPack {
     name: string;
     units: number;
     price: number;
+    sold_out: boolean;
 }
 
 interface MenuProduct {
@@ -24,6 +25,7 @@ interface MenuProduct {
     category_id: number;
     category_name: string | null;
     price: number;
+    sold_out: boolean;
 }
 
 const props = defineProps<{
@@ -187,10 +189,29 @@ const isStaff = computed(() => !!page.props.auth?.user);
                     afford a 64px thumbnail.
                 -->
                 <ul class="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                    <li v-for="item in group.items" :key="item.id" class="lift flex flex-col overflow-hidden rounded-xl border border-border bg-card">
-                        <div class="flex aspect-square w-full items-center justify-center overflow-hidden bg-muted/40">
-                            <img v-if="item.image" :src="`/storage/${item.image}`" :alt="item.name" loading="lazy" class="size-full object-cover" />
+                    <li
+                        v-for="item in group.items"
+                        :key="item.id"
+                        class="flex flex-col overflow-hidden rounded-xl border border-border bg-card"
+                        :class="item.sold_out ? 'opacity-60' : 'lift'"
+                    >
+                        <div class="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-muted/40">
+                            <img
+                                v-if="item.image"
+                                :src="`/storage/${item.image}`"
+                                :alt="item.name"
+                                loading="lazy"
+                                class="size-full object-cover"
+                                :class="item.sold_out && 'grayscale'"
+                            />
                             <UtensilsCrossed v-else class="size-7 text-muted-foreground/50" />
+
+                            <span
+                                v-if="item.sold_out"
+                                class="absolute inset-x-0 bottom-0 bg-destructive/90 py-1 text-center text-[0.7rem] font-semibold uppercase tracking-wide text-white"
+                            >
+                                Out of stock
+                            </span>
                         </div>
 
                         <div class="flex flex-1 flex-col gap-0.5 p-3">
@@ -219,9 +240,16 @@ const isStaff = computed(() => !!page.props.auth?.user);
                                     between.
                                 -->
                                 <dl v-if="item.packs.length" class="mt-1.5 space-y-0.5 border-t border-border pt-1.5">
-                                    <div v-for="pack in item.packs" :key="pack.id" class="flex items-baseline justify-between gap-2">
+                                    <div
+                                        v-for="pack in item.packs"
+                                        :key="pack.id"
+                                        class="flex items-baseline justify-between gap-2"
+                                        :class="pack.sold_out && 'opacity-50'"
+                                    >
                                         <dt class="truncate text-xs text-muted-foreground">{{ pack.name }}</dt>
-                                        <dd class="tabular shrink-0 font-mono text-xs font-medium">{{ money(pack.price) }}</dd>
+                                        <dd class="tabular shrink-0 font-mono text-xs font-medium" :class="pack.sold_out && 'line-through'">
+                                            {{ money(pack.price) }}
+                                        </dd>
                                     </div>
                                 </dl>
                             </div>

@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\Role;
+use App\Models\Setting;
 use App\Support\Currency;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
@@ -63,6 +64,12 @@ class HandleInertiaRequests extends Middleware
             // Every price on every page formats through this. Changing the
             // setting therefore changes the whole app on the next request.
             'currency' => fn () => Currency::current()->toArray(),
+            // The shop's face: sidebar logo and browser-tab icon. Shared here
+            // because the sidebar renders on every authenticated page.
+            'branding' => fn () => [
+                'logo' => Setting::get('shop_logo'),
+                'favicon' => Setting::get('shop_favicon'),
+            ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

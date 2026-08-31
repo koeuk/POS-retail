@@ -67,7 +67,9 @@ const cart = useCart();
                     <span class="tabular w-8 text-center font-mono text-sm font-semibold">{{ line.qty }}</span>
                     <button
                         type="button"
-                        class="press flex size-8 items-center justify-center rounded-md border border-border"
+                        class="flex size-8 items-center justify-center rounded-md border border-border"
+                        :class="line.trackStock && line.qty >= line.stockHint ? 'cursor-not-allowed opacity-40' : 'press'"
+                        :disabled="line.trackStock && line.qty >= line.stockHint"
                         :aria-label="`More ${line.name}`"
                         @click="cart.setQty(line.productId, line.qty + 1)"
                     >
