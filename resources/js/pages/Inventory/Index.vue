@@ -194,6 +194,13 @@ const typedUnits = computed(() => {
 const container = computed(() => form.unit_label.trim() || 'case');
 const caseEntry = computed(() => Number(form.units_each) > 1);
 
+/* "cases", "boxes" — but a Khmer word like កេស is left exactly as typed. */
+const containerPlural = computed(() => {
+    const word = container.value;
+    if (!/^[a-z]+$/i.test(word) || word.endsWith('s')) return word;
+    return /(x|ch|sh)$/i.test(word) ? `${word}es` : `${word}s`;
+});
+
 const resulting = computed(() => {
     if (!adjusting.value) return 0;
     const q = typedUnits.value;
@@ -552,7 +559,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
 
                         <div class="grid gap-2">
                             <Label for="qty">
-                                {{ form.mode === 'count' ? 'Counted on the shelf' : caseEntry ? `Number of ${form.unit_label.trim() || 'cases'}` : 'Quantity' }}
+                                {{ form.mode === 'count' ? 'Counted on the shelf' : caseEntry ? `Number of ${containerPlural}` : 'Quantity' }}
                             </Label>
                             <Input id="qty" v-model="form.quantity" type="number" min="0" inputmode="numeric" class="tabular font-mono" />
                             <InputError :message="form.errors.quantity" />

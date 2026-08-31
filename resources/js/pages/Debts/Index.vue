@@ -170,9 +170,7 @@ function unpickProduct() {
     void searchProducts();
 }
 
-const lineTotal = computed(() =>
-    pickedProduct.value ? Number(pickedProduct.value.sell_price) * Math.max(1, Number(addForm.qty) || 1) : 0,
-);
+const lineTotal = computed(() => (pickedProduct.value ? Number(pickedProduct.value.sell_price) * Math.max(1, Number(addForm.qty) || 1) : 0));
 
 /** Who the debt lands on. Set by the row's + button, or searched for. */
 const picked = ref<PickedCustomer | null>(null);
@@ -235,9 +233,9 @@ function submitAdd() {
             note: pickedProduct.value ? null : data.note,
         }))
         .post(route('debts.store'), {
-        preserveScroll: true,
-        onSuccess: () => (adding.value = false),
-    });
+            preserveScroll: true,
+            onSuccess: () => (adding.value = false),
+        });
 }
 </script>
 
@@ -503,6 +501,70 @@ function submitAdd() {
                         </div>
 
                         <div class="grid gap-2">
+                            <Label>What did they take? <span class="text-muted-foreground">(optional)</span></Label>
+
+                            <!-- Picked: the catalogue prices it and the shelf will move. -->
+                            <div v-if="pickedProduct" class="rounded-lg border border-border p-3">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-medium">{{ pickedProduct.name }}</p>
+                                        <p class="tabular truncate font-mono text-xs text-muted-foreground">
+                                            {{ money(pickedProduct.sell_price) }}
+                                            <template v-if="pickedProduct.parent_name">
+                                                · ×{{ pickedProduct.units_per_pack }} of {{ pickedProduct.parent_name }}
+                                            </template>
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        class="press rounded p-1 text-muted-foreground hover:text-foreground"
+                                        aria-label="Type an amount instead"
+                                        @click="unpickProduct"
+                                    >
+                                        <X class="size-4" />
+                                    </button>
+                                </div>
+
+                                <div class="mt-3 flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-2">
+                                        <Label for="debt-qty" class="text-xs text-muted-foreground">Qty</Label>
+                                        <Input id="debt-qty" v-model="addForm.qty" type="number" min="1" class="tabular w-20 font-mono" />
+                                    </div>
+                                    <p class="tabular font-mono text-sm font-semibold text-primary">{{ money(lineTotal) }}</p>
+                                </div>
+                                <InputError :message="addForm.errors.qty" />
+                            </div>
+
+                            <!-- Not picked: search, or just skip to a typed amount below. -->
+                            <template v-else>
+                                <div class="relative">
+                                    <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                                    <Input v-model="productQuery" placeholder="Product, SKU or barcode…" class="pl-9" autocomplete="off" />
+                                </div>
+                                <ul v-if="productResults.length" class="max-h-40 overflow-y-auto rounded-lg border border-border">
+                                    <li v-for="pr in productResults" :key="pr.id" class="border-b border-border last:border-b-0">
+                                        <button
+                                            type="button"
+                                            class="row-press flex w-full items-baseline justify-between gap-2 px-3 py-2 text-left"
+                                            @click="pickProduct(pr)"
+                                        >
+                                            <span class="min-w-0 flex-1 truncate text-sm">
+                                                {{ pr.name }}
+                                                <span v-if="pr.parent_name" class="text-xs text-muted-foreground">
+                                                    ×{{ pr.units_per_pack }} {{ pr.parent_name }}
+                                                </span>
+                                            </span>
+                                            <span class="tabular shrink-0 font-mono text-xs font-semibold text-primary">{{
+                                                money(pr.sell_price)
+                                            }}</span>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </template>
+                            <InputError :message="addForm.errors.product_id" />
+                        </div>
+
+                        <div v-if="!pickedProduct" class="grid gap-2">
                             <Label for="debt-amount">Amount</Label>
                             <div class="relative">
                                 <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
@@ -521,7 +583,7 @@ function submitAdd() {
                             <InputError :message="addForm.errors.amount" />
                         </div>
 
-                        <div class="grid gap-2">
+                        <div v-if="!pickedProduct" class="grid gap-2">
                             <Label for="debt-note">What for</Label>
                             <Input id="debt-note" v-model="addForm.note" placeholder="Optional — rice, oil, cigarettes…" />
                             <p class="text-xs text-muted-foreground">Shown on the debt so both sides remember what it was.</p>
@@ -531,7 +593,11 @@ function submitAdd() {
 
                     <DialogFooter>
                         <Button type="button" variant="ghost" class="press" @click="adding = false">Cancel</Button>
-                        <Button type="submit" class="press" :disabled="addForm.processing || !addForm.customer_id || !addForm.amount">
+                        <Button
+                            type="submit"
+                            class="press"
+                            :disabled="addForm.processing || !addForm.customer_id || (pickedProduct ? !addForm.qty : !addForm.amount)"
+                        >
                             Add to debt
                         </Button>
                     </DialogFooter>

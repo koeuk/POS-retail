@@ -147,7 +147,7 @@ const isStaff = computed(() => !!page.props.auth?.user);
                         "
                         @click="activeCategory = null"
                     >
-                        Everything
+                        All
                     </button>
                     <button
                         v-for="c in categories"
