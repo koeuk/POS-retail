@@ -102,6 +102,11 @@ function stockTone(product: PosProduct): string {
     return 'text-muted-foreground';
 }
 
+const outOfStock = (product: PosProduct) => product.track_stock && product.stock_qty <= 0;
+
+/** Nothing on this tile can be sold — not the single, not any pack. */
+const fullySoldOut = (product: PosProduct) => sellableAs(product).every(outOfStock);
+
 defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus() });
 </script>
 
@@ -150,7 +155,13 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                 <div v-for="product in visible" :key="product.id" class="relative">
                     <button
                         type="button"
-                        class="press flex h-full w-full flex-col overflow-hidden rounded-xl border border-border bg-card text-left transition-colors hover:border-primary/50 active:border-primary"
+                        class="flex h-full w-full flex-col overflow-hidden rounded-xl border border-border bg-card text-left transition-colors"
+                        :class="
+                            outOfStock(product)
+                                ? 'cursor-not-allowed opacity-60'
+                                : 'press hover:border-primary/50 active:border-primary'
+                        "
+                        :disabled="outOfStock(product)"
                         @click="tap(product)"
                     >
                         <div class="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-muted/40">
@@ -160,8 +171,16 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                                 :alt="product.name"
                                 loading="lazy"
                                 class="size-full object-cover"
+                                :class="outOfStock(product) && 'grayscale'"
                             />
                             <PackageOpen v-else class="size-7 text-muted-foreground/50" />
+
+                            <span
+                                v-if="outOfStock(product)"
+                                class="absolute inset-x-0 bottom-0 bg-destructive/90 py-1 text-center text-[0.7rem] font-semibold uppercase tracking-wide text-white"
+                            >
+                                Out of stock
+                            </span>
 
                             <!-- Says at a glance that this tile hides more than one price. -->
                             <span
@@ -194,7 +213,7 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                         the price corner.
                     -->
                     <button
-                        v-if="sellableAs(product).length > 1"
+                        v-if="sellableAs(product).length > 1 && !fullySoldOut(product)"
                         type="button"
                         class="press absolute bottom-2 right-2 z-10 flex items-center gap-0.5 rounded-full border border-border bg-card/95 py-1 pl-2 pr-1 text-[0.7rem] font-medium text-muted-foreground shadow-sm backdrop-blur transition-colors hover:border-primary/50 hover:text-foreground"
                         :aria-label="`See every price for ${product.name}`"
@@ -225,7 +244,9 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                     <li v-for="option in sellableAs(viewing)" :key="option.id">
                         <button
                             type="button"
-                            class="row-press flex w-full items-baseline justify-between gap-3 rounded-lg px-3 py-3 text-left"
+                            class="flex w-full items-baseline justify-between gap-3 rounded-lg px-3 py-3 text-left"
+                            :class="outOfStock(option) ? 'cursor-not-allowed opacity-50' : 'row-press'"
+                            :disabled="outOfStock(option)"
                             @click="choose(option)"
                         >
                             <span class="min-w-0 flex-1">
@@ -235,6 +256,7 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                                 <span v-if="option.id !== viewing.id" class="tabular font-mono text-xs text-muted-foreground">
                                     ×{{ option.units_per_pack }} {{ viewing.unit }}
                                 </span>
+                                <span v-if="outOfStock(option)" class="block text-xs font-medium text-destructive">Out of stock</span>
                             </span>
                             <span class="tabular shrink-0 font-mono text-base font-semibold text-primary">
                                 {{ formatMoney(Number(option.sell_price), currency) }}

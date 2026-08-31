@@ -59,10 +59,14 @@ class MenuController extends Controller
                         'name' => $pack->name,
                         'units' => $pack->units_per_pack,
                         'price' => (float) $pack->sell_price,
+                        'sold_out' => $pack->track_stock && $pack->stock_qty <= 0,
                     ])
                     ->values(),
 
                 'price' => (float) $p->sell_price,
+
+                // A boolean only — actual quantities stay off this public page.
+                'sold_out' => $p->track_stock && $p->stock_qty <= 0,
             ])
             ->values();
 

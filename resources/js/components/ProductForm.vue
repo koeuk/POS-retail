@@ -57,6 +57,18 @@ const priceStep = computed(() => (currency.value.decimals > 0 ? '0.01' : '1'));
 const SINGLE = 'single';
 
 /** Fields that only mean anything once the product exists. */
+/*
+ * Opening stock, entered the way it arrives: two cases of twenty-four and one
+ * loose, not forty-nine. The per-case count borrows "Counted in cases of"
+ * from Options so it is typed once; either can be overridden here. Only the
+ * computed total travels to the server — the wire stays a plain opening_qty.
+ */
+const openingEach = ref<string | number>('');
+const openingLoose = ref<string | number>('');
+const openingPerCase = computed(() => Number(openingEach.value) || Number(form.case_size) || 1);
+const openingInCases = computed(() => openingPerCase.value > 1);
+const openingTotal = computed(() => (Number(form.opening_qty) || 0) * openingPerCase.value + (Number(openingLoose.value) || 0));
+
 const RECEIPT_KEYS = ['add_stock', 'add_stock_pack_id', 'add_stock_units_each', 'add_stock_unit_label', 'add_stock_loose', 'add_stock_note'] as const;
 
 const form = useForm({
@@ -203,6 +215,9 @@ function submit() {
         const payload: Record<string, unknown> = { ...data };
 
         for (const key of RECEIPT_KEYS) delete payload[key];
+
+        // The server hears one number; the cases arithmetic lives up here.
+        payload.opening_qty = openingTotal.value;
 
         return payload;
     }).post(route('products.store'), { forceFormData: true });
@@ -460,15 +475,37 @@ function submit() {
                 <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Opening stock</h2>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
-                        <Label for="qty">Quantity per store</Label>
+                        <Label for="qty">{{ openingInCases ? 'Number of cases, per store' : 'Quantity per store' }}</Label>
                         <Input id="qty" v-model="form.opening_qty" type="number" min="0" class="tabular font-mono" />
                         <InputError :message="form.errors.opening_qty" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="opening-each">
+                            {{ form.unit || 'pcs' }} in each case
+                            <span class="text-muted-foreground">(optional)</span>
+                        </Label>
+                        <Input
+                            id="opening-each"
+                            v-model="openingEach"
+                            type="number"
+                            min="1"
+                            inputmode="numeric"
+                            :placeholder="String(form.case_size || 12)"
+                            class="tabular font-mono"
+                        />
+                    </div>
+                    <div v-if="openingInCases" class="grid gap-2">
+                        <Label for="opening-loose">Plus loose {{ form.unit || 'pcs' }}</Label>
+                        <Input id="opening-loose" v-model="openingLoose" type="number" min="0" class="tabular font-mono" />
                     </div>
                     <div class="grid gap-2">
                         <Label for="threshold">Low-stock alert at</Label>
                         <Input id="threshold" v-model="form.low_stock_threshold" type="number" min="0" class="tabular font-mono" />
                         <InputError :message="form.errors.low_stock_threshold" />
                     </div>
+                    <p v-if="openingInCases" class="tabular font-mono text-xs text-muted-foreground sm:col-span-2">
+                        Each store starts with {{ openingTotal }} {{ form.unit || 'pcs' }}
+                    </p>
                 </div>
             </section>
         </div>
