@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Register;
+use App\Models\Setting;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
@@ -612,5 +613,26 @@ class PosSyncTest extends TestCase
         $stored = Order::where('order_no', $result['order_no'])->value('created_offline_at');
 
         $this->assertSame('2026-08-23 23:00:00', Carbon::parse($stored)->utc()->toDateTimeString());
+    }
+
+    public function test_the_order_number_code_can_be_set_from_shop_settings(): void
+    {
+        Setting::put('order_prefix', 'MYSHOP');
+
+        $product = $this->stockedProduct(50);
+        $first = $this->sync([$this->orderPayload([$this->line($product, 1)])])->json('results.0');
+
+        $day = SalesReporter::businessNow()->format('ymd');
+        $this->assertSame("MYSHOP-{$day}-0001", $first['order_no']);
+
+        // The sequence continues under the custom code, not beside it.
+        $second = $this->sync([$this->orderPayload([$this->line($product, 1)])])->json('results.0');
+        $this->assertSame("MYSHOP-{$day}-0002", $second['order_no']);
+
+        // Clearing the code goes back to the store-and-register default,
+        // whose run starts fresh — it is a different prefix.
+        Setting::put('order_prefix', null);
+        $third = $this->sync([$this->orderPayload([$this->line($product, 1)])])->json('results.0');
+        $this->assertSame(sprintf('S%d-R%d-%s-0001', $this->store->id, $this->register->id, $day), $third['order_no']);
     }
 }

@@ -159,6 +159,16 @@ class ShopBrandingTest extends TestCase
         $this->assertNull(Setting::get('shop_logo'));
     }
 
+    public function test_guests_receive_branding_so_the_login_page_can_show_the_logo(): void
+    {
+        Setting::put('shop_logo', 'branding/logo.png');
+
+        $this->get('/login')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('branding.logo', 'branding/logo.png'));
+    }
+
     public function test_settings_page_shows_current_branding(): void
     {
         Setting::put('shop_logo', 'branding/logo.png');

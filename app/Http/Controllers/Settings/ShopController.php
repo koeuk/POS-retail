@@ -31,6 +31,7 @@ class ShopController extends Controller
                 'receipt_footer' => Setting::get('receipt_footer'),
                 'currency' => Currency::current()->code,
                 'riel_per_usd' => Currency::current()->rielPerUsd,
+                'order_prefix' => Setting::get('order_prefix'),
                 'logo' => Setting::get('shop_logo'),
                 'favicon' => Setting::get('shop_favicon'),
             ],
@@ -55,6 +56,11 @@ class ShopController extends Controller
                 // the millions is a typo, not an economy. Bound it sensibly.
                 'riel_per_usd' => ['required', 'numeric', 'min:1', 'max:100000'],
 
+                // Leads every order number, so it has to survive the LIKE and
+                // SUBSTRING_INDEX arithmetic the numbering is built on: letters,
+                // digits and dashes, never a trailing dash or a space.
+                'order_prefix' => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/'],
+
                 /*
                  * Branding. The favicon stays small and square-ish because the
                  * browser will render it at 16–32px — a 2MB photograph there
@@ -64,6 +70,8 @@ class ShopController extends Controller
                 'favicon' => ['nullable', 'image', 'mimes:png,ico,webp,jpg,jpeg', 'max:512'],
                 'remove_logo' => ['boolean'],
                 'remove_favicon' => ['boolean'],
+            ], [
+                'order_prefix.regex' => 'Letters, numbers and dashes only — it leads every order number.',
             ]);
 
             foreach (['logo' => 'shop_logo', 'favicon' => 'shop_favicon'] as $field => $key) {

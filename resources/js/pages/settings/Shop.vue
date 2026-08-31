@@ -19,11 +19,16 @@ const props = defineProps<{
         receipt_footer: string | null;
         currency: string;
         riel_per_usd: number;
+        order_prefix: string | null;
         logo: string | null;
         favicon: string | null;
     };
     currencies: { code: string; symbol: string; name: string }[];
 }>();
+
+/* What today's first order would be called, so the code is never a surprise. */
+const ymd = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+const prefixPreview = computed(() => `${(form.order_prefix || 'S1-R1').trim()}-${ymd}-0001`);
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Shop settings', href: '/settings/shop' }];
 
@@ -32,6 +37,7 @@ const form = useForm({
     receipt_footer: props.shop.receipt_footer ?? '',
     currency: props.shop.currency,
     riel_per_usd: String(props.shop.riel_per_usd),
+    order_prefix: props.shop.order_prefix ?? '',
     logo: null as File | null,
     favicon: null as File | null,
     remove_logo: false as boolean,
@@ -257,6 +263,21 @@ function submit() {
                             <p class="text-xs text-muted-foreground">PNG or ICO up to 512 KB. Shown on the browser tab.</p>
                             <InputError :message="form.errors.favicon" />
                         </div>
+                    </div>
+                </div>
+
+                <!-- Order numbers -->
+                <div class="space-y-6">
+                    <HeadingSmall title="Order numbers" description="The code every order number starts with." />
+
+                    <div class="grid gap-2">
+                        <Label for="order-prefix">Code <span class="text-muted-foreground">(optional)</span></Label>
+                        <Input id="order-prefix" v-model="form.order_prefix" class="font-mono" maxlength="20" placeholder="S1-R1" />
+                        <p class="tabular font-mono text-xs text-muted-foreground">
+                            Orders will look like <strong class="text-foreground">{{ prefixPreview }}</strong
+                            >. Leave empty for the store-and-register default.
+                        </p>
+                        <InputError :message="form.errors.order_prefix" />
                     </div>
                 </div>
 

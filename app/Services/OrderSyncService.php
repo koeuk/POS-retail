@@ -8,6 +8,7 @@ use App\Enums\SaleType;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Register;
+use App\Models\Setting;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
@@ -321,7 +322,11 @@ class OrderSyncService
     {
         // Numbered by the shop's day, matching how the reports group them.
         $day = ($offlineAt ?? now())->copy()->setTimezone(config('pos.business_timezone'));
-        $prefix = sprintf('S%d-R%d-%s-', $storeId, $registerId ?? 0, $day->format('ymd'));
+        // The leading code is the shop's to choose (Settings -> Shop). The
+        // default encodes store and register; a custom code is shared by every
+        // till, so its daily sequence is simply shared too.
+        $code = trim((string) Setting::get('order_prefix'));
+        $prefix = ($code !== '' ? $code : sprintf('S%d-R%d', $storeId, $registerId ?? 0)).'-'.$day->format('ymd').'-';
 
         /*
          * Read the highest sequence already issued rather than counting rows.
@@ -333,8 +338,10 @@ class OrderSyncService
          * over gaps, and the attempt offset walks forward if two registers
          * land on the same number at once.
          */
-        $highest = (int) Order::where('store_id', $storeId)
-            ->where('order_no', 'like', $prefix.'%')
+        // Scoped by the prefix alone: the default form already names the
+        // store and register, and a custom code must count across stores or
+        // two shops would mint the same number on the same day.
+        $highest = (int) Order::where('order_no', 'like', $prefix.'%')
             ->max(DB::raw("CAST(SUBSTRING_INDEX(order_no, '-', -1) AS UNSIGNED)"));
 
         return $prefix.sprintf('%04d', $highest + $attempt);
