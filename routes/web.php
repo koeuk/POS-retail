@@ -113,8 +113,13 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
     Route::resource('customers', CustomerController::class)
         ->only(['index', 'store', 'update', 'destroy'])->middleware('permission:customers');
 
-    Route::resource('users', UserController::class)
-        ->only(['index', 'store', 'update', 'destroy'])->middleware('permission:users');
+    Route::middleware('permission:users')->group(function () {
+        Route::resource('users', UserController::class)->only(['index', 'store', 'update', 'destroy']);
+        // Permissions save on their own path so the dialog sends only the
+        // switches — see UserController::permissions().
+        Route::put('users/{user}/permissions', [UserController::class, 'permissions'])
+            ->name('users.permissions');
+    });
 
     /*
     | Audit trail. Read-only — index is the whole surface, and there is no

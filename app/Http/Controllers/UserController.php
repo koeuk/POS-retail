@@ -117,6 +117,48 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * Save one account's permission overrides and nothing else.
+     *
+     * Separate from update() so the Permissions dialog cannot carry a stale
+     * name, email or role along with the switches. The guards are the same
+     * ones update() applies: only an admin may hand out access, keys are
+     * whitelisted against the enum, and an admin's own row is left alone
+     * because admins hold everything regardless.
+     */
+    public function permissions(Request $request, User $user): RedirectResponse
+    {
+        try {
+            $this->authorize('update', $user);
+
+            abort_unless($request->user()->isAdmin(), 403);
+
+            if ($user->role === Role::Admin) {
+                return back()->withErrors([
+                    'permissions' => 'Administrators always hold every permission.',
+                ]);
+            }
+
+            $validated = $request->validate([
+                'permissions' => ['required', 'array'],
+                'permissions.*' => ['boolean'],
+            ]);
+
+            // Unknown keys are dropped rather than stored: a renamed enum
+            // case must not leave orphaned overrides rotting in the column.
+            $permissions = collect($validated['permissions'])
+                ->only(Permission::values())
+                ->map(fn ($granted) => (bool) $granted)
+                ->all();
+
+            DB::transaction(fn () => $user->update(['permissions' => $permissions]));
+
+            return back()->with('success', "Permissions updated for {$user->name}.");
+        } catch (QueryException $e) {
+            return $this->failed($e, 'The permissions could not be saved. Nothing was changed — try again.');
+        }
+    }
+
     public function destroy(Request $request, User $user): RedirectResponse
     {
         try {

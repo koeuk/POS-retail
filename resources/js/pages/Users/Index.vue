@@ -16,7 +16,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
 import type { Paginated, SharedData, Store, User } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { Pencil, Plus, Search, Trash2, Users } from 'lucide-vue-next';
+import { Pencil, Plus, Search, ShieldCheck, Trash2, Users } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 type PermissionOption = {
@@ -138,6 +138,38 @@ function submit() {
     }
 }
 
+/*
+ * Permissions get their own dialog and their own form. Sharing the edit
+ * form would mean a permissions save also PUTs name, email and role — so a
+ * stale field on screen could quietly overwrite a colleague's edit. This
+ * sends only the switches.
+ */
+const permissionsFor = ref<(User & { effective_permissions: Record<string, boolean> }) | null>(null);
+const permissionsOpen = ref(false);
+const permissionsForm = useForm({ permissions: {} as Record<string, boolean> });
+
+function openPermissions(user: User & { effective_permissions: Record<string, boolean> }) {
+    permissionsFor.value = user;
+    permissionsForm.clearErrors();
+    permissionsForm.permissions = { ...user.effective_permissions };
+    permissionsOpen.value = true;
+}
+
+/** Back to what the role alone grants — clears every per-user override. */
+function resetToRoleDefaults() {
+    if (!permissionsFor.value) return;
+    permissionsForm.permissions = roleDefaults(permissionsFor.value.role);
+}
+
+function submitPermissions() {
+    if (!permissionsFor.value) return;
+
+    permissionsForm.put(route('users.permissions', { user: permissionsFor.value.id }), {
+        preserveScroll: true,
+        onSuccess: () => (permissionsOpen.value = false),
+    });
+}
+
 const pendingDelete = ref<User | null>(null);
 
 function confirmDelete() {
@@ -232,6 +264,26 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                 </TableCell>
                                 <TableCell>
                                     <div class="flex items-center gap-1">
+                                        <!-- Admins hold every permission by definition, so the
+                                             button is disabled rather than hidden: a control that
+                                             vanishes makes people hunt for it, a dead one with a
+                                             reason attached answers the question on the spot. -->
+                                        <Button
+                                            v-if="canEditPermissions"
+                                            variant="ghost"
+                                            size="icon"
+                                            class="press size-8 disabled:opacity-40"
+                                            :disabled="u.role === 'admin'"
+                                            :aria-label="`Permissions for ${u.name}`"
+                                            :title="
+                                                u.role === 'admin'
+                                                    ? 'Administrators always have every permission'
+                                                    : `Permissions for ${u.name}`
+                                            "
+                                            @click="openPermissions(u)"
+                                        >
+                                            <ShieldCheck class="size-4" />
+                                        </Button>
                                         <HistoryButton subject-type="User" :subject-id="u.id" :label="u.name" />
                                         <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(u)">
                                             <Pencil class="size-4" />
@@ -270,6 +322,16 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                             </div>
 
                             <Badge :variant="roleTone(u.role)" class="shrink-0 capitalize">{{ u.role }}</Badge>
+                        </button>
+
+                        <button
+                            v-if="canEditPermissions && u.role !== 'admin'"
+                            type="button"
+                            class="list-row-action"
+                            :aria-label="`Permissions for ${u.name}`"
+                            @click="openPermissions(u)"
+                        >
+                            <ShieldCheck class="size-4" />
                         </button>
 
                         <button
@@ -407,6 +469,40 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                         <Button type="submit" class="press" :disabled="form.processing">
                             {{ editing ? 'Save' : 'Create' }}
                         </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Permissions on their own. Same switches as the edit dialog, but
+             this saves the switches alone — see permissionsForm. -->
+        <Dialog v-model:open="permissionsOpen">
+            <DialogContent class="max-h-[90svh] overflow-y-auto">
+                <form @submit.prevent="submitPermissions">
+                    <DialogHeader>
+                        <DialogTitle>Permissions — {{ permissionsFor?.name }}</DialogTitle>
+                        <DialogDescription>
+                            The <span class="capitalize">{{ permissionsFor?.role }}</span> role sets the baseline. Each switch is a change for this
+                            person alone.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div class="grid gap-4 py-5 sm:grid-cols-2">
+                        <div v-for="[group, options] in permissionGroups" :key="group" class="space-y-2">
+                            <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">{{ group }}</p>
+                            <div v-for="option in options" :key="option.value" class="flex items-center justify-between gap-3">
+                                <span class="text-sm">{{ option.label }}</span>
+                                <Switch v-model="permissionsForm.permissions[option.value]" :aria-label="option.label" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter class="gap-2 sm:justify-between">
+                        <Button type="button" variant="ghost" class="press" @click="resetToRoleDefaults">Reset to role defaults</Button>
+                        <div class="flex gap-2">
+                            <Button type="button" variant="ghost" class="press" @click="permissionsOpen = false">Cancel</Button>
+                            <Button type="submit" class="press" :disabled="permissionsForm.processing">Save permissions</Button>
+                        </div>
                     </DialogFooter>
                 </form>
             </DialogContent>
