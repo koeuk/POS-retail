@@ -208,7 +208,7 @@
      * padding either side is 11% of a 360px screen that the content wants.
      */
     .list-panel {
-        @apply shadow-soft -mx-2.5 border-y border-border bg-card/75 backdrop-blur-xl md:mx-0 md:rounded-2xl md:border md:bg-card md:backdrop-blur-none;
+        @apply shadow-soft -mx-2.5 border-y border-border bg-card md:mx-0 md:rounded-2xl md:border;
     }
 
     /*

@@ -26,7 +26,17 @@ const page = usePage<SharedData>();
 
 const visible = computed(() => !!page.props.auth.can.activity);
 
-const href = computed(() => route('activity.show', { subjectType: props.subjectType, subjectId: props.subjectId }));
+/** Each record type's own history endpoint — /products/21/history etc. */
+const routeNames: Record<string, string> = {
+    Product: 'products.history',
+    Category: 'categories.history',
+    Customer: 'customers.history',
+    Store: 'stores.history',
+    Stock: 'inventory.history',
+    User: 'users.history',
+};
+
+const href = computed(() => route(routeNames[props.subjectType], { subjectId: props.subjectId }));
 </script>
 
 <template>
@@ -35,7 +45,7 @@ const href = computed(() => route('activity.show', { subjectType: props.subjectT
         as-child
         variant="ghost"
         :size="withLabel ? 'default' : 'icon'"
-        :class="withLabel ? 'press h-11 flex-1 gap-1.5 rounded-none text-xs font-medium text-muted-foreground' : 'press size-8'"
+        :class="withLabel ? 'press h-9 flex-1 gap-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground' : 'press size-8'"
     >
         <Link :href="href" :aria-label="`History for ${label}`">
             <History class="size-4" />

@@ -89,14 +89,15 @@ class ActivityController extends Controller
     /**
      * One record's own history — where the per-row History button lands.
      *
-     * The subject arrives as a short class name from the URL, resolved
-     * against a whitelist rather than trusted: `activity/Product/7` is a
-     * page, `activity/../../User/1` with an invented class is a 404.
+     * The id comes from the URL; the record type is pinned by the route's
+     * default (`products.history` → Product), resolved against a whitelist —
+     * parameters arrive positionally, URI segment first, defaults after.
      */
-    public function show(Request $request, string $subjectType, int $subjectId): Response
+    public function show(Request $request, string $subjectId, string $subjectType): Response
     {
         $this->authorize('viewAny', Activity::class);
 
+        $subjectId = (int) $subjectId; // whereNumber guarantees digits
         $class = self::SUBJECTS[$subjectType] ?? abort(404);
 
         $subject = $class::find($subjectId);
@@ -136,6 +137,7 @@ class ActivityController extends Controller
                 'last_at' => $bounds?->last_at,
             ],
             'parent' => self::PARENTS[$subjectType],
+            'self_href' => self::PARENTS[$subjectType]['href']."/{$subjectId}/history",
         ]);
     }
 
@@ -148,7 +150,6 @@ class ActivityController extends Controller
         'Category' => ['title' => 'Categories', 'href' => '/categories'],
         'Customer' => ['title' => 'Customers', 'href' => '/customers'],
         'Store' => ['title' => 'Stores', 'href' => '/stores'],
-        'Register' => ['title' => 'Stores', 'href' => '/stores'],
         'Stock' => ['title' => 'Inventory', 'href' => '/inventory'],
         'User' => ['title' => 'Staff', 'href' => '/users'],
     ];

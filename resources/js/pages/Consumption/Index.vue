@@ -87,12 +87,12 @@ const summarise = (r: Row) => r.items.map((i) => (i.qty > 1 ? `${i.product_name}
             </div>
 
             <div class="animate-rise shadow-soft rounded-xl border border-border bg-card" style="animation-delay: 60ms">
-                <div class="space-y-2 border-b border-border p-3">
-                    <div class="relative">
+                <div class="space-y-2 border-b border-border p-3 md:flex md:items-center md:gap-2 md:space-y-0">
+                    <div class="relative md:flex-1">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input v-model="search" placeholder="Search by product…" class="h-10 rounded-full pl-9" autocomplete="off" />
                     </div>
-                    <div class="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 py-2">
+                    <div class="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 py-2 md:m-0 md:overflow-visible md:p-0">
                         <DateRangePicker v-model:from="from" v-model:to="to" placeholder="Any date" class="h-9 shrink-0 rounded-full" />
                     </div>
                 </div>

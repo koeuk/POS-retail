@@ -251,7 +251,7 @@ Each row is one `Route::middleware('permission:<key>')` group — the middleware
 | `customers`   | index/store/update/destroy                                                                                                         |
 | `users`       | index/store/update/destroy (admin-only by default; see invariants)                                                                 |
 | `stores`      | `GET/POST /stores`, `PUT/DELETE /stores/{store}`, `POST/PUT .../registers`                                                         |
-| `activity`    | `GET /activity` (whole log) · `GET /history/{Type}/{id}` (one record's own history page) — read-only by design: no write route exists, rows age out via the weekly `activitylog:clean` |
+| `activity`    | `GET /activity` (whole log) · `GET /<resource>/{id}/history` (a record's own history page, beside its show/edit endpoints: products, categories, customers, stores, inventory, users) — read-only by design: no write route exists, rows age out via the weekly `activitylog:clean` |
 
 ## The POS data API
 

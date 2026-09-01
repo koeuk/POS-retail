@@ -263,10 +263,10 @@ function stockTone(qty: number | null | undefined) {
                             </div>
                         </Link>
 
-                        <div class="flex items-stretch divide-x divide-border border-t border-border">
+                        <div class="flex items-stretch gap-2 border-t border-border p-2">
                             <Link
                                 :href="route('products.show', { product: p.id })"
-                                class="row-press flex h-11 flex-1 items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground"
+                                class="press flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground"
                             >
                                 <Eye class="size-4" />
                                 View
@@ -274,14 +274,14 @@ function stockTone(qty: number | null | undefined) {
                             <HistoryButton subject-type="Product" :subject-id="p.id" :label="p.name" with-label />
                             <Link
                                 :href="route('products.edit', { product: p.id })"
-                                class="row-press flex h-11 flex-1 items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground"
+                                class="press flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground"
                             >
                                 <Pencil class="size-4" />
                                 Edit
                             </Link>
                             <button
                                 type="button"
-                                class="row-press flex h-11 flex-1 items-center justify-center gap-1.5 text-xs font-medium text-destructive"
+                                class="press flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border text-xs font-medium text-destructive"
                                 @click="pendingDelete = p"
                             >
                                 <Trash2 class="size-4" />

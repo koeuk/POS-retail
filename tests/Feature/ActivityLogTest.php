@@ -157,7 +157,7 @@ class ActivityLogTest extends TestCase
         $product = Product::factory()->create(['name' => 'Angkor']);
         $product->update(['sell_price' => '4000']);
 
-        $this->get(route('activity.show', ['subjectType' => 'Product', 'subjectId' => $product->id]))
+        $this->get(route('products.history', ['subjectId' => $product->id]))
             ->assertOk()
             ->assertInertia(
                 fn (AssertableInertia $page) => $page
@@ -177,7 +177,7 @@ class ActivityLogTest extends TestCase
         $id = $product->id;
         $product->delete();
 
-        $this->get(route('activity.show', ['subjectType' => 'Product', 'subjectId' => $id]))
+        $this->get(route('products.history', ['subjectId' => $id]))
             ->assertOk()
             ->assertInertia(
                 fn (AssertableInertia $page) => $page
@@ -186,11 +186,11 @@ class ActivityLogTest extends TestCase
             );
     }
 
-    /** The subject type comes from the URL — anything off the whitelist 404s. */
-    public function test_an_unknown_subject_type_is_a_404(): void
+    /** The endpoint is typed like show/edit — a non-numeric id is a 404. */
+    public function test_a_malformed_history_url_is_a_404(): void
     {
         $this->actingAs($this->admin)
-            ->get('/history/Payment/1')
+            ->get('/products/abc/history')
             ->assertNotFound();
     }
 
@@ -203,7 +203,7 @@ class ActivityLogTest extends TestCase
         ]);
 
         $this->actingAs($cashier)
-            ->get(route('activity.show', ['subjectType' => 'Product', 'subjectId' => 1]))
+            ->get(route('products.history', ['subjectId' => 1]))
             ->assertForbidden();
     }
 

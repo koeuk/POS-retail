@@ -35,6 +35,8 @@ defineProps<{
     summary: { total: number; first_at: string | null; last_at: string | null };
     /** The section this record lives in — Products, Customers, … */
     parent: { title: string; href: string };
+    /** This page's own URL, e.g. /products/21/history. */
+    self_href: string;
 }>();
 
 /** Badge variant per event, mirroring the movement ledger's colour logic. */
@@ -56,7 +58,7 @@ const fieldLabel = (field: string) =>
     <AppLayout
         :breadcrumbs="[
             { title: parent.title, href: parent.href },
-            { title: subject.label, href: `/history/${subject.type}/${subject.id}` },
+            { title: subject.label, href: self_href },
         ]"
     >
         <div class="px-2.5 py-6 md:px-8">
