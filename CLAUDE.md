@@ -7,6 +7,7 @@ Laravel 11 + Inertia (Vue 3, TypeScript) + Tailwind. Offline-first POS for a Cam
 Before writing ANY code that touches roles, permissions, route gating, policies, or nav visibility, read **[docs/roles-and-permissions.md](docs/roles-and-permissions.md)** and follow it exactly. It contains the file map, the function reference, a copy-paste worked example for adding a feature area, and wrong-vs-right snippets. The short version:
 
 - Feature access goes through `$user->hasPermission(Permission::X)` — **never** `isManager()` / `role:admin,manager` for features.
+- Per-action rules (may edit but not delete) go through `$user->mayDo(Permission::X, Action::Y)` in the policy — never as extra `Permission` cases.
 - New feature area = 4 edits only: `Permission` enum case → `permission:<key>` route middleware → policy using `hasPermission` (keep the `before()` admin bypass) → `requires: '<key>'` nav item. Everything else picks the key up automatically.
 - UI hiding is never the wall — the route middleware and policy are.
 - Only admins may edit `permissions` or mint admins; keep the guards in `UserRequest`/`UserController`.

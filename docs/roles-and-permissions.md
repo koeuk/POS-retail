@@ -28,6 +28,11 @@ How access control works in POS Retail, the patterns every new feature must foll
 // The only way to ask "can this user use feature X?" — server side.
 $user->hasPermission(Permission::Reports): bool
 
+// And the next question down: inside an area they can reach, may they take
+// THIS action? Route middleware still gates the area; this gates the verb.
+// NOT called can() — that is Laravel's own Authorizable method.
+$user->mayDo(Permission::Products, Action::Delete): bool
+
 // Every key resolved for one user, as ['reports' => true, ...].
 // Used to feed the Staff dialog and auth.can. Rarely needed elsewhere.
 $user->effectivePermissions(): array
@@ -86,20 +91,31 @@ Dashboard and the public `/menu` need no permission. Shop settings (`/settings/s
 
 ## How a check resolves
 
-`User::hasPermission(Permission $p)` answers every question, in this order:
+`User::hasPermission(Permission $p)` answers the **area** question, in this order:
 
 1. **Admin?** → always `true`.
-2. **Override present** in the `users.permissions` JSON column (`{"reports": true}`)? → use it.
+2. **Override present** in the `users.permissions` JSON column? → use it.
 3. Otherwise → the role's default from `Permission::defaultFor(Role $r)`.
 
-`NULL` in the column means "no overrides" — the account behaves exactly as its role. This is why adding a permission case never requires a data migration.
+`User::mayDo(Permission $p, Action $a)` answers the **action** question: the area gate first (someone who cannot open Products cannot delete one), then the stored override for that key.
+
+An override is stored in one of two shapes, and both are valid:
+
+```jsonc
+{"reports": true}                                   // the whole area, every action
+{"products": {"view": true, "update": true, "delete": false}}  // per action
+```
+
+A plain `true`/`false` means every action follows it — which is why **the action matrix needed no data migration**, and why old overrides keep working untouched. In a per-action map, an action that is *omitted* falls back to the area's answer, so a partial map is safe. An area whose actions are *all* false is the same as no access at all, and `hasPermission()` reports it as such.
+
+`NULL` in the column means "no overrides" — the account behaves exactly as its role.
 
 ## The three enforcement layers
 
 Access is enforced in three places, and **all three must agree**. The UI layer is convenience; the server layers are the security.
 
 1. **Route middleware** — `->middleware('permission:reports')` ([EnsurePermission](../app/Http/Middleware/EnsurePermission.php)) blocks the request with 403 before the controller runs. Every feature route group in [routes/web.php](../routes/web.php) carries one.
-2. **Policies** — decide _what kind_ of action inside an area (`create`/`update`/`delete` vs read). They call `$user->hasPermission(...)`, never `isManager()`. Every policy keeps the `before()` admin bypass.
+2. **Policies** — decide _what kind_ of action inside an area (`create`/`update`/`delete` vs read). They call `$user->mayDo(Permission::X, Action::Y)` — never `isManager()`, and no longer bare `hasPermission()` for a write. Every policy keeps the `before()` admin bypass. Areas with no model of their own (Inventory movements, debt settlements) carry the same `mayDo()` check as an `abort_unless` in the controller.
 3. **Navigation** — the sidebar and phone tab bar render from `auth.can` (shared in [HandleInertiaRequests](../app/Http/Middleware/HandleInertiaRequests.php)); each nav item names its key via `requires:` in [navigation.ts](../resources/js/lib/navigation.ts). A user never sees a door they cannot open.
 
 ## Code patterns used
@@ -216,7 +232,16 @@ class ExpensePolicy
     if ($user->hasPermission(Permission::Reports)) { ... }
     ```
 
-- **Don't add a permission for something that isn't a feature area.** Fine-grained rules ("may edit but not delete") belong in the policy for that model, not as new enum cases — the enum is the menu the Staff dialog renders, and it should stay short enough to read at a glance.
+- **Don't add a permission for something that isn't a feature area.** The enum is the menu the Staff dialog renders and it must stay short enough to read at a glance. "May edit but not delete" is not a new case — it is an `Action` inside an existing one, resolved by `mayDo()` and enforced in that model's policy.
+
+    ```php
+    // ❌ wrong — four cases per screen, and the dialog becomes a wall of text
+    case ProductsView = 'products.view';
+    case ProductsDelete = 'products.delete';
+
+    // ✅ right — one case per area, the verb is an Action
+    $user->mayDo(Permission::Products, Action::Delete);
+    ```
 - **Don't remove enum cases casually.** Stored overrides referencing a removed key are ignored harmlessly, but renaming a key orphans existing grants — if you must rename, migrate the JSON column.
 
 ## The HTTP surface — every route and its gate
