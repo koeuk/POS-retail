@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import type { SharedData } from '@/types';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
@@ -18,7 +17,8 @@ const sidebarNavItems = computed<NavItem[]>(() => [
     ...(page.props.auth.can.isAdmin ? [{ title: 'Shop', href: '/settings/shop' }] : []),
 ]);
 
-const currentPath = window.location.pathname;
+/* Follows Inertia navigation; window.location would go stale after a visit. */
+const currentPath = computed(() => new URL(page.url, 'http://x').pathname);
 </script>
 
 <template>
@@ -26,7 +26,32 @@ const currentPath = window.location.pathname;
         <Heading title="Settings" description="Manage your profile and account settings" />
 
         <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-x-12 lg:space-y-0">
-            <aside class="w-full max-w-xl lg:w-48">
+            <!--
+                Phone: one row of tabs. The stacked list cost four rows of a
+                430px screen before the page itself began. It scrolls sideways
+                rather than wrapping, so adding a fifth section never pushes
+                the content down; the underline marks the current section the
+                way every mobile tab bar does.
+            -->
+            <nav class="scrollbar-none -mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 lg:hidden" aria-label="Settings sections">
+                <Link
+                    v-for="item in sidebarNavItems"
+                    :key="item.href"
+                    :href="item.href"
+                    class="press -mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors"
+                    :class="
+                        currentPath === item.href
+                            ? 'border-primary text-foreground'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                    "
+                    :aria-current="currentPath === item.href ? 'page' : undefined"
+                >
+                    {{ item.title }}
+                </Link>
+            </nav>
+
+            <!-- Desktop keeps the sidebar: there is room, and it matches the app. -->
+            <aside class="hidden w-full max-w-xl lg:block lg:w-48">
                 <nav class="flex flex-col space-x-0 space-y-1">
                     <Button
                         v-for="item in sidebarNavItems"
@@ -41,8 +66,6 @@ const currentPath = window.location.pathname;
                     </Button>
                 </nav>
             </aside>
-
-            <Separator class="my-6 md:hidden" />
 
             <div class="flex-1 md:max-w-2xl">
                 <section class="max-w-xl space-y-12">
