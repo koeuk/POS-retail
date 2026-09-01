@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Action;
 use App\Enums\InventoryLogType;
+use App\Enums\Permission;
 use App\Models\InventoryLog;
 use App\Models\Product;
 use App\Models\Stock;
@@ -175,6 +177,10 @@ class InventoryController extends Controller
         try {
             $user = $request->user();
 
+            // Inventory has no model policy — stock rows are written through
+            // movements, not edited — so the action gate sits here.
+            abort_unless($user->mayDo(Permission::Inventory, Action::Update), 403);
+
             $data = $request->validate([
                 'stock_id' => ['required', 'integer', Rule::exists('stocks', 'id')],
                 'mode' => ['required', Rule::in(['restock', 'remove', 'count', 'return'])],
@@ -256,6 +262,8 @@ class InventoryController extends Controller
     {
         try {
             $user = $request->user();
+
+            abort_unless($user->mayDo(Permission::Inventory, Action::Update), 403);
 
             $data = $request->validate([
                 'stock_id' => ['required', 'integer', Rule::exists('stocks', 'id')],

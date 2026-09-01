@@ -106,6 +106,10 @@ class User extends Authenticatable
     /**
      * May this user perform one particular action inside an area?
      *
+     * Deliberately NOT named can() — that is Laravel's own Authorizable
+     * method, which every $this->authorize() call and policy gate routes
+     * through. Shadowing it with a different signature breaks all of them.
+     *
      * The area gate comes first — someone who cannot open Products cannot
      * edit one either. Beyond that, the stored override for a key is read
      * one of two ways:
@@ -116,7 +120,7 @@ class User extends Authenticatable
      *                 → per action; an action the map omits falls back to
      *                   the area's own answer, so a partial map is safe.
      */
-    public function can(Permission $permission, Action $action): bool
+    public function mayDo(Permission $permission, Action $action): bool
     {
         if ($this->role === Role::Admin) {
             return true;
@@ -148,7 +152,7 @@ class User extends Authenticatable
             ->mapWithKeys(fn (Permission $p) => [$p->value => [
                 'allowed' => $this->hasPermission($p),
                 'actions' => collect(Action::cases())
-                    ->mapWithKeys(fn (Action $a) => [$a->value => $this->can($p, $a)])
+                    ->mapWithKeys(fn (Action $a) => [$a->value => $this->mayDo($p, $a)])
                     ->all(),
             ]])
             ->all();

@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Action;
 use App\Enums\Permission;
 use App\Models\Category;
 use App\Models\User;
@@ -26,16 +27,16 @@ class CategoryPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasPermission(Permission::Categories);
+        return $user->mayDo(Permission::Categories, Action::Create);
     }
 
     public function update(User $user, Category $category): bool
     {
-        return $user->hasPermission(Permission::Categories);
+        return $user->mayDo(Permission::Categories, Action::Update);
     }
 
     public function delete(User $user, Category $category): bool
     {
-        return $user->hasPermission(Permission::Categories);
+        return $user->mayDo(Permission::Categories, Action::Delete);
     }
 }

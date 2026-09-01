@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Action;
 use App\Enums\Permission;
 use App\Models\User;
 
@@ -25,7 +26,7 @@ class UserPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasPermission(Permission::Users);
+        return $user->mayDo(Permission::Users, Action::Create);
     }
 
     public function update(User $user, User $model): bool
@@ -36,12 +37,12 @@ class UserPolicy
             return true;
         }
 
-        return $user->hasPermission(Permission::Users) && ! $model->isAdmin();
+        return $user->mayDo(Permission::Users, Action::Update) && ! $model->isAdmin();
     }
 
     /** Nobody may delete themselves, and only admins may delete anyone. */
     public function delete(User $user, User $model): bool
     {
-        return $user->hasPermission(Permission::Users) && ! $model->isAdmin() && $user->id !== $model->id;
+        return $user->mayDo(Permission::Users, Action::Delete) && ! $model->isAdmin() && $user->id !== $model->id;
     }
 }

@@ -142,6 +142,11 @@ class DebtController extends Controller
      */
     public function store(Request $request, OrderSyncService $sync): RedirectResponse
     {
+        // Debts are orders, not their own model, so the action gates sit here
+        // rather than in a policy: putting a sale on the book is a create,
+        // recording money against one is an update.
+        abort_unless($request->user()->mayDo(Permission::Debts, Action::Create), 403);
+
         $data = $request->validate([
             'customer_id' => ['required', 'integer', Rule::exists('customers', 'id')],
 
@@ -222,6 +227,8 @@ class DebtController extends Controller
 
     public function settle(Request $request, Order $order): RedirectResponse
     {
+        abort_unless($request->user()->mayDo(Permission::Debts, Action::Update), 403);
+
         try {
             $this->scoped($request->user())->whereKey($order->id)->firstOrFail();
 

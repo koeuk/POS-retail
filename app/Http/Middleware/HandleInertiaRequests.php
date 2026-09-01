@@ -65,8 +65,15 @@ class HandleInertiaRequests extends Middleware
                     // One flag per feature area, already resolved through the
                     // user's role defaults and per-user overrides. The nav
                     // renders from these; the permission middleware enforces.
-                    ...($request->user()?->effectivePermissions() ?? []),
+                    ...($request->user()?->permissionFlags() ?? []),
                 ],
+                /*
+                 * What may be done inside each area, as
+                 * `{products: {view: true, delete: false}}`. Buttons render
+                 * from this; the policies and controllers enforce it. Kept
+                 * apart from `can` so the nav's flat flags stay flat.
+                 */
+                'actions' => $request->user()?->actionMatrix() ?? (object) [],
             ],
             // Every price on every page formats through this. Changing the
             // setting therefore changes the whole app on the next request.
