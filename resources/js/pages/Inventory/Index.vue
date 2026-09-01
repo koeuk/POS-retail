@@ -342,10 +342,10 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
             <div
                 class="stagger scrollbar-none -mx-2.5 mb-4 flex gap-2 overflow-x-auto px-2.5 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:px-0 lg:grid-cols-3 xl:grid-cols-5 [&>*]:min-w-[11rem] [&>*]:flex-1 sm:[&>*]:min-w-0"
             >
-                <StatTile label="Tracked" :value="String(summary.tracked)" :icon="Boxes" hint="Product / store rows" />
-                <StatTile label="In stock" :value="summary.units.toLocaleString()" :icon="Layers" hint="Units on hand, all products" />
-                <StatTile label="Low stock" :value="String(summary.low)" :icon="TriangleAlert" hint="At or below the alert level" />
-                <StatTile label="Out of stock" :value="String(summary.out)" :icon="PackageSearch" hint="Exactly zero on hand" />
+                <StatTile label="Tracked" :value="String(summary.tracked)" :icon="Boxes" :accent="1" hint="Product / store rows" />
+                <StatTile label="In stock" :value="summary.units.toLocaleString()" :icon="Layers" :accent="2" hint="Units on hand, all products" />
+                <StatTile label="Low stock" :value="String(summary.low)" :icon="TriangleAlert" :accent="4" hint="At or below the alert level" />
+                <StatTile label="Out of stock" :value="String(summary.out)" :icon="PackageSearch" :accent="5" hint="Exactly zero on hand" />
                 <StatTile
                     label="Oversold"
                     :value="String(summary.oversold)"
@@ -373,7 +373,9 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
 
                         <div class="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 py-2">
                             <Select v-if="stores.length > 1" v-model="storeId">
-                                <SelectTrigger class="h-9 w-auto min-w-[7rem] shrink-0 rounded-full"><SelectValue placeholder="Store" /></SelectTrigger>
+                                <SelectTrigger class="h-9 w-auto min-w-[7rem] shrink-0 rounded-full"
+                                    ><SelectValue placeholder="Store"
+                                /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem :value="ALL">All stores</SelectItem>
                                     <SelectItem v-for="s in stores" :key="s.id" :value="String(s.id)">{{ s.name }}</SelectItem>
@@ -381,7 +383,9 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                             </Select>
 
                             <Select v-model="state">
-                                <SelectTrigger class="h-9 w-auto min-w-[7rem] shrink-0 rounded-full"><SelectValue placeholder="Anything" /></SelectTrigger>
+                                <SelectTrigger class="h-9 w-auto min-w-[7rem] shrink-0 rounded-full"
+                                    ><SelectValue placeholder="Anything"
+                                /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem :value="ALL">Anything</SelectItem>
                                     <SelectItem value="low">Low stock</SelectItem>
@@ -393,7 +397,9 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                             <!-- Order, separate from the state filter: "what is oversold"
                              and "show me the emptiest first" are different questions. -->
                             <Select v-model="sort">
-                                <SelectTrigger class="h-9 w-auto min-w-[10rem] shrink-0 rounded-full" aria-label="Sort by"><SelectValue /></SelectTrigger>
+                                <SelectTrigger class="h-9 w-auto min-w-[10rem] shrink-0 rounded-full" aria-label="Sort by"
+                                    ><SelectValue
+                                /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="qty">Stock: low to high</SelectItem>
                                     <SelectItem value="-qty">Stock: high to low</SelectItem>

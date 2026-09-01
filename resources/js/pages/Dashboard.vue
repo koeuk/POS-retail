@@ -78,9 +78,7 @@ watch(date, (value) => {
 });
 
 const heroLabel = computed(() =>
-    props.filters.isToday
-        ? "Today's sales"
-        : `Sales · ${new Date(props.filters.date).toLocaleDateString(undefined, { dateStyle: 'medium' })}`,
+    props.filters.isToday ? "Today's sales" : `Sales · ${new Date(props.filters.date).toLocaleDateString(undefined, { dateStyle: 'medium' })}`,
 );
 
 const times = (n: number) => `${n} time${n === 1 ? '' : 's'}, at shelf price`;
@@ -116,10 +114,10 @@ const salesDelta = computed(() => {
  */
 const quickActions = computed(() =>
     [
-        { title: 'Sell', href: '/pos', icon: ScanBarcode, always: true },
-        { title: 'Orders', href: '/orders', icon: Receipt, always: props.canSeeReports },
-        { title: 'Stock', href: '/inventory', icon: PackageSearch, always: props.canSeeReports },
-        { title: 'Reports', href: '/reports', icon: ChartNoAxesColumn, always: props.canSeeReports },
+        { title: 'Sell', href: '/pos', icon: ScanBarcode, chip: 'bg-chart-1/10 text-chart-1', always: true },
+        { title: 'Orders', href: '/orders', icon: Receipt, chip: 'bg-chart-2/15 text-chart-2', always: props.canSeeReports },
+        { title: 'Stock', href: '/inventory', icon: PackageSearch, chip: 'bg-chart-5/10 text-chart-5', always: props.canSeeReports },
+        { title: 'Reports', href: '/reports', icon: ChartNoAxesColumn, chip: 'bg-chart-4/15 text-chart-4', always: props.canSeeReports },
     ].filter((a) => a.always),
 );
 </script>
@@ -167,7 +165,7 @@ const quickActions = computed(() =>
                         </span>
                     </div>
 
-                    <p class="tabular mt-1.5 font-mono text-sm opacity-90 md:text-base">
+                    <p class="tabular mt-1.5 font-mono text-base opacity-90 md:text-lg">
                         {{ today.orders }} order{{ today.orders === 1 ? '' : 's' }} · {{ today.items }} item{{ today.items === 1 ? '' : 's' }}
                         <span v-if="offlineToday > 0"> · {{ offlineToday }} synced offline</span>
                     </p>
@@ -199,7 +197,7 @@ const quickActions = computed(() =>
                     :href="action.href"
                     class="press shadow-soft flex flex-1 flex-col items-center gap-1.5 rounded-2xl border border-border bg-card px-2 py-3"
                 >
-                    <span class="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <span class="flex size-11 items-center justify-center rounded-full" :class="action.chip">
                         <component :is="action.icon" class="size-5" />
                     </span>
                     <span class="text-[0.7rem] font-medium text-muted-foreground">{{ action.title }}</span>
@@ -210,8 +208,8 @@ const quickActions = computed(() =>
                  edges — the half-visible card is the scroll affordance.
                  Desktop shows these figures in the wider tile rows below. -->
             <div v-if="canSeeReports" class="stagger scrollbar-none mb-4 flex snap-x snap-proximity gap-2 overflow-x-auto rounded-2xl md:hidden">
-                <StatTile class="w-44 shrink-0 snap-start" label="Products" :value="String(catalogue.products)" :icon="Boxes" />
-                <StatTile class="w-44 shrink-0 snap-start" label="Categories" :value="String(catalogue.categories)" :icon="Shapes" />
+                <StatTile class="w-44 shrink-0 snap-start" label="Products" :value="String(catalogue.products)" :icon="Boxes" :accent="1" />
+                <StatTile class="w-44 shrink-0 snap-start" label="Categories" :value="String(catalogue.categories)" :icon="Shapes" :accent="2" />
                 <StatTile
                     class="w-44 shrink-0 snap-start"
                     label="In debt"
@@ -225,19 +223,27 @@ const quickActions = computed(() =>
                     label="Myself · month"
                     :value="money(myself.month.value)"
                     :icon="Utensils"
+                    :accent="4"
                     :hint="times(myself.month.count)"
                 />
             </div>
 
             <div class="stagger hidden gap-4 md:grid md:grid-cols-3">
-                <StatTile label="Orders" :value="String(today.orders)" :icon="Receipt" :previous="yesterday.orders" />
+                <StatTile label="Orders" :value="String(today.orders)" :icon="Receipt" :accent="2" :previous="yesterday.orders" />
                 <StatTile
                     label="Average basket"
                     :value="money(today.basket)"
                     :icon="Boxes"
+                    :accent="1"
                     :hint="`${today.items} item${today.items === 1 ? '' : 's'} sold`"
                 />
-                <StatTile label="Synced from offline" :value="String(offlineToday)" :icon="CloudOff" hint="Sales rung up without a connection" />
+                <StatTile
+                    label="Synced from offline"
+                    :value="String(offlineToday)"
+                    :icon="CloudOff"
+                    :accent="5"
+                    hint="Sales rung up without a connection"
+                />
             </div>
 
             <!-- The owner's own money: what is still out on credit, and what
@@ -250,9 +256,9 @@ const quickActions = computed(() =>
                     :tone="debts.count > 0 ? 'warning' : 'default'"
                     :hint="`${debts.count} sale${debts.count === 1 ? '' : 's'} on credit, not yet paid`"
                 />
-                <StatTile label="Myself · week" :value="money(myself.week.value)" :icon="Utensils" :hint="times(myself.week.count)" />
-                <StatTile label="Myself · month" :value="money(myself.month.value)" :icon="Utensils" :hint="times(myself.month.count)" />
-                <StatTile label="Myself · year" :value="money(myself.year.value)" :icon="Utensils" :hint="times(myself.year.count)" />
+                <StatTile label="Myself · week" :value="money(myself.week.value)" :icon="Utensils" :accent="4" :hint="times(myself.week.count)" />
+                <StatTile label="Myself · month" :value="money(myself.month.value)" :icon="Utensils" :accent="4" :hint="times(myself.month.count)" />
+                <StatTile label="Myself · year" :value="money(myself.year.value)" :icon="Utensils" :accent="4" :hint="times(myself.year.count)" />
             </div>
 
             <!-- items-start: panels size to their own content rather than

@@ -12,7 +12,24 @@ const props = defineProps<{
     /** Rendered under the value when there is no comparison to make. */
     hint?: string;
     tone?: 'default' | 'warning';
+    /*
+     * Which of the five chart accents tints the icon chip. A row of tiles
+     * reads as separate figures when each carries its own colour; one shared
+     * wash turns them into wallpaper. `warning` always wins — a tile shouting
+     * about oversold stock must not be quietly recoloured.
+     */
+    accent?: 1 | 2 | 3 | 4 | 5;
 }>();
+
+const ACCENTS: Record<number, string> = {
+    1: 'bg-chart-1/10 text-chart-1',
+    2: 'bg-chart-2/15 text-chart-2',
+    3: 'bg-chart-3/10 text-chart-3',
+    4: 'bg-chart-4/15 text-chart-4',
+    5: 'bg-chart-5/10 text-chart-5',
+};
+
+const chip = computed(() => (props.tone === 'warning' ? 'bg-destructive/10 text-destructive' : (ACCENTS[props.accent ?? 1] ?? ACCENTS[1])));
 
 /*
  * A single headline number is a stat tile, not a chart — there is nothing to
@@ -99,21 +116,13 @@ onBeforeUnmount(() => cancelAnimationFrame(frame));
         :class="tone === 'warning' ? 'border-destructive/40' : 'border-border'"
     >
         <!-- A quiet wash of the tile's own colour behind the icon — depth, not decoration. -->
-        <div
-            aria-hidden="true"
-            class="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full blur-2xl"
-            :class="tone === 'warning' ? 'bg-destructive/10' : 'bg-primary/10'"
-        />
+        <div aria-hidden="true" class="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full opacity-60 blur-2xl" :class="chip" />
 
         <div class="relative flex items-start justify-between gap-2">
             <p class="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
                 {{ label }}
             </p>
-            <span
-                v-if="icon"
-                class="grid size-8 shrink-0 place-items-center rounded-lg transition-transform duration-300 ease-out"
-                :class="tone === 'warning' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'"
-            >
+            <span v-if="icon" class="grid size-8 shrink-0 place-items-center rounded-lg transition-transform duration-300 ease-out" :class="chip">
                 <component :is="icon" class="size-4" />
             </span>
         </div>
