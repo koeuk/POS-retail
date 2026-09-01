@@ -113,7 +113,7 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                         <Input v-model="search" placeholder="Order no., cashier or customer…" class="h-10 rounded-full pl-9" autocomplete="off" />
                     </div>
 
-                    <div class="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3">
+                    <div class="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 py-2">
                         <Select v-model="status">
                             <SelectTrigger class="h-9 w-auto min-w-[7rem] shrink-0 rounded-full"><SelectValue placeholder="Status" /></SelectTrigger>
                             <SelectContent>
