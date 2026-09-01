@@ -120,8 +120,11 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
     | Audit trail. Read-only — index is the whole surface, and there is no
     | write route to add: rows are pruned by activitylog:clean, never edited.
     */
-    Route::get('activity', [ActivityController::class, 'index'])
-        ->name('activity.index')->middleware('permission:activity');
+    Route::middleware('permission:activity')->group(function () {
+        Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
+        Route::get('activity/{subjectType}/{subjectId}', [ActivityController::class, 'show'])
+            ->whereAlpha('subjectType')->whereNumber('subjectId')->name('activity.show');
+    });
 
     Route::middleware('permission:stores')->group(function () {
         Route::get('stores', [StoreController::class, 'index'])->name('stores.index');

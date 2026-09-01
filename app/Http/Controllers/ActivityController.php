@@ -3,6 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Activity;
+use App\Models\Category;
+use App\Models\Customer;
+use App\Models\Product;
+use App\Models\Register;
+use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\PerPage;
@@ -79,6 +84,70 @@ class ActivityController extends Controller
                 'stores' => Store::query()->orderBy('name')->get(['id', 'name']),
             ],
         ]);
+    }
+
+    /**
+     * One record's own history — where the per-row History button lands.
+     *
+     * The subject arrives as a short class name from the URL, resolved
+     * against a whitelist rather than trusted: `activity/Product/7` is a
+     * page, `activity/../../User/1` with an invented class is a 404.
+     */
+    public function show(Request $request, string $subjectType, int $subjectId): Response
+    {
+        $this->authorize('viewAny', Activity::class);
+
+        $class = self::SUBJECTS[$subjectType] ?? abort(404);
+
+        $subject = $class::find($subjectId);
+
+        $entries = Activity::query()
+            ->where('subject_type', $class)
+            ->where('subject_id', $subjectId)
+            ->with(['causer:id,name,email,role', 'store:id,name'])
+            ->latest('id')
+            ->paginate(PerPage::resolve($request))
+            ->withQueryString()
+            ->through(fn (Activity $activity) => $this->present($activity));
+
+        return Inertia::render('Activity/Show', [
+            'entries' => $entries,
+            'subject' => [
+                'type' => $subjectType,
+                'id' => $subjectId,
+                // A deleted record still has history — fall back to the name
+                // its last entry recorded rather than showing a bare id.
+                'label' => $subject?->auditLabel()
+                    ?? $this->lastKnownLabel($class, $subjectId)
+                    ?? "#{$subjectId}",
+                'exists' => $subject !== null,
+            ],
+        ]);
+    }
+
+    /** Short URL name → class, for the record-history page. */
+    private const SUBJECTS = [
+        'Product' => Product::class,
+        'Category' => Category::class,
+        'Customer' => Customer::class,
+        'Store' => Store::class,
+        'Register' => Register::class,
+        'Stock' => Stock::class,
+        'User' => User::class,
+    ];
+
+    /** The name a since-deleted record went by, from its final log entry. */
+    private function lastKnownLabel(string $class, int $id): ?string
+    {
+        $last = Activity::query()
+            ->where('subject_type', $class)
+            ->where('subject_id', $id)
+            ->latest('id')
+            ->value('description');
+
+        // Descriptions read `Product “Angkor can” deleted` — the quoted part
+        // is the label. No quotes means no name was recorded.
+        return $last && preg_match('/“(.+)”/u', $last, $m) ? $m[1] : null;
     }
 
     /**

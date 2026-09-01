@@ -150,6 +150,63 @@ class ActivityLogTest extends TestCase
         $this->actingAs($manager)->get(route('activity.index'))->assertOk();
     }
 
+    public function test_a_record_has_its_own_history_page(): void
+    {
+        $this->actingAs($this->admin);
+
+        $product = Product::factory()->create(['name' => 'Angkor']);
+        $product->update(['sell_price' => '4000']);
+
+        $this->get(route('activity.show', ['subjectType' => 'Product', 'subjectId' => $product->id]))
+            ->assertOk()
+            ->assertInertia(
+                fn (AssertableInertia $page) => $page
+                    ->component('Activity/Show')
+                    ->where('subject.label', 'Angkor')
+                    ->where('subject.exists', true)
+                    ->has('entries.data', 2)
+            );
+    }
+
+    /** A deleted record still has a history page, named from its last entry. */
+    public function test_a_deleted_record_keeps_its_history_page(): void
+    {
+        $this->actingAs($this->admin);
+
+        $product = Product::factory()->create(['name' => 'Gone Soon']);
+        $id = $product->id;
+        $product->delete();
+
+        $this->get(route('activity.show', ['subjectType' => 'Product', 'subjectId' => $id]))
+            ->assertOk()
+            ->assertInertia(
+                fn (AssertableInertia $page) => $page
+                    ->where('subject.label', 'Gone Soon')
+                    ->where('subject.exists', false)
+            );
+    }
+
+    /** The subject type comes from the URL — anything off the whitelist 404s. */
+    public function test_an_unknown_subject_type_is_a_404(): void
+    {
+        $this->actingAs($this->admin)
+            ->get('/activity/Payment/1')
+            ->assertNotFound();
+    }
+
+    public function test_the_history_page_is_gated_like_the_log(): void
+    {
+        $cashier = User::factory()->create([
+            'role' => 'cashier',
+            'is_active' => true,
+            'store_id' => $this->store->id,
+        ]);
+
+        $this->actingAs($cashier)
+            ->get(route('activity.show', ['subjectType' => 'Product', 'subjectId' => 1]))
+            ->assertForbidden();
+    }
+
     public function test_the_screen_can_be_scoped_to_one_record(): void
     {
         $this->actingAs($this->admin);

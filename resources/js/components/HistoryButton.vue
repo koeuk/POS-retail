@@ -7,8 +7,8 @@ import { computed } from 'vue';
 
 /**
  * The per-row "History" button every list screen carries — one component so
- * they cannot drift. It links to the Activity screen pre-filtered to this
- * one record, and renders nothing for staff without the `activity`
+ * they cannot drift. It opens the record's own history page (not the whole
+ * Activity Log), and renders nothing for staff without the `activity`
  * permission: the route middleware is still the wall, this just hides a
  * locked door.
  */
@@ -24,9 +24,7 @@ const page = usePage<SharedData>();
 
 const visible = computed(() => !!page.props.auth.can.activity);
 
-const href = computed(() =>
-    route('activity.index', { filter: { subject_type: props.subjectType, subject_id: props.subjectId } }),
-);
+const href = computed(() => route('activity.show', { subjectType: props.subjectType, subjectId: props.subjectId }));
 </script>
 
 <template>
