@@ -187,6 +187,46 @@ class UserPermissionsTest extends TestCase
         $this->assertModelExists($product);
     }
 
+    /**
+     * The whole chain for one account: nav flag, policy, controller gate,
+     * untouched areas, and the matrix the frontend renders from.
+     */
+    public function test_the_matrix_resolves_consistently_everywhere(): void
+    {
+        $manager = User::factory()->create([
+            'role' => 'manager',
+            'is_active' => true,
+            'permissions' => [
+                'products' => ['view' => true, 'create' => true, 'update' => true, 'delete' => false],
+                'inventory' => ['view' => true, 'create' => false, 'update' => false, 'delete' => false],
+            ],
+        ]);
+
+        $product = Product::factory()->create();
+
+        // The area stays reachable, so the nav item stays visible.
+        $this->assertTrue($manager->hasPermission(Permission::Products));
+        $this->assertTrue($manager->permissionFlags()['products']);
+
+        // Policies honour the matrix.
+        $this->assertTrue($manager->can('update', $product));
+        $this->assertFalse($manager->can('delete', $product));
+
+        // Inventory has no policy — its gate lives in the controller.
+        $this->assertTrue($manager->mayDo(Permission::Inventory, Action::View));
+        $this->assertFalse($manager->mayDo(Permission::Inventory, Action::Update));
+        $this->actingAs($manager)->post(route('inventory.store'), [])->assertForbidden();
+
+        // An area with no override still follows the role default.
+        $this->assertTrue($manager->mayDo(Permission::Customers, Action::Delete));
+
+        // What the frontend hides buttons with.
+        $this->assertSame(
+            ['view' => true, 'create' => true, 'update' => true, 'delete' => false],
+            $manager->actionMatrix()['products'],
+        );
+    }
+
     /** Turning a switch off is recorded in the access log like any other. */
     public function test_the_change_is_written_to_the_activity_log(): void
     {
