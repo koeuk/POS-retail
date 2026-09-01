@@ -53,7 +53,7 @@ class AuthController extends Controller
         return response()->json([
             'token' => $user->createToken($data['device_name'])->plainTextToken,
             'user' => $user->only('id', 'name', 'email', 'role', 'store_id'),
-            'can' => $user->effectivePermissions(),
+            'can' => $user->permissionFlags(),
         ], 201);
     }
 
@@ -89,7 +89,7 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => $user->only('id', 'name', 'email', 'role', 'store_id'),
-            'can' => $user->effectivePermissions(),
+            'can' => $user->permissionFlags(),
         ]);
     }
 }

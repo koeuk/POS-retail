@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\Action;
 use App\Enums\Permission;
 use App\Enums\Role;
 use Illuminate\Foundation\Http\FormRequest;
@@ -52,7 +53,11 @@ class UserRequest extends FormRequest
              * admin target in prepareForValidation.
              */
             'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['boolean'],
+            // Either shape is valid: `true` (the whole area) or a per-action
+            // map. prepareForValidation has already normalised whichever
+            // arrived, so only the leaf values need checking here.
+            'permissions.*' => ['array'],
+            'permissions.*.*' => ['boolean'],
 
             /*
              * store_id is nullable in the schema because admins are not bound
@@ -77,6 +82,27 @@ class UserRequest extends FormRequest
         ];
     }
 
+    /**
+     * One override, in the matrix shape.
+     *
+     * A plain `true`/`false` (the original shape, and what an older client
+     * still sends) becomes that answer for every action, so both forms mean
+     * the same thing and nothing has to be migrated.
+     *
+     * @return array<string, bool>
+     */
+    private static function normaliseActions(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return array_fill_keys(Action::values(), (bool) $value);
+        }
+
+        return collect($value)
+            ->only(Action::values())
+            ->map(fn ($granted) => (bool) $granted)
+            ->all();
+    }
+
     protected function prepareForValidation(): void
     {
         $permissions = $this->input('permissions');
@@ -84,10 +110,10 @@ class UserRequest extends FormRequest
         if (is_array($permissions)) {
             // Unknown keys are dropped rather than rejected — a stale tab
             // sending a key that has since been renamed should not 422.
-            $permissions = array_intersect_key(
-                array_map(fn ($v) => (bool) $v, $permissions),
-                array_flip(Permission::values()),
-            );
+            $permissions = collect($permissions)
+                ->only(Permission::values())
+                ->map(fn ($value) => self::normaliseActions($value))
+                ->all();
         }
 
         $this->merge([

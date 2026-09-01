@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Action;
 use App\Enums\Permission;
 use App\Enums\Role;
 use App\Http\Requests\UserRequest;
@@ -141,14 +142,18 @@ class UserController extends Controller
 
             $validated = $request->validate([
                 'permissions' => ['required', 'array'],
-                'permissions.*' => ['boolean'],
+                'permissions.*' => ['array'],
+                'permissions.*.*' => ['boolean'],
             ]);
 
-            // Unknown keys are dropped rather than stored: a renamed enum
-            // case must not leave orphaned overrides rotting in the column.
+            // Unknown area keys and unknown action keys are both dropped: a
+            // renamed enum case must not leave orphans rotting in the column.
             $permissions = collect($validated['permissions'])
                 ->only(Permission::values())
-                ->map(fn ($granted) => (bool) $granted)
+                ->map(fn ($actions) => collect($actions)
+                    ->only(Action::values())
+                    ->map(fn ($granted) => (bool) $granted)
+                    ->all())
                 ->all();
 
             DB::transaction(fn () => $user->update(['permissions' => $permissions]));

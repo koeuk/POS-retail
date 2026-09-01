@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Action;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
+use App\Enums\Permission;
 use App\Enums\SaleType;
 use App\Models\Customer;
 use App\Models\Order;

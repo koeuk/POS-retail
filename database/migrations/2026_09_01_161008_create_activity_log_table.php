@@ -20,4 +20,14 @@ return new class extends Migration
             $table->timestamps();
         });
     }
+
+    /*
+     * The published stub ships without a down(), so a rollback left the
+     * table behind and the next migrate failed on "table already exists".
+     * RefreshDatabase does exactly that between tests.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('activity_log');
+    }
 };

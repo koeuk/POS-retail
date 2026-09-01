@@ -158,6 +158,19 @@ class User extends Authenticatable
             ->all();
     }
 
+    /**
+     * Just the actions, as `{products: {view: true, delete: false}}` —
+     * what the frontend hides buttons with.
+     */
+    public function actionMatrix(): array
+    {
+        return collect(Permission::cases())
+            ->mapWithKeys(fn (Permission $p) => [$p->value => collect(Action::cases())
+                ->mapWithKeys(fn (Action $a) => [$a->value => $this->mayDo($p, $a)])
+                ->all()])
+            ->all();
+    }
+
     /** Just the area flags, as {key: bool} — what the nav renders from. */
     public function permissionFlags(): array
     {
