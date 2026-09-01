@@ -298,15 +298,17 @@ function submit() {
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3">
-                    <Button type="submit" class="press" :disabled="form.processing">Save</Button>
+                <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+                    <!-- Full width on a phone: a thumb-sized target, and the
+                         page ends with an obvious action rather than a chip. -->
+                    <Button type="submit" class="press w-full sm:w-auto" :disabled="form.processing">Save</Button>
                     <Transition
                         enter-from-class="opacity-0"
                         enter-active-class="transition-opacity duration-200"
                         leave-to-class="opacity-0"
                         leave-active-class="transition-opacity duration-500"
                     >
-                        <p v-if="form.recentlySuccessful" class="text-sm text-muted-foreground">Saved.</p>
+                        <p v-if="form.recentlySuccessful" class="text-center text-sm text-muted-foreground sm:text-left">Saved.</p>
                     </Transition>
                 </div>
             </form>
