@@ -15,8 +15,14 @@ class DashboardController extends Controller
         $user = $request->user();
         $reporter = SalesReporter::for($user);
 
+        $request->validate(['date' => ['nullable', 'date']]);
+
         // The shop's day, not the server's — see SalesReporter::businessDay().
-        $today = SalesReporter::businessNow()->startOfDay();
+        // A ?date= filter shows any past day with the same screen; the trend
+        // and the "yesterday" comparison follow the chosen day along.
+        $today = $request->filled('date')
+            ? \Illuminate\Support\Carbon::parse($request->input('date'))->startOfDay()
+            : SalesReporter::businessNow()->startOfDay();
         $yesterday = $today->copy()->subDay();
 
         try {
@@ -44,6 +50,10 @@ class DashboardController extends Controller
                     'categories' => \App\Models\Category::query()->count(),
                 ],
                 'canSeeReports' => $user->role->canAccessAdmin(),
+                'filters' => [
+                    'date' => $today->toDateString(),
+                    'isToday' => $today->isSameDay(SalesReporter::businessNow()),
+                ],
             ]);
         } catch (QueryException $e) {
             // The first screen after login must open. Empty figures and a
@@ -63,6 +73,10 @@ class DashboardController extends Controller
                 'myself' => ['week' => ['count' => 0, 'value' => '0.00'], 'month' => ['count' => 0, 'value' => '0.00'], 'year' => ['count' => 0, 'value' => '0.00']],
                 'catalogue' => ['products' => 0, 'categories' => 0],
                 'canSeeReports' => $user->role->canAccessAdmin(),
+                'filters' => [
+                    'date' => $today->toDateString(),
+                    'isToday' => $today->isSameDay(SalesReporter::businessNow()),
+                ],
             ]);
         }
     }

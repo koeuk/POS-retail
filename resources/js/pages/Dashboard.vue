@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useCurrency } from '@/composables/useCurrency';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { SharedData } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
     Boxes,
     ChartNoAxesColumn,
@@ -22,7 +22,7 @@ import {
     TriangleAlert,
     Utensils,
 } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 interface Summary {
     sales: string;
@@ -62,7 +62,26 @@ const props = defineProps<{
     myself: { week: Spent; month: Spent; year: Spent };
     catalogue: { products: number; categories: number };
     canSeeReports: boolean;
+    filters: { date: string; isToday: boolean };
 }>();
+
+/*
+ * The dashboard answers "how was the day?" — this picks which day. Today by
+ * default; any past day reloads the same screen for that date.
+ */
+const date = ref(props.filters.date);
+const maxDate = new Date().toISOString().slice(0, 10);
+
+watch(date, (value) => {
+    if (!value) return;
+    router.get(route('dashboard'), value === maxDate ? {} : { date: value }, { preserveState: true, preserveScroll: true, replace: true });
+});
+
+const heroLabel = computed(() =>
+    props.filters.isToday
+        ? "Today's sales"
+        : `Sales · ${new Date(props.filters.date).toLocaleDateString(undefined, { dateStyle: 'medium' })}`,
+);
 
 const times = (n: number) => `${n} time${n === 1 ? '' : 's'}, at shelf price`;
 
@@ -110,7 +129,17 @@ const quickActions = computed(() =>
 
     <AppLayout :breadcrumbs="[{ title: 'Dashboard', href: '/dashboard' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader :eyebrow="greeting" :title="user?.name ?? 'Dashboard'" description="Today across the shop floor." />
+            <PageHeader :eyebrow="greeting" :title="user?.name ?? 'Dashboard'" description="Today across the shop floor.">
+                <template #actions>
+                    <input
+                        v-model="date"
+                        type="date"
+                        :max="maxDate"
+                        aria-label="Show figures for a day"
+                        class="tabular h-10 rounded-full border border-input bg-background px-4 font-mono text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                </template>
+            </PageHeader>
 
             <!--
                 The hero, every screen size. One painted card carrying the only
@@ -123,7 +152,7 @@ const quickActions = computed(() =>
                 class="surface-brand animate-rise shadow-soft mb-4 rounded-3xl p-5 text-brand-foreground md:mb-6 md:flex md:items-center md:justify-between md:gap-8 md:p-7"
             >
                 <div>
-                    <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] opacity-85">Today's sales</p>
+                    <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] opacity-85">{{ heroLabel }}</p>
 
                     <div class="mt-1 flex items-end gap-2">
                         <p class="tabular font-mono text-4xl font-bold leading-none md:text-5xl">{{ money(today.sales) }}</p>
@@ -138,7 +167,7 @@ const quickActions = computed(() =>
                         </span>
                     </div>
 
-                    <p class="tabular mt-1 font-mono text-xs opacity-85">
+                    <p class="tabular mt-1.5 font-mono text-sm opacity-90 md:text-base">
                         {{ today.orders }} order{{ today.orders === 1 ? '' : 's' }} · {{ today.items }} item{{ today.items === 1 ? '' : 's' }}
                         <span v-if="offlineToday > 0"> · {{ offlineToday }} synced offline</span>
                     </p>
@@ -177,19 +206,27 @@ const quickActions = computed(() =>
                 </Link>
             </nav>
 
-            <!-- Phone summary: the shelf and the shop's own money, two-up.
+            <!-- Phone summary: one swipeable rail, bleeding to the screen
+                 edges — the half-visible card is the scroll affordance.
                  Desktop shows these figures in the wider tile rows below. -->
-            <div v-if="canSeeReports" class="stagger mb-4 grid grid-cols-2 gap-2 md:hidden">
-                <StatTile label="Products" :value="String(catalogue.products)" :icon="Boxes" />
-                <StatTile label="Categories" :value="String(catalogue.categories)" :icon="Shapes" />
+            <div v-if="canSeeReports" class="stagger scrollbar-none -mx-2.5 mb-4 flex snap-x snap-proximity gap-2 overflow-x-auto px-2.5 md:hidden">
+                <StatTile class="w-44 shrink-0 snap-start" label="Products" :value="String(catalogue.products)" :icon="Boxes" />
+                <StatTile class="w-44 shrink-0 snap-start" label="Categories" :value="String(catalogue.categories)" :icon="Shapes" />
                 <StatTile
+                    class="w-44 shrink-0 snap-start"
                     label="In debt"
                     :value="money(debts.owed)"
                     :icon="HandCoins"
                     :tone="debts.count > 0 ? 'warning' : 'default'"
                     :hint="`${debts.count} sale${debts.count === 1 ? '' : 's'} on credit`"
                 />
-                <StatTile label="Myself · month" :value="money(myself.month.value)" :icon="Utensils" :hint="times(myself.month.count)" />
+                <StatTile
+                    class="w-44 shrink-0 snap-start"
+                    label="Myself · month"
+                    :value="money(myself.month.value)"
+                    :icon="Utensils"
+                    :hint="times(myself.month.count)"
+                />
             </div>
 
             <div class="stagger hidden gap-4 md:grid md:grid-cols-3">
