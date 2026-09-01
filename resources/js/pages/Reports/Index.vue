@@ -113,7 +113,8 @@ const exportUrl = computed(() => route('reports.export', { from: from.value, to:
                 </div>
             </div>
 
-            <div class="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <!-- Two-up on a phone: four figures in two rows, not a tower. -->
+            <div class="stagger grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
                 <StatTile label="Sales" :value="money(totals.sales)" :icon="TrendingUp" />
                 <StatTile label="Orders" :value="String(totals.orders)" :icon="Receipt" />
                 <StatTile label="Average basket" :value="money(totals.basket)" :icon="Boxes" />

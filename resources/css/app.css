@@ -212,11 +212,15 @@
     }
 
     /*
-     * One row of a phone list: a tap area first, then the row's own controls.
-     * 3.5rem clears the 44px touch floor with the padding included.
+     * One row of a list: a tap area first, then the row's own controls —
+     * 3.5rem clears the 44px touch floor with the padding included. On a
+     * phone each row floats as its own card, matching every list screen;
+     * on desktop it is the classic divided row inside the panel.
      */
     .list-row {
-        @apply flex items-stretch border-b border-border transition-colors last:border-b-0;
+        @apply flex items-stretch transition-colors;
+        @apply max-md:shadow-soft max-md:mx-4 max-md:my-2.5 max-md:overflow-hidden max-md:rounded-xl max-md:border max-md:border-border max-md:bg-card;
+        @apply md:border-b md:border-border md:last:border-b-0;
     }
 
     /*
