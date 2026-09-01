@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import EmptyState from '@/components/EmptyState.vue';
+import HistoryButton from '@/components/HistoryButton.vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Badge } from '@/components/ui/badge';
@@ -132,6 +133,7 @@ function submitRegister() {
                             </div>
                         </div>
                         <div v-if="canManage" class="flex shrink-0 items-center gap-1">
+                            <HistoryButton subject-type="Store" :subject-id="store.id" :label="store.name" />
                             <Button variant="ghost" size="sm" class="press touch-target" @click="openStore(store)"> Edit </Button>
                             <!--
                                 Disabled rather than hidden when it is the only

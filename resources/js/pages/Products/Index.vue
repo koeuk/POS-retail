@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import EmptyState from '@/components/EmptyState.vue';
+import HistoryButton from '@/components/HistoryButton.vue';
 import Money from '@/components/Money.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
@@ -20,29 +21,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
-import type { Category, Paginated, Product, SharedData } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Boxes, Eye, History, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import type { Category, Paginated, Product } from '@/types';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { Boxes, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
+import { ref, watch } from 'vue';
 
 const props = defineProps<{
     products: Paginated<Product>;
     categories: Category[];
     filters: { search?: string; category_id?: string; status?: string };
 }>();
-
-const page = usePage<SharedData>();
-
-/*
- * The audit trail is a separate feature area with its own permission, so the
- * History button only appears for staff who may actually open /activity —
- * the route middleware is still the wall, this just hides a locked door.
- */
-const canViewActivity = computed(() => !!page.props.auth.can.activity);
-
-/** That one product's entries, pre-filtered — not the whole log. */
-const historyHref = (id: number) =>
-    route('activity.index', { filter: { subject_type: 'Product', subject_id: id } });
 
 const search = ref(props.filters.search ?? '');
 const categoryId = ref(props.filters.category_id ?? 'all');
@@ -224,11 +212,7 @@ function stockTone(qty: number | null | undefined) {
                                                 <Eye class="size-4" />
                                             </Link>
                                         </Button>
-                                        <Button v-if="canViewActivity" as-child variant="ghost" size="icon" class="press size-8">
-                                            <Link :href="historyHref(p.id)" :aria-label="`History for ${p.name}`">
-                                                <History class="size-4" />
-                                            </Link>
-                                        </Button>
+                                        <HistoryButton subject-type="Product" :subject-id="p.id" :label="p.name" />
                                         <Button as-child variant="ghost" size="icon" class="press size-8">
                                             <Link :href="route('products.edit', { product: p.id })" aria-label="Edit">
                                                 <Pencil class="size-4" />

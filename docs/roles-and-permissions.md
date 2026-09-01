@@ -80,6 +80,7 @@ Defined in `App\Enums\Permission`, one case per feature area:
 | `customers`   | Customers          |   ✓   |    ✓    |    —    |
 | `users`       | Staff              |   ✓   |    —    |    —    |
 | `stores`      | Stores & registers |   ✓   |    ✓    |    —    |
+| `activity`    | Activity log       |   ✓   |    —    |    —    |
 
 Dashboard and the public `/menu` need no permission. Shop settings (`/settings/shop`) are deliberately **role-gated to admin**, not permission-gated — they change what every screen shows.
 
@@ -250,6 +251,7 @@ Each row is one `Route::middleware('permission:<key>')` group — the middleware
 | `customers`   | index/store/update/destroy                                                                                                         |
 | `users`       | index/store/update/destroy (admin-only by default; see invariants)                                                                 |
 | `stores`      | `GET/POST /stores`, `PUT/DELETE /stores/{store}`, `POST/PUT .../registers`                                                         |
+| `activity`    | `GET /activity` — the audit trail, read-only by design: no write route exists, rows age out via the weekly `activitylog:clean`     |
 
 ## The POS data API
 

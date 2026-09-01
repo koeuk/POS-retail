@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import EmptyState from '@/components/EmptyState.vue';
+import HistoryButton from '@/components/HistoryButton.vue';
 import InputError from '@/components/InputError.vue';
 import Money from '@/components/Money.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -142,6 +143,7 @@ function confirmDelete() {
                                 </TableCell>
                                 <TableCell>
                                     <div class="flex items-center gap-1">
+                                        <HistoryButton subject-type="Customer" :subject-id="c.id" :label="c.name" />
                                         <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(c)">
                                             <Pencil class="size-4" />
                                         </Button>

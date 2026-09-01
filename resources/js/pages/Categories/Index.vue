@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import EmptyState from '@/components/EmptyState.vue';
+import HistoryButton from '@/components/HistoryButton.vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Badge } from '@/components/ui/badge';
@@ -109,6 +110,10 @@ function confirmDelete() {
 
                             <Pencil class="hidden size-4 shrink-0 text-muted-foreground md:block" />
                         </button>
+
+                        <div class="flex shrink-0 items-center">
+                            <HistoryButton subject-type="Category" :subject-id="c.id" :label="c.name" />
+                        </div>
 
                         <button type="button" class="list-row-action" :aria-label="`Delete ${c.name}`" @click="pendingDelete = c">
                             <Trash2 class="size-4" />

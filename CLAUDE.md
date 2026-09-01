@@ -20,4 +20,5 @@ Before writing ANY code that touches roles, permissions, route gating, policies,
 - Stock is per-store in the `stocks` table; there is no `stock_qty` column on products. Sum or scope it explicitly.
 - Money uses the shop's currency minor factor (riel has none) — never assume cents.
 - Lists paginate through `App\Support\PerPage` + the shared `Pagination.vue`; page-size options come from the server via shared props.
+- The audit trail uses `spatie/laravel-activitylog` (v5) with a custom `App\Models\Activity`. Model auditing goes through the `RecordsActivity` trait + a `$auditable` field list (never `logAll()` — unlisted columns like password hashes must stay out of the log); event-shaped entries (money, auth, access) go through `App\Support\AuditLog`, never raw `activity()` calls in controllers.
 - `demo/` holds rendered demo videos — gitignored, never commit them.

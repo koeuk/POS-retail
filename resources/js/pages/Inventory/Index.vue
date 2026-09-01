@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import StatTile from '@/components/charts/StatTile.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import HistoryButton from '@/components/HistoryButton.vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
@@ -492,7 +493,12 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                                         </button>
                                     </TableCell>
                                     <TableCell>
-                                        <Button size="sm" variant="outline" class="press" @click="openAdjust(stock)">Adjust</Button>
+                                        <div class="flex items-center justify-end gap-1">
+                                            <!-- Stock-row audit: threshold edits and the like.
+                                                 Movements themselves live in the ledger below. -->
+                                            <HistoryButton subject-type="Stock" :subject-id="stock.id" :label="stock.product?.name ?? 'stock'" />
+                                            <Button size="sm" variant="outline" class="press" @click="openAdjust(stock)">Adjust</Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             </tbody>

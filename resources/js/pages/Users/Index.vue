@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import EmptyState from '@/components/EmptyState.vue';
+import HistoryButton from '@/components/HistoryButton.vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
@@ -231,6 +232,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                 </TableCell>
                                 <TableCell>
                                     <div class="flex items-center gap-1">
+                                        <HistoryButton subject-type="User" :subject-id="u.id" :label="u.name" />
                                         <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(u)">
                                             <Pencil class="size-4" />
                                         </Button>
