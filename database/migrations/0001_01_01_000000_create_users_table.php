@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Role;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -17,8 +18,21 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+
+            $table->enum('role', Role::values())->default(Role::Cashier->value);
+
+            /*
+             * Per-user permission overrides, {"reports": true, ...}. NULL
+             * means "no overrides" — the role's defaults apply untouched.
+             */
+            $table->json('permissions')->nullable();
+
+            $table->boolean('is_active')->default(true);
+
             $table->rememberToken();
             $table->timestamps();
+
+            $table->index(['role', 'is_active']);
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

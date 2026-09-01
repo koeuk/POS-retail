@@ -15,9 +15,23 @@ return new class extends Migration
             $table->nullableMorphs('subject', 'subject');
             $table->string('event')->nullable();
             $table->nullableMorphs('causer', 'causer');
+
+            // Which shop the action happened in. Null for admins acting
+            // outside any store, and for console/seeder activity.
+            $table->foreignId('store_id')->nullable()->constrained()->nullOnDelete();
+
             $table->json('attribute_changes')->nullable();
             $table->json('properties')->nullable();
+
+            // Audit context Spatie's own table does not carry.
+            $table->string('ip_address', 45)->nullable();
+            $table->string('user_agent')->nullable();
+
             $table->timestamps();
+
+            // The Activity screen filters on all three.
+            $table->index('created_at');
+            $table->index(['log_name', 'created_at']);
         });
     }
 

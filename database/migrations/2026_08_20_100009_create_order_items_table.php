@@ -11,7 +11,13 @@ return new class extends Migration
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('product_id')->constrained()->restrictOnDelete();
+            /*
+             * Nullable: a debt can be typed straight onto a customer —
+             * "៛10,000, rice and oil" — without ringing products through the
+             * till. Such a line has no product row behind it; product_name
+             * (the snapshot every report groups on) carries what it was.
+             */
+            $table->foreignId('product_id')->nullable()->constrained()->restrictOnDelete();
 
             // Plain column, deliberately NOT a foreign key: product_variants is
             // deferred to v2, so the constraint has nothing to point at yet.
