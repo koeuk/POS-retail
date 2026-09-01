@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { usePermissions } from '@/composables/usePermissions';
 import { currentPerPage } from '@/lib/utils';
 import type { Paginated } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
@@ -53,6 +54,9 @@ const props = defineProps<{
     movements: Movement[];
     summary: { tracked: number; units: number; low: number; out: number; oversold: number };
 }>();
+
+/* Stock writes are gated in InventoryController; this hides the button. */
+const { may } = usePermissions();
 
 const ALL = 'all';
 const search = ref(props.filters.search ?? '');
@@ -497,7 +501,15 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                                             <!-- Stock-row audit: threshold edits and the like.
                                                  Movements themselves live in the ledger below. -->
                                             <HistoryButton subject-type="Stock" :subject-id="stock.id" :label="stock.product?.name ?? 'stock'" />
-                                            <Button size="sm" variant="outline" class="press" @click="openAdjust(stock)">Adjust</Button>
+                                            <Button
+                                                v-if="may('inventory', 'update')"
+                                                size="sm"
+                                                variant="outline"
+                                                class="press"
+                                                @click="openAdjust(stock)"
+                                            >
+                                                Adjust
+                                            </Button>
                                         </div>
                                     </TableCell>
                                 </TableRow>

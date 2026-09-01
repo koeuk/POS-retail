@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { usePermissions } from '@/composables/usePermissions';
 import { currentPerPage } from '@/lib/utils';
 import type { Customer, Paginated } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
@@ -22,6 +23,9 @@ const props = defineProps<{
     customers: Paginated<Customer>;
     filters: { search?: string };
 }>();
+
+/* Controls the user cannot use are hidden; the policies are the wall. */
+const { may } = usePermissions();
 
 const search = ref(props.filters.search ?? '');
 let debounce: ReturnType<typeof setTimeout>;
@@ -86,7 +90,7 @@ function confirmDelete() {
         <div class="px-2.5 py-6 md:px-8">
             <PageHeader eyebrow="People" title="Customers" description="Optional at the till — attach a customer to a sale to track loyalty points.">
                 <template #actions>
-                    <Button class="press" @click="openCreate">
+                    <Button v-if="may('customers', 'create')" class="press" @click="openCreate">
                         <Plus class="size-4" />
                         New customer
                     </Button>
@@ -144,10 +148,18 @@ function confirmDelete() {
                                 <TableCell>
                                     <div class="flex items-center gap-1">
                                         <HistoryButton subject-type="Customer" :subject-id="c.id" :label="c.name" />
-                                        <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(c)">
+                                        <Button
+                                            v-if="may('customers', 'update')"
+                                            variant="ghost"
+                                            size="icon"
+                                            class="press size-8"
+                                            aria-label="Edit"
+                                            @click="openEdit(c)"
+                                        >
                                             <Pencil class="size-4" />
                                         </Button>
                                         <Button
+                                            v-if="may('customers', 'delete')"
                                             variant="ghost"
                                             size="icon"
                                             class="press size-8 text-muted-foreground hover:text-destructive"
@@ -185,7 +197,13 @@ function confirmDelete() {
                             </div>
                         </button>
 
-                        <button type="button" class="list-row-action" :aria-label="`Delete ${c.name}`" @click="pendingDelete = c">
+                        <button
+                            v-if="may('customers', 'delete')"
+                            type="button"
+                            class="list-row-action"
+                            :aria-label="`Delete ${c.name}`"
+                            @click="pendingDelete = c"
+                        >
                             <Trash2 class="size-4" />
                         </button>
                     </li>

@@ -6,6 +6,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -516,13 +517,13 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
         <!-- Permissions on their own. Same switches as the edit dialog, but
              this saves the switches alone — see permissionsForm. -->
         <Dialog v-model:open="permissionsOpen">
-            <DialogContent class="max-h-[90svh] overflow-y-auto">
+            <DialogContent class="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
                 <form @submit.prevent="submitPermissions">
                     <DialogHeader>
                         <DialogTitle>Permissions — {{ permissionsFor?.name }}</DialogTitle>
                         <DialogDescription>
-                            The <span class="capitalize">{{ permissionsFor?.role }}</span> role sets the baseline. Each switch is a change for this
-                            person alone.
+                            The <span class="capitalize">{{ permissionsFor?.role }}</span> role sets the baseline. Tick what this person may do in
+                            each area — click an area's name to turn its whole row on or off.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -569,7 +570,8 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                         <Checkbox
                                             :model-value="permissionsForm.permissions[option.value]?.[action.value] ?? false"
                                             @update:model-value="
-                                                (v) => (permissionsForm.permissions[option.value][action.value] = v === true)
+                                                (v: boolean | 'indeterminate') =>
+                                                    (permissionsForm.permissions[option.value][action.value] = v === true)
                                             "
                                         />
                                     </label>

@@ -13,6 +13,11 @@ export interface Auth {
         /** One resolved flag per feature permission (pos, orders, reports…). */
         [permission: string]: boolean;
     };
+    /**
+     * What may be done inside each area, e.g. `actions.products.delete`.
+     * Buttons render from this; the policies are what actually enforce it.
+     */
+    actions: Record<string, Record<string, boolean>>;
 }
 
 export interface BreadcrumbItem {

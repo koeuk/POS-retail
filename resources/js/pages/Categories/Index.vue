@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Category } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
@@ -18,6 +19,9 @@ const props = defineProps<{
     categories: Category[];
     filters: { search?: string };
 }>();
+
+/* Controls the user cannot use are hidden; the policies are the wall. */
+const { may } = usePermissions();
 
 const search = ref(props.filters.search ?? '');
 let debounce: ReturnType<typeof setTimeout>;
@@ -80,7 +84,7 @@ function confirmDelete() {
         <div class="px-2.5 py-6 md:px-8">
             <PageHeader eyebrow="Catalogue" title="Categories" description="Used to group products and filter the POS grid.">
                 <template #actions>
-                    <Button class="press" @click="openCreate">
+                    <Button v-if="may('categories', 'create')" class="press" @click="openCreate">
                         <Plus class="size-4" />
                         New category
                     </Button>
@@ -99,7 +103,13 @@ function confirmDelete() {
                     <li v-for="c in categories" :key="c.id" class="list-row group">
                         <!-- The row itself is the edit affordance — on a phone a
                              pencil hiding behind a hover state is unreachable. -->
-                        <button type="button" class="list-row-main md:px-4" :aria-label="`Edit ${c.name}`" @click="openEdit(c)">
+                        <button
+                            type="button"
+                            class="list-row-main md:px-4"
+                            :disabled="!may('categories', 'update')"
+                            :aria-label="may('categories', 'update') ? `Edit ${c.name}` : c.name"
+                            @click="openEdit(c)"
+                        >
                             <Shapes class="size-4 shrink-0 text-primary" />
 
                             <p class="min-w-0 flex-1 truncate font-medium leading-tight">{{ c.name }}</p>
@@ -115,7 +125,13 @@ function confirmDelete() {
                             <HistoryButton subject-type="Category" :subject-id="c.id" :label="c.name" />
                         </div>
 
-                        <button type="button" class="list-row-action" :aria-label="`Delete ${c.name}`" @click="pendingDelete = c">
+                        <button
+                            v-if="may('categories', 'delete')"
+                            type="button"
+                            class="list-row-action"
+                            :aria-label="`Delete ${c.name}`"
+                            @click="pendingDelete = c"
+                        >
                             <Trash2 class="size-4" />
                         </button>
                     </li>

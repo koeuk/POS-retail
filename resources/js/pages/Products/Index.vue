@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { usePermissions } from '@/composables/usePermissions';
 import { currentPerPage } from '@/lib/utils';
 import type { Category, Paginated, Product } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
@@ -31,6 +32,10 @@ const props = defineProps<{
     categories: Category[];
     filters: { search?: string; category_id?: string; status?: string };
 }>();
+
+/* Controls the signed-in user cannot use are hidden — the policies are the
+   actual wall, this just avoids offering a door that opens onto a 403. */
+const { may } = usePermissions();
 
 const search = ref(props.filters.search ?? '');
 const categoryId = ref(props.filters.category_id ?? 'all');
@@ -98,7 +103,7 @@ function stockTone(qty: number | null | undefined) {
         <div class="px-2.5 py-6 md:px-8">
             <PageHeader eyebrow="Catalogue" title="Products" description="Everything you sell, with live stock across all stores.">
                 <template #actions>
-                    <Button as-child class="press">
+                    <Button v-if="may('products', 'create')" as-child class="press">
                         <Link :href="route('products.create')">
                             <Plus class="size-4" />
                             New product
@@ -213,12 +218,13 @@ function stockTone(qty: number | null | undefined) {
                                             </Link>
                                         </Button>
                                         <HistoryButton subject-type="Product" :subject-id="p.id" :label="p.name" />
-                                        <Button as-child variant="ghost" size="icon" class="press size-8">
+                                        <Button v-if="may('products', 'update')" as-child variant="ghost" size="icon" class="press size-8">
                                             <Link :href="route('products.edit', { product: p.id })" aria-label="Edit">
                                                 <Pencil class="size-4" />
                                             </Link>
                                         </Button>
                                         <Button
+                                            v-if="may('products', 'delete')"
                                             variant="ghost"
                                             size="icon"
                                             class="press size-8 text-muted-foreground hover:text-destructive"
@@ -273,6 +279,7 @@ function stockTone(qty: number | null | undefined) {
                             </Link>
                             <HistoryButton subject-type="Product" :subject-id="p.id" :label="p.name" with-label />
                             <Link
+                                v-if="may('products', 'update')"
                                 :href="route('products.edit', { product: p.id })"
                                 class="press flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground"
                             >
@@ -280,6 +287,7 @@ function stockTone(qty: number | null | undefined) {
                                 Edit
                             </Link>
                             <button
+                                v-if="may('products', 'delete')"
                                 type="button"
                                 class="press flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border text-xs font-medium text-destructive"
                                 @click="pendingDelete = p"
