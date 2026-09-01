@@ -12,9 +12,11 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['IBM Plex Sans', ...defaultTheme.fontFamily.sans],
-                display: ['Bricolage Grotesque', 'IBM Plex Sans', ...defaultTheme.fontFamily.sans],
-                mono: ['IBM Plex Mono', ...defaultTheme.fontFamily.mono],
+                // The stacks live in app.css as --font-* tokens; changing the
+                // shop's typography is a CSS edit, not a config rebuild hunt.
+                sans: ['var(--font-sans)', ...defaultTheme.fontFamily.sans],
+                display: ['var(--font-display)', ...defaultTheme.fontFamily.sans],
+                mono: ['var(--font-mono)', ...defaultTheme.fontFamily.mono],
             },
             borderRadius: {
                 lg: 'var(--radius)',
