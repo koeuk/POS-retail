@@ -27,6 +27,13 @@ return new class extends Migration
              */
             $table->json('permissions')->nullable();
 
+            /*
+             * Nullable at the DB level because admins and managers have no
+             * home store, but enforced non-null for cashiers in validation —
+             * /pos cannot resolve stock rows without one.
+             */
+            $table->foreignId('store_id')->nullable()->constrained()->nullOnDelete();
+
             $table->boolean('is_active')->default(true);
 
             $table->rememberToken();
