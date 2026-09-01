@@ -126,7 +126,56 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                     <DateRangePicker v-model:from="from" v-model:to="to" placeholder="Any date" class="w-full sm:w-[16rem]" />
                 </div>
 
-                <div v-if="orders.data.length" class="overflow-x-auto">
+                <!-- Phone: one card per sale. A seven-column table has no honest
+                     way to fit 390px — it only pretends to, behind a sideways
+                     scroll nobody discovers. -->
+                <ul v-if="orders.data.length" class="space-y-2 p-2.5 md:hidden">
+                    <li v-for="order in orders.data" :key="order.id" class="shadow-soft relative overflow-hidden rounded-xl border border-border bg-card">
+                        <Link :href="route('orders.show', { order: order.id })" class="row-press block px-3.5 py-3">
+                            <div class="flex items-baseline justify-between gap-3">
+                                <span class="tabular truncate font-mono text-xs font-semibold">{{ order.order_no }}</span>
+                                <Money :value="order.total" :muted="false" class="shrink-0 text-[0.95rem] font-semibold" />
+                            </div>
+
+                            <p class="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <CloudOff v-if="order.created_offline_at" class="size-3 shrink-0 text-primary" />
+                                {{ soldAt(order) }}
+                            </p>
+                            <p class="truncate text-xs text-muted-foreground">
+                                {{ order.cashier?.name ?? '—' }}<span v-if="order.register"> · {{ order.register.name }}</span>
+                                <span v-if="order.customer"> · {{ order.customer.name }}</span>
+                            </p>
+
+                            <div class="mt-2 flex flex-wrap items-center gap-1 pr-9">
+                                <Badge :variant="statusTone(order.status)" class="capitalize">{{ order.status }}</Badge>
+                                <Badge v-if="owed(order) > 0" variant="destructive" class="gap-1">
+                                    <HandCoins class="size-3" />
+                                    Owes <span class="tabular font-mono">{{ money(owed(order)) }}</span>
+                                </Badge>
+                                <Badge v-else-if="order.sale_type === 'debt'" variant="outline">Debt · settled</Badge>
+                                <Badge v-else-if="order.sale_type === 'myself'" variant="outline" class="gap-1">
+                                    <Utensils class="size-3" />
+                                    Myself
+                                </Badge>
+                                <span class="ml-auto text-[0.7rem] text-muted-foreground">
+                                    {{ order.payments.map((p) => methodLabel(p.method)).join(' + ') || '—' }} ·
+                                    <span class="tabular font-mono">{{ order.items_count }}</span> items
+                                </span>
+                            </div>
+                        </Link>
+
+                        <!-- A sibling, not a nested link — see the desktop print note below. -->
+                        <Link
+                            :href="route('orders.show', { order: order.id, print: 1 })"
+                            class="press absolute bottom-2 right-2 flex size-8 items-center justify-center rounded-md text-muted-foreground"
+                            :aria-label="`Print receipt for ${order.order_no}`"
+                        >
+                            <Printer class="size-4" />
+                        </Link>
+                    </li>
+                </ul>
+
+                <div v-if="orders.data.length" class="hidden overflow-x-auto md:block">
                     <Table>
                         <TableHeader>
                             <TableRow class="hover:bg-transparent">
