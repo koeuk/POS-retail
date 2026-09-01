@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\Category;
 use App\Enums\Permission;
+use App\Models\Category;
 use App\Models\User;
 
 class CategoryPolicy

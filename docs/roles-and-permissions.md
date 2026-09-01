@@ -293,6 +293,33 @@ Rules the server holds, in the order they matter:
 
 There is no separate API auth model to keep in sync: the same `permission:pos` gate covers the page _and_ its data. Grant a user `pos` on the Staff screen and their till works; revoke it and every endpoint above starts returning 403 — including a queue flush from a tablet they still have open. That is intentional: the queue survives in Dexie and syncs when an allowed user signs in.
 
+## The token API (`/api/v1/*`)
+
+> Full endpoint reference with request/response examples: **[docs/api.md](api.md)**.
+
+The same app through a second door, for integrations and scripts. Implemented with Laravel Sanctum personal access tokens ([routes/api.php](../routes/api.php), [app/Http/Controllers/Api](../app/Http/Controllers/Api)) — and **the same permission gates answer for a token exactly as for a session**: every endpoint sits behind `permission:<key>`, resolved for the token's user, with the bare `role` middleware enforcing `is_active` on every request.
+
+| Endpoint                                              | Gate            | Notes                                                                                                                           |
+| ----------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/v1/auth/token`                             | throttle 10/min | `{ email, password, device_name }` → `201 { token, user, can }`. Deactivated accounts are refused.                              |
+| `DELETE /api/v1/auth/token`                           | signed in       | Revokes the very token that authenticated the request.                                                                          |
+| `GET /api/v1/me`                                      | signed in       | The user plus the resolved `can` map — the API twin of `auth.can`.                                                              |
+| `GET /api/v1/products`, `GET /api/v1/products/{id}`   | `products`      | Same `filter[search]`, `filter[category_id]`, `filter[status]` grammar as the web.                                              |
+| `GET /api/v1/categories`                              | `categories`    |                                                                                                                                 |
+| `GET/POST /api/v1/customers`                          | `customers`     |                                                                                                                                 |
+| `GET /api/v1/orders`, `GET /api/v1/orders/{id}`       | `orders`        | Store-scoped like the web screen; `filter[from]`/`filter[to]` bucket by business day.                                           |
+| `POST /api/v1/orders/sync`                            | `pos`           | **Identical contract** to `/pos/data/orders/sync` — same request rules, same per-order results, same `client_uuid` idempotency. |
+| `GET /api/v1/debts`, `POST /api/v1/debts/{id}/settle` | `debts`         | Settling writes an ordinary payment row and recomputes `paid_amount` from the ledger.                                           |
+| `GET /api/v1/inventory`                               | `inventory`     | Read-only; movements still go through the web screen or sync.                                                                   |
+| `GET /api/v1/reports/summary?from&to`                 | `reports`       | Totals, by-day, by-product, by-payment, outstanding debts — clamped to a year like the web.                                     |
+
+Rules that keep the two doors honest:
+
+- **No second permission model.** Tokens carry no abilities of their own; access is `hasPermission()` at request time, so a Staff-screen grant or revoke applies to existing tokens immediately.
+- **Deactivation kills tokens.** `EnsureRole` runs on every API request; it skips the session teardown when there is no session ([EnsureRole](../app/Http/Middleware/EnsureRole.php)) but the 403 stands.
+- **Store pinning survives the door.** A cashier's token is bound to their store for orders, debts, inventory and sync, exactly as their session is.
+- Lists paginate through the same `PerPage` whitelist (`?per_page=`), and filters use the same Spatie grammar — one query language across web and API.
+
 ## Security invariants (keep these true)
 
 - `EnsureRole` (bare, on the authenticated group) enforces `is_active` on every request — a deactivated user is out on their next click, mid-session.

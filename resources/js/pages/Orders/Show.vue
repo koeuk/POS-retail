@@ -84,8 +84,17 @@ onMounted(() => {
             { title: order.order_no, href: `/orders/${order.id}` },
         ]"
     >
+        <!-- On a phone the app bar already carries the back chevron and the
+             order number, and "Sold" sits in the details card — repeating them
+             in a header block was pure noise. Print rides in the app bar. -->
+        <template #actions>
+            <Button variant="ghost" size="icon" class="press size-10 md:hidden" aria-label="Print receipt" @click="printReceipt()">
+                <Printer class="size-5" />
+            </Button>
+        </template>
+
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader eyebrow="Selling" :title="order.order_no" :description="soldAt">
+            <PageHeader class="hidden md:flex" eyebrow="Selling" :title="order.order_no" :description="soldAt">
                 <template #actions>
                     <Button as-child variant="ghost" class="press">
                         <Link :href="route('orders.index')">

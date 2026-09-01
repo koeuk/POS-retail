@@ -294,6 +294,14 @@
 */
 
 @layer utilities {
+    /* A swipeable rail hides its scrollbar — the overflow is felt, not drawn. */
+    .scrollbar-none {
+        scrollbar-width: none;
+    }
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
+    }
+
     @keyframes rise-in {
         from {
             opacity: 0;

@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\Customer;
 use App\Enums\Permission;
+use App\Models\Customer;
 use App\Models\User;
 
 class CustomerPolicy

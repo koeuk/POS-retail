@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\Store;
 use App\Enums\Permission;
+use App\Models\Store;
 use App\Models\User;
 
 class StorePolicy

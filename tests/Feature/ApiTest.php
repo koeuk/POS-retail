@@ -39,6 +39,15 @@ class ApiTest extends TestCase
 
     private function token(User $user): string
     {
+        /*
+         * Laravel's test client caches the resolved guard between requests in
+         * one test, so a second request would silently reuse the first
+         * request's user — token revocation and permission changes would
+         * never be re-read. Forgetting the guards makes every request
+         * authenticate for real, like production does.
+         */
+        $this->app['auth']->forgetGuards();
+
         return $user->createToken('test')->plainTextToken;
     }
 
@@ -116,7 +125,7 @@ class ApiTest extends TestCase
 
         $first = $this->withToken($this->token($this->admin))
             ->postJson('/api/v1/orders/sync', $payload)->assertOk()->json('results.0');
-        $this->assertSame('synced', $first['status']);
+        $this->assertSame('created', $first['status']);
 
         // The retry collapses into the original — the token door keeps the contract.
         $second = $this->withToken($this->token($this->admin))
@@ -177,6 +186,8 @@ class ApiTest extends TestCase
         $token = $this->token($this->admin);
 
         $this->withToken($token)->deleteJson('/api/v1/auth/token')->assertOk();
+
+        $this->app['auth']->forgetGuards();
         $this->withToken($token)->getJson('/api/v1/me')->assertUnauthorized();
     }
 }

@@ -13,6 +13,8 @@ Before writing ANY code that touches roles, permissions, route gating, policies,
 
 ## Conventions
 
+- The token API (`/api/v1/*`) is documented in [docs/api.md](docs/api.md); it reuses the web permission gates — never add API-only auth logic.
+
 - Frontend assets are served from `public/build` — run `npm run build` after JS/Vue changes (no vite dev server is usually running).
 - Stock is per-store in the `stocks` table; there is no `stock_qty` column on products. Sum or scope it explicitly.
 - Money uses the shop's currency minor factor (riel has none) — never assume cents.

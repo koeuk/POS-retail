@@ -101,29 +101,37 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
             />
 
             <div class="animate-rise shadow-soft rounded-xl border border-border bg-card" style="animation-delay: 60ms">
-                <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
-                    <div class="relative min-w-[14rem] flex-1">
+                <!--
+                    Search gets its own full-width row; the remaining filters
+                    ride a one-line chip rail that swipes sideways on a phone —
+                    the same gesture as every native app's filter bar — instead
+                    of wrapping into a ragged two-and-a-half-row grid.
+                -->
+                <div class="space-y-2 border-b border-border p-3">
+                    <div class="relative">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input v-model="search" placeholder="Order no., cashier or customer…" class="pl-9" autocomplete="off" />
+                        <Input v-model="search" placeholder="Order no., cashier or customer…" class="h-10 rounded-full pl-9" autocomplete="off" />
                     </div>
 
-                    <Select v-model="status">
-                        <SelectTrigger class="w-[9.5rem]"><SelectValue placeholder="Status" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem :value="ALL">All status</SelectItem>
-                            <SelectItem v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <div class="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3">
+                        <Select v-model="status">
+                            <SelectTrigger class="h-9 w-auto min-w-[7rem] shrink-0 rounded-full"><SelectValue placeholder="Status" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem :value="ALL">All status</SelectItem>
+                                <SelectItem v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</SelectItem>
+                            </SelectContent>
+                        </Select>
 
-                    <Select v-model="method">
-                        <SelectTrigger class="w-[9.5rem]"><SelectValue placeholder="Payment" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem :value="ALL">All payments</SelectItem>
-                            <SelectItem v-for="m in methods" :key="m.value" :value="m.value">{{ m.label }}</SelectItem>
-                        </SelectContent>
-                    </Select>
+                        <Select v-model="method">
+                            <SelectTrigger class="h-9 w-auto min-w-[7.5rem] shrink-0 rounded-full"><SelectValue placeholder="Payment" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem :value="ALL">All payments</SelectItem>
+                                <SelectItem v-for="m in methods" :key="m.value" :value="m.value">{{ m.label }}</SelectItem>
+                            </SelectContent>
+                        </Select>
 
-                    <DateRangePicker v-model:from="from" v-model:to="to" placeholder="Any date" class="w-full sm:w-[16rem]" />
+                        <DateRangePicker v-model:from="from" v-model:to="to" placeholder="Any date" class="h-9 shrink-0 rounded-full" />
+                    </div>
                 </div>
 
                 <!-- Phone: one card per sale. A seven-column table has no honest
