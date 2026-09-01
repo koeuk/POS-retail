@@ -278,6 +278,7 @@ const isStaff = computed(() => !!page.props.auth?.user);
             <div class="mx-auto max-w-5xl px-5 py-8 text-center">
                 <p v-if="shop.footer" class="text-sm text-muted-foreground">{{ shop.footer }}</p>
                 <p class="mt-1 font-mono text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground/60">{{ shop.name }} · {{ year }}</p>
+                <p class="mt-2 text-[0.7rem] text-muted-foreground/60">© {{ year }} Koeuk Dev. All rights reserved.</p>
             </div>
         </footer>
     </div>
