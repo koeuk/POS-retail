@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Permission;
 use App\Enums\Role;
 use App\Http\Requests\UserRequest;
 use App\Models\Store;
@@ -38,11 +39,21 @@ class UserController extends Controller
                 ])
                 ->orderBy('name')
                 ->paginate(PerPage::resolve($request))
-                ->withQueryString(),
+                ->withQueryString()
+                ->through(fn (User $u) => array_merge($u->toArray(), [
+                    'effective_permissions' => $u->effectivePermissions(),
+                ])),
             'stores' => Store::orderBy('name')->get(['id', 'name']),
             'roles' => collect(Role::cases())->map(fn (Role $r) => [
                 'value' => $r->value,
                 'label' => $r->label(),
+            ]),
+            'permissionOptions' => collect(Permission::cases())->map(fn (Permission $p) => [
+                'value' => $p->value,
+                'label' => $p->label(),
+                'group' => $p->group(),
+                'defaults' => collect(Role::cases())
+                    ->mapWithKeys(fn (Role $r) => [$r->value => $p->defaultFor($r)]),
             ]),
             'filters' => ['search' => (string) $request->input('filter.search', ''), 'role' => (string) $request->input('filter.role', '')],
         ]);
@@ -56,6 +67,12 @@ class UserController extends Controller
             $data = $request->validated();
             $data['password'] = Hash::make($data['password']);
             $data['email_verified_at'] = now(); // staff accounts are created by an admin
+
+            // Only an admin hands out permission overrides — a delegated
+            // staff manager creates accounts with role defaults only.
+            if (! $request->user()->isAdmin()) {
+                unset($data['permissions']);
+            }
 
             DB::transaction(fn () => User::create($data));
 
@@ -76,6 +93,13 @@ class UserController extends Controller
                 $data['password'] = Hash::make($data['password']);
             } else {
                 unset($data['password']);
+            }
+
+            // Only an admin may change what a user is allowed to do — anyone
+            // else editing an account (or themselves) leaves overrides as
+            // they are. Closes the self-escalation door.
+            if (! $request->user()->isAdmin()) {
+                unset($data['permissions']);
             }
 
             // An admin must not be able to lock themselves out of their own

@@ -95,7 +95,7 @@ onBeforeUnmount(() => cancelAnimationFrame(frame));
 
 <template>
     <article
-        class="lift relative overflow-hidden rounded-xl border bg-card p-4 shadow-sm"
+        class="lift shadow-soft relative overflow-hidden rounded-2xl border bg-card p-4"
         :class="tone === 'warning' ? 'border-destructive/40' : 'border-border'"
     >
         <!-- A quiet wash of the tile's own colour behind the icon — depth, not decoration. -->

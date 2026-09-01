@@ -18,7 +18,6 @@ import {
     PackageSearch,
     Receipt,
     ScanBarcode,
-    TrendingUp,
     TriangleAlert,
     Utensils,
 } from 'lucide-vue-next';
@@ -109,55 +108,50 @@ const quickActions = computed(() =>
 
     <AppLayout :breadcrumbs="[{ title: 'Dashboard', href: '/dashboard' }]">
         <div class="px-5 py-6 md:px-8">
-            <PageHeader :eyebrow="greeting" :title="user?.name ?? 'Dashboard'" description="Today across the shop floor.">
-                <template #actions>
-                    <!-- Hidden on a phone: the hero's Sell button is the same
-                         destination, and closer to the thumb. -->
-                    <Button as-child class="press hidden md:inline-flex">
-                        <Link href="/pos">
-                            <ScanBarcode class="size-4" />
-                            Open POS
-                        </Link>
-                    </Button>
-                </template>
-            </PageHeader>
+            <PageHeader :eyebrow="greeting" :title="user?.name ?? 'Dashboard'" description="Today across the shop floor." />
 
             <!--
-                Phone hero. One dark card carrying the only number that matters
-                before lunch, with the day's routes out of it underneath. The
-                four separate full-width tiles this replaces pushed everything
-                else below the fold on a 390px screen.
+                The hero, every screen size. One painted card carrying the only
+                number that matters before lunch, with the day's routes out of
+                it — on a phone they sit under the number for the thumb, on a
+                desk they line up beside it. The gradient is the shopfront's
+                paint catching light, not flat ink.
             -->
-            <!-- The brand green, not the foreground colour — the card is a
-                 painted surface and should match the menu masthead. --brand
-                 already goes a shade deeper in dark mode. -->
-            <section class="animate-rise mb-4 rounded-3xl bg-brand p-5 text-brand-foreground shadow-lg md:hidden">
-                <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] opacity-85">Today's sales</p>
+            <section
+                class="surface-brand animate-rise shadow-soft mb-4 rounded-3xl p-5 text-brand-foreground md:mb-6 md:flex md:items-center md:justify-between md:gap-8 md:p-7"
+            >
+                <div>
+                    <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] opacity-85">Today's sales</p>
 
-                <div class="mt-1 flex items-end gap-2">
-                    <p class="tabular font-mono text-4xl font-bold leading-none">{{ money(today.sales) }}</p>
-                    <span
-                        v-if="salesDelta !== null"
-                        class="mb-0.5 rounded-full px-2 py-0.5 text-[0.7rem] font-semibold"
-                        :class="salesDelta >= 0 ? 'bg-brand-foreground/20 text-brand-foreground' : 'bg-brand-foreground/10 text-brand-foreground/80'"
-                    >
-                        {{ salesDelta >= 0 ? '+' : '' }}{{ salesDelta.toFixed(0) }}%
-                    </span>
+                    <div class="mt-1 flex items-end gap-2">
+                        <p class="tabular font-mono text-4xl font-bold leading-none md:text-5xl">{{ money(today.sales) }}</p>
+                        <span
+                            v-if="salesDelta !== null"
+                            class="mb-0.5 rounded-full px-2 py-0.5 text-[0.7rem] font-semibold"
+                            :class="
+                                salesDelta >= 0 ? 'bg-brand-foreground/20 text-brand-foreground' : 'bg-brand-foreground/10 text-brand-foreground/80'
+                            "
+                        >
+                            {{ salesDelta >= 0 ? '+' : '' }}{{ salesDelta.toFixed(0) }}%
+                        </span>
+                    </div>
+
+                    <p class="tabular mt-1 font-mono text-xs opacity-85">
+                        {{ today.orders }} order{{ today.orders === 1 ? '' : 's' }} · {{ today.items }} item{{ today.items === 1 ? '' : 's' }}
+                        <span v-if="offlineToday > 0"> · {{ offlineToday }} synced offline</span>
+                    </p>
                 </div>
 
-                <p class="tabular mt-1 font-mono text-xs opacity-85">
-                    {{ today.orders }} order{{ today.orders === 1 ? '' : 's' }} · {{ today.items }} item{{ today.items === 1 ? '' : 's' }}
-                    <span v-if="offlineToday > 0"> · {{ offlineToday }} synced offline</span>
-                </p>
-
-                <div class="mt-5 flex items-start justify-around gap-2">
+                <div class="mt-5 flex items-start justify-around gap-2 md:mt-0 md:justify-end md:gap-7">
                     <Link
                         v-for="action in quickActions"
                         :key="action.href"
                         :href="action.href"
-                        class="press flex flex-1 flex-col items-center gap-1.5"
+                        class="press flex flex-1 flex-col items-center gap-1.5 md:flex-none"
                     >
-                        <span class="flex size-12 items-center justify-center rounded-full bg-brand-foreground/15">
+                        <span
+                            class="flex size-12 items-center justify-center rounded-full bg-brand-foreground/15 transition-colors hover:bg-brand-foreground/25"
+                        >
                             <component :is="action.icon" class="size-5" />
                         </span>
                         <span class="text-[0.7rem] font-medium opacity-80">{{ action.title }}</span>
@@ -165,8 +159,7 @@ const quickActions = computed(() =>
                 </div>
             </section>
 
-            <div class="stagger hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-4">
-                <StatTile label="Today's sales" :value="money(today.sales)" :icon="TrendingUp" :previous="yesterday.sales" />
+            <div class="stagger hidden gap-4 md:grid md:grid-cols-3">
                 <StatTile label="Orders" :value="String(today.orders)" :icon="Receipt" :previous="yesterday.orders" />
                 <StatTile
                     label="Average basket"
@@ -198,7 +191,7 @@ const quickActions = computed(() =>
             <div class="mt-4 grid items-start gap-4 lg:grid-cols-3">
                 <!-- One series, so no legend: the panel title names it. -->
                 <section
-                    class="animate-rise min-w-0 rounded-2xl border border-border bg-card p-4 shadow-sm lg:col-span-2"
+                    class="animate-rise shadow-soft min-w-0 rounded-2xl border border-border bg-card p-4 lg:col-span-2"
                     style="animation-delay: 120ms"
                 >
                     <div class="mb-3 flex items-baseline justify-between">
@@ -209,7 +202,7 @@ const quickActions = computed(() =>
                     <SalesBarChart :rows="trend" :height="200" />
                 </section>
 
-                <section class="animate-rise rounded-2xl border border-border bg-card shadow-sm" style="animation-delay: 160ms">
+                <section class="animate-rise shadow-soft rounded-2xl border border-border bg-card" style="animation-delay: 160ms">
                     <div class="flex items-center justify-between border-b border-border px-4 py-3">
                         <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Latest sales</h2>
                         <Link
@@ -245,7 +238,7 @@ const quickActions = computed(() =>
                 -->
                 <section
                     v-if="oversold.length"
-                    class="animate-rise rounded-2xl border border-destructive/40 bg-card shadow-sm"
+                    class="animate-rise shadow-soft rounded-2xl border border-destructive/40 bg-card"
                     style="animation-delay: 200ms"
                 >
                     <h2
@@ -265,7 +258,7 @@ const quickActions = computed(() =>
                     </ul>
                 </section>
 
-                <section class="animate-rise rounded-2xl border border-border bg-card shadow-sm" style="animation-delay: 240ms">
+                <section class="animate-rise shadow-soft rounded-2xl border border-border bg-card" style="animation-delay: 240ms">
                     <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                         Low stock
                     </h2>

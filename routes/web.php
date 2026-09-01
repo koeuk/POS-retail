@@ -50,9 +50,9 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
     | POS data endpoints — JSON, not Inertia. See PosDataController.
     | Products and order sync land here in Phase 4.
     */
-    Route::get('pos', [PosController::class, 'index'])->name('pos');
+    Route::get('pos', [PosController::class, 'index'])->name('pos')->middleware('permission:pos');
 
-    Route::prefix('pos/data')->name('pos.data.')->group(function () {
+    Route::prefix('pos/data')->name('pos.data.')->middleware('permission:pos')->group(function () {
         Route::get('heartbeat', [PosDataController::class, 'heartbeat'])->name('heartbeat');
         Route::get('products', [PosDataController::class, 'products'])->name('products');
         Route::get('customers', [PosDataController::class, 'customers'])->name('customers');
@@ -66,45 +66,56 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
     |----------------------------------------------------------------------
     | Admin area
     |----------------------------------------------------------------------
-    | Gated to admin + manager. Finer-grained rules (who may edit vs only
-    | read) live in the policies, not here.
+    | Gated per feature: a role sets the defaults and each user can be
+    | granted or denied a feature on the Staff screen. Finer-grained rules
+    | (who may edit vs only read) live in the policies, not here.
     */
-    Route::middleware('role:admin,manager')->group(function () {
+    Route::middleware('permission:debts')->group(function () {
         Route::get('debts', [DebtController::class, 'index'])->name('debts.index');
         Route::post('debts', [DebtController::class, 'store'])->name('debts.store');
         Route::get('debts/product-lookup', [DebtController::class, 'productLookup'])->name('debts.products');
         Route::post('debts/{order}/settle', [DebtController::class, 'settle'])->name('debts.settle');
-        Route::get('consumption', [ConsumptionController::class, 'index'])->name('consumption.index');
+    });
 
+    Route::get('consumption', [ConsumptionController::class, 'index'])
+        ->name('consumption.index')->middleware('permission:consumption');
+
+    Route::middleware('permission:orders')->group(function () {
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    });
 
+    Route::middleware('permission:reports')->group(function () {
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
+    });
 
-        Route::get('admin/ping', function () {
-            return response()->json(['ok' => true, 'area' => 'admin']);
-        })->name('admin.ping');
+    Route::get('admin/ping', function () {
+        return response()->json(['ok' => true, 'area' => 'admin']);
+    })->name('admin.ping')->middleware('role:admin,manager');
 
-        /*
-        | Inventory. Movements, not raw edits — see InventoryController.
-        */
+    /*
+    | Inventory. Movements, not raw edits — see InventoryController.
+    */
+    Route::middleware('permission:inventory')->group(function () {
         Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
         Route::get('inventory/lookup', [InventoryController::class, 'lookup'])->name('inventory.lookup');
         Route::post('inventory/movements', [InventoryController::class, 'store'])->name('inventory.store');
         Route::put('inventory/threshold', [InventoryController::class, 'updateThreshold'])->name('inventory.threshold');
+    });
 
-        Route::resource('products', ProductController::class);
+    Route::resource('products', ProductController::class)->middleware('permission:products');
 
-        Route::resource('categories', CategoryController::class)
-            ->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('categories', CategoryController::class)
+        ->only(['index', 'store', 'update', 'destroy'])->middleware('permission:categories');
 
-        Route::resource('customers', CustomerController::class)
-            ->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('customers', CustomerController::class)
+        ->only(['index', 'store', 'update', 'destroy'])->middleware('permission:customers');
 
-        Route::resource('users', UserController::class)
-            ->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('users', UserController::class)
+        ->only(['index', 'store', 'update', 'destroy'])->middleware('permission:users');
 
+    Route::middleware('permission:stores')->group(function () {
         Route::get('stores', [StoreController::class, 'index'])->name('stores.index');
         Route::post('stores', [StoreController::class, 'store'])->name('stores.store');
         Route::put('stores/{store}', [StoreController::class, 'update'])->name('stores.update');

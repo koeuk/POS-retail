@@ -10,6 +10,8 @@ export interface Auth {
         accessAdmin: boolean;
         manage: boolean;
         isAdmin: boolean;
+        /** One resolved flag per feature permission (pos, orders, reports…). */
+        [permission: string]: boolean;
     };
 }
 
@@ -23,8 +25,8 @@ export interface NavItem {
     href: string;
     icon?: LucideIcon;
     isActive?: boolean;
-    /** Hide from users without this capability. */
-    requires?: 'manage' | 'isAdmin';
+    /** Hide from users without this capability or feature permission. */
+    requires?: string;
 }
 
 export interface NavGroup {

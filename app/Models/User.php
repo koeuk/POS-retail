@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Permission;
 use App\Enums\Role;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,6 +21,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'permissions',
         'store_id',
         'is_active',
     ];
@@ -35,8 +37,34 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => Role::class,
+            'permissions' => 'array',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Role default, unless this user carries an override for the key.
+     * Admins always pass — the shop cannot be locked out of its own admin.
+     */
+    public function hasPermission(Permission $permission): bool
+    {
+        if ($this->role === Role::Admin) {
+            return true;
+        }
+
+        $override = $this->permissions[$permission->value] ?? null;
+
+        return $override !== null
+            ? (bool) $override
+            : $permission->defaultFor($this->role);
+    }
+
+    /** Every permission resolved to its effective value, as {key: bool}. */
+    public function effectivePermissions(): array
+    {
+        return collect(Permission::cases())
+            ->mapWithKeys(fn (Permission $p) => [$p->value => $this->hasPermission($p)])
+            ->all();
     }
 
     public function store(): BelongsTo

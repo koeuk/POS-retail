@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Store;
+use App\Enums\Permission;
 use App\Models\User;
 
 class StorePolicy
@@ -14,13 +15,13 @@ class StorePolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->isManager();
+        return $user->hasPermission(Permission::Stores);
     }
 
     /** Managers only ever see their own store. */
     public function view(User $user, Store $store): bool
     {
-        return $user->isManager() && $user->store_id === $store->id;
+        return $user->hasPermission(Permission::Stores) && $user->store_id === $store->id;
     }
 
     public function create(User $user): bool

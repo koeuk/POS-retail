@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Category;
+use App\Enums\Permission;
 use App\Models\User;
 
 class CategoryPolicy
@@ -25,16 +26,16 @@ class CategoryPolicy
 
     public function create(User $user): bool
     {
-        return $user->isManager();
+        return $user->hasPermission(Permission::Categories);
     }
 
     public function update(User $user, Category $category): bool
     {
-        return $user->isManager();
+        return $user->hasPermission(Permission::Categories);
     }
 
     public function delete(User $user, Category $category): bool
     {
-        return $user->isManager();
+        return $user->hasPermission(Permission::Categories);
     }
 }

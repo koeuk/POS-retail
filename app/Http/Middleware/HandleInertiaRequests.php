@@ -59,6 +59,10 @@ class HandleInertiaRequests extends Middleware
                         Role::Manager,
                     ),
                     'isAdmin' => (bool) $request->user()?->isAdmin(),
+                    // One flag per feature area, already resolved through the
+                    // user's role defaults and per-user overrides. The nav
+                    // renders from these; the permission middleware enforces.
+                    ...($request->user()?->effectivePermissions() ?? []),
                 ],
             ],
             // Every price on every page formats through this. Changing the

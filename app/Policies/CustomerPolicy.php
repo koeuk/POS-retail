@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Customer;
+use App\Enums\Permission;
 use App\Models\User;
 
 class CustomerPolicy
@@ -30,11 +31,11 @@ class CustomerPolicy
 
     public function update(User $user, Customer $customer): bool
     {
-        return $user->isManager();
+        return $user->hasPermission(Permission::Customers);
     }
 
     public function delete(User $user, Customer $customer): bool
     {
-        return $user->isManager();
+        return $user->hasPermission(Permission::Customers);
     }
 }

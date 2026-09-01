@@ -17,15 +17,36 @@ import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { Pencil, Plus, Search, Trash2, Users } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
+type PermissionOption = {
+    value: string;
+    label: string;
+    group: string;
+    defaults: Record<string, boolean>;
+};
+
 const props = defineProps<{
-    users: Paginated<User & { store?: Pick<Store, 'id' | 'name'> | null }>;
+    users: Paginated<User & { store?: Pick<Store, 'id' | 'name'> | null; effective_permissions: Record<string, boolean> }>;
     stores: Store[];
     roles: { value: string; label: string }[];
+    permissionOptions: PermissionOption[];
     filters: { search?: string; role?: string };
 }>();
 
 const page = usePage<SharedData>();
 const currentUserId = computed(() => page.props.auth.user?.id);
+const canEditPermissions = computed(() => page.props.auth.can.isAdmin);
+
+/** Options grouped for display: [group label, options[]]. */
+const permissionGroups = computed(() => {
+    const groups = new Map<string, PermissionOption[]>();
+    for (const option of props.permissionOptions) {
+        groups.set(option.group, [...(groups.get(option.group) ?? []), option]);
+    }
+    return [...groups.entries()];
+});
+
+const roleDefaults = (role: string) =>
+    Object.fromEntries(props.permissionOptions.map((o) => [o.value, o.defaults[role] ?? false]));
 
 const ALL = 'all';
 const NONE = 'none';
@@ -64,20 +85,32 @@ const form = useForm({
     role: 'cashier',
     store_id: NONE,
     is_active: true as boolean,
+    permissions: {} as Record<string, boolean>,
 });
 
 /** A cashier cannot open /pos without a store, so the field becomes required. */
 const storeRequired = computed(() => form.role === 'cashier');
+
+/*
+ * Picking a role re-seeds the switches to that role's defaults — the role is
+ * the baseline, the switches are the deviations from it. Wired to the Select
+ * itself rather than a watcher so opening an existing account (which also
+ * sets form.role) cannot wipe the loaded permissions.
+ */
+function reseedFromRole(role: unknown) {
+    form.permissions = roleDefaults(String(role));
+}
 
 function openCreate() {
     editing.value = null;
     form.reset();
     form.clearErrors();
     form.store_id = NONE;
+    form.permissions = roleDefaults(form.role);
     dialogOpen.value = true;
 }
 
-function openEdit(user: User) {
+function openEdit(user: User & { effective_permissions: Record<string, boolean> }) {
     editing.value = user;
     form.clearErrors();
     form.name = user.name;
@@ -87,6 +120,7 @@ function openEdit(user: User) {
     form.role = user.role;
     form.store_id = user.store_id ? String(user.store_id) : NONE;
     form.is_active = user.is_active;
+    form.permissions = { ...user.effective_permissions };
     dialogOpen.value = true;
 }
 
@@ -254,7 +288,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
         </div>
 
         <Dialog v-model:open="dialogOpen">
-            <DialogContent class="sm:max-w-lg">
+            <DialogContent class="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
                 <form @submit.prevent="submit">
                     <DialogHeader>
                         <DialogTitle>{{ editing ? 'Edit staff account' : 'New staff account' }}</DialogTitle>
@@ -281,7 +315,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
                                 <Label for="u-role">Role</Label>
-                                <Select v-model="form.role" :disabled="editing?.id === currentUserId">
+                                <Select v-model="form.role" :disabled="editing?.id === currentUserId" @update:model-value="reseedFromRole">
                                     <SelectTrigger id="u-role">
                                         <SelectValue />
                                     </SelectTrigger>
@@ -327,6 +361,33 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                 <Input id="u-pass2" v-model="form.password_confirmation" type="password" autocomplete="new-password" />
                             </div>
                         </div>
+
+                        <!--
+                            What this account may open. Role picks the baseline;
+                            each switch is a per-user deviation from it. Hidden
+                            for admin accounts (they always hold everything) and
+                            from non-admin editors (only admins hand out access).
+                        -->
+                        <div v-if="canEditPermissions && form.role !== 'admin'" class="rounded-lg border border-border">
+                            <div class="border-b border-border px-3 py-2.5">
+                                <p class="text-sm font-medium">Permissions</p>
+                                <p class="text-xs text-muted-foreground">
+                                    Pre-set by the role — switch anything on or off for this person alone.
+                                </p>
+                            </div>
+                            <div class="grid gap-4 p-3 sm:grid-cols-2">
+                                <div v-for="[group, options] in permissionGroups" :key="group" class="space-y-2">
+                                    <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">{{ group }}</p>
+                                    <div v-for="option in options" :key="option.value" class="flex items-center justify-between gap-3">
+                                        <span class="text-sm">{{ option.label }}</span>
+                                        <Switch v-model="form.permissions[option.value]" :aria-label="option.label" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <p v-else-if="canEditPermissions" class="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+                            Administrators always have access to everything, so there is nothing to switch off here.
+                        </p>
 
                         <div class="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
                             <div>

@@ -25,11 +25,11 @@ export const navGroups: NavGroup[] = [
         label: 'Selling',
         items: [
             { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-            { title: 'Point of Sale', href: '/pos', icon: ScanBarcode },
-            { title: 'Order History', href: '/orders', icon: ReceiptText, requires: 'manage' },
-            { title: 'In Debt', href: '/debts', icon: HandCoins, requires: 'manage' },
-            { title: 'Myself', href: '/consumption', icon: Utensils, requires: 'manage' },
-            { title: 'Reports', href: '/reports', icon: ChartNoAxesColumn, requires: 'manage' },
+            { title: 'Point of Sale', href: '/pos', icon: ScanBarcode, requires: 'pos' },
+            { title: 'Order History', href: '/orders', icon: ReceiptText, requires: 'orders' },
+            { title: 'In Debt', href: '/debts', icon: HandCoins, requires: 'debts' },
+            { title: 'Myself', href: '/consumption', icon: Utensils, requires: 'consumption' },
+            { title: 'Reports', href: '/reports', icon: ChartNoAxesColumn, requires: 'reports' },
             // The public customer catalogue. No `requires`: a cashier may well
             // want to show someone the menu across the counter.
             { title: 'View Menu', href: '/menu', icon: BookOpen },
@@ -38,16 +38,16 @@ export const navGroups: NavGroup[] = [
     {
         label: 'Catalogue',
         items: [
-            { title: 'Products', href: '/products', icon: Boxes, requires: 'manage' },
-            { title: 'Categories', href: '/categories', icon: Shapes, requires: 'manage' },
-            { title: 'Inventory', href: '/inventory', icon: PackageSearch, requires: 'manage' },
+            { title: 'Products', href: '/products', icon: Boxes, requires: 'products' },
+            { title: 'Categories', href: '/categories', icon: Shapes, requires: 'categories' },
+            { title: 'Inventory', href: '/inventory', icon: PackageSearch, requires: 'inventory' },
         ],
     },
     {
         label: 'People',
         items: [
-            { title: 'Customers', href: '/customers', icon: UsersRound, requires: 'manage' },
-            { title: 'Staff', href: '/users', icon: Users, requires: 'isAdmin' },
+            { title: 'Customers', href: '/customers', icon: UsersRound, requires: 'customers' },
+            { title: 'Staff', href: '/users', icon: Users, requires: 'users' },
             /*
              * Stores is deliberately not in the nav: this is a single-store
              * shop, so the screen has nothing to choose between. The route is
@@ -59,9 +59,9 @@ export const navGroups: NavGroup[] = [
     },
 ];
 
-type Can = { manage: boolean; isAdmin: boolean; accessAdmin: boolean };
+type Can = Record<string, boolean>;
 
-const permitted = (item: NavItem, can: Can) => !item.requires || can[item.requires];
+const permitted = (item: NavItem, can: Can) => !item.requires || !!can[item.requires];
 
 /** Groups the user can see something in, with the forbidden items removed. */
 export function visibleGroups(can: Can): NavGroup[] {

@@ -51,6 +51,7 @@ const submit = () => {
                         autocomplete="email"
                         v-model="form.email"
                         placeholder="email@example.com"
+                        class="h-11 rounded-xl"
                     />
                     <InputError :message="form.errors.email" />
                 </div>
@@ -71,7 +72,7 @@ const submit = () => {
                             autocomplete="current-password"
                             v-model="form.password"
                             placeholder="Password"
-                            class="pr-10"
+                            class="h-11 rounded-xl pr-10"
                         />
                         <button
                             type="button"
@@ -95,7 +96,12 @@ const submit = () => {
                     </Label>
                 </div>
 
-                <Button type="submit" class="mt-4 w-full" tabindex="4" :disabled="form.processing">
+                <Button
+                    type="submit"
+                    class="press shadow-soft mt-2 h-11 w-full rounded-xl text-[0.95rem] font-semibold"
+                    tabindex="4"
+                    :disabled="form.processing"
+                >
                     <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
                     Log in
                 </Button>

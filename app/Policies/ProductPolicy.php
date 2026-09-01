@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Product;
+use App\Enums\Permission;
 use App\Models\User;
 
 class ProductPolicy
@@ -26,16 +27,16 @@ class ProductPolicy
 
     public function create(User $user): bool
     {
-        return $user->isManager();
+        return $user->hasPermission(Permission::Products);
     }
 
     public function update(User $user, Product $product): bool
     {
-        return $user->isManager();
+        return $user->hasPermission(Permission::Products);
     }
 
     public function delete(User $user, Product $product): bool
     {
-        return $user->isManager();
+        return $user->hasPermission(Permission::Products);
     }
 }

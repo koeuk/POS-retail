@@ -35,6 +35,7 @@
          * the same paint whatever the screen is doing.
          */
         --brand: 155 58% 26%;
+        --brand-bright: 158 55% 32%;
         --brand-foreground: 150 30% 98%;
         --secondary: 36 22% 93%;
         --secondary-foreground: 25 12% 20%;
@@ -63,7 +64,7 @@
         --series-3: #1baf7a;
         --series-4: #eda100;
 
-        --radius: 0.625rem;
+        --radius: 0.75rem;
 
         --sidebar-background: 36 24% 96%;
         --sidebar-foreground: 25 10% 28%;
@@ -108,6 +109,7 @@
         /* Deeper still on a dark page: the same green at full lightness would
            glow against near-black instead of sitting behind the type. */
         --brand: 155 55% 17%;
+        --brand-bright: 158 50% 22%;
         --brand-foreground: 150 25% 96%;
         --secondary: 28 7% 17%;
         --secondary-foreground: 40 20% 93%;
@@ -574,5 +576,60 @@
     @page {
         size: 80mm auto;
         margin: 0;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Modern surface treatments
+|--------------------------------------------------------------------------
+| The painted brand surfaces get a quiet gradient — light falling on a
+| painted board rather than flat ink — and cards get a green-tinted soft
+| shadow instead of a grey one, so elevation feels warm, not clinical.
+*/
+@layer utilities {
+    .surface-brand {
+        background:
+            radial-gradient(120% 90% at 88% -12%, hsl(0 0% 100% / 0.13), transparent 58%),
+            linear-gradient(135deg, hsl(var(--brand)) 0%, hsl(var(--brand-bright)) 100%);
+    }
+
+    .shadow-soft {
+        box-shadow:
+            0 1px 2px hsl(155 30% 20% / 0.05),
+            0 10px 28px -10px hsl(155 35% 25% / 0.14);
+    }
+
+    .dark .shadow-soft {
+        box-shadow:
+            0 1px 2px hsl(0 0% 0% / 0.3),
+            0 10px 28px -10px hsl(0 0% 0% / 0.5);
+    }
+
+    /* Soft brand-coloured light for the auth pages: two out-of-focus pools,
+       enough to make the page feel lit without tinting the form itself. */
+    .auth-glow::before,
+    .auth-glow::after {
+        content: '';
+        position: absolute;
+        border-radius: 9999px;
+        filter: blur(90px);
+        pointer-events: none;
+    }
+
+    .auth-glow::before {
+        top: -12rem;
+        left: -10rem;
+        width: 32rem;
+        height: 32rem;
+        background: hsl(var(--primary) / 0.14);
+    }
+
+    .auth-glow::after {
+        bottom: -14rem;
+        right: -10rem;
+        width: 36rem;
+        height: 36rem;
+        background: hsl(var(--primary) / 0.1);
     }
 }
