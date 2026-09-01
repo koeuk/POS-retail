@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\Permission;
+use App\Models\Activity;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -118,7 +119,7 @@ class UserPermissionsTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('activity_log', [
-            'log_name' => \App\Models\Activity::LOG_ACCESS,
+            'log_name' => Activity::LOG_ACCESS,
             'subject_type' => User::class,
             'subject_id' => $this->cashier->id,
             'causer_id' => $this->admin->id,
