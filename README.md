@@ -16,7 +16,7 @@ Laravel 12 · Inertia · Vue 3 + TypeScript · Tailwind · MySQL
 | --- | --- | --- |
 | PHP | 8.2+ | with `pdo_mysql` |
 | Composer | 2.x | |
-| Node | 20+ | npm 10+ |
+| Node | 22 | what CI pins; npm 10+ |
 | MySQL | 8.x | or MariaDB |
 
 Check your PHP has the database driver before starting — a missing one is the most
