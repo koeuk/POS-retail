@@ -165,7 +165,7 @@ const quickActions = computed(() =>
                         </span>
                     </div>
 
-                    <p class="tabular mt-1.5 font-mono text-base opacity-90 md:text-lg">
+                    <p class="tabular mt-1.5 font-mono text-[0.8125rem] opacity-90 sm:text-sm md:text-lg">
                         {{ today.orders }} order{{ today.orders === 1 ? '' : 's' }} · {{ today.items }} item{{ today.items === 1 ? '' : 's' }}
                         <span v-if="offlineToday > 0"> · {{ offlineToday }} synced offline</span>
                     </p>
