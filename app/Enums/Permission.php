@@ -23,6 +23,7 @@ enum Permission: string
     case Customers = 'customers';
     case Users = 'users';
     case Stores = 'stores';
+    case Activity = 'activity';
 
     public function label(): string
     {
@@ -38,6 +39,7 @@ enum Permission: string
             self::Customers => 'Customers',
             self::Users => 'Staff',
             self::Stores => 'Stores & registers',
+            self::Activity => 'Activity log',
         };
     }
 
@@ -48,6 +50,7 @@ enum Permission: string
             self::Pos, self::Orders, self::Debts, self::Consumption, self::Reports => 'Selling',
             self::Products, self::Categories, self::Inventory => 'Catalogue',
             self::Customers, self::Users, self::Stores => 'People & stores',
+            self::Activity => 'Audit',
         };
     }
 
@@ -56,7 +59,9 @@ enum Permission: string
     {
         return match ($role) {
             Role::Admin => true,
-            Role::Manager => $this !== self::Users,
+            // The audit trail records what managers themselves do, so it is
+            // admin-only by default — grant it per user on the Staff screen.
+            Role::Manager => ! in_array($this, [self::Users, self::Activity], true),
             Role::Cashier => $this === self::Pos,
         };
     }

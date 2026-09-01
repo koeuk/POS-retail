@@ -12,6 +12,7 @@ use App\Models\Setting;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\AuditLog;
 use App\Support\Currency;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
@@ -188,6 +189,25 @@ class OrderSyncService
                 'reference_no' => $payment['reference_no'] ?? null,
             ]);
         }
+
+        /*
+         * The cash trail. Logged here rather than in the controllers because
+         * every completed sale — till sync and the straight-to-debt form
+         * alike — is created through this method, so one entry point covers
+         * both and neither can be added without its audit row.
+         */
+        AuditLog::money("Sale {$order->order_no} recorded", $order, [
+            'order_no' => $order->order_no,
+            'sale_type' => $saleType->value,
+            'total' => (string) $order->total,
+            'paid_amount' => (string) $order->paid_amount,
+            'currency' => $order->currency,
+            'item_count' => count($items),
+            'store_id' => $storeId,
+            // Sales sync from a till that was offline; when the sale actually
+            // happened matters more than when the server heard about it.
+            'created_offline_at' => $offlineAt?->toIso8601String(),
+        ], 'sale');
 
         return $order;
     }

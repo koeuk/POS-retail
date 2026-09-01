@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Permission;
 use App\Enums\Role;
+use App\Models\Concerns\RecordsActivity;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,12 +16,29 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, RecordsActivity;
 
     protected $fillable = [
         'name',
         'email',
         'password',
+        'role',
+        'permissions',
+        'store_id',
+        'is_active',
+    ];
+
+    /**
+     * Columns the audit trail records changes to.
+     *
+     * `password` and `remember_token` are deliberately absent — the log
+     * records that an account changed, never the credential itself. Role and
+     * permission edits ARE recorded: they are the escalation path, so they
+     * are the entries an audit exists to catch.
+     */
+    protected array $auditable = [
+        'name',
+        'email',
         'role',
         'permissions',
         'store_id',
@@ -41,6 +59,22 @@ class User extends Authenticatable
             'permissions' => 'array',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Access-shaped edits belong in the access log, not the generic model
+     * log — an admin auditing "who was given what" filters on one name and
+     * gets every grant, revoke and role change without wading through name
+     * and email edits.
+     *
+     * Spatie calls this after the change set is built, so `isDirty` still
+     * reflects the edit being recorded.
+     */
+    public function getLogNameToUse(): ?string
+    {
+        return $this->isDirty(['role', 'permissions', 'is_active'])
+            ? Activity::LOG_ACCESS
+            : Activity::LOG_MODEL;
     }
 
     /**

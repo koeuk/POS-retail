@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\OrderSyncService;
+use App\Support\AuditLog;
 use App\Support\Currency;
 use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
@@ -248,6 +249,20 @@ class DebtController extends Controller
 
             $order->refresh();
             $left = (float) $order->outstanding();
+
+            AuditLog::money(
+                $left > 0 ? "Debt payment on {$order->order_no}" : "Debt on {$order->order_no} settled",
+                $order,
+                [
+                    'order_no' => $order->order_no,
+                    'amount' => number_format((float) $data['amount'], 2, '.', ''),
+                    'method' => $data['method'],
+                    'reference_no' => $data['reference_no'] ?? null,
+                    'outstanding_after' => number_format($left, 2, '.', ''),
+                    'customer' => $order->customer?->name,
+                ],
+                $left > 0 ? 'debt_payment' : 'debt_settled',
+            );
 
             return back()->with(
                 'success',

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ConsumptionController;
 use App\Http\Controllers\CustomerController;
@@ -114,6 +115,13 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
 
     Route::resource('users', UserController::class)
         ->only(['index', 'store', 'update', 'destroy'])->middleware('permission:users');
+
+    /*
+    | Audit trail. Read-only — index is the whole surface, and there is no
+    | write route to add: rows are pruned by activitylog:clean, never edited.
+    */
+    Route::get('activity', [ActivityController::class, 'index'])
+        ->name('activity.index')->middleware('permission:activity');
 
     Route::middleware('permission:stores')->group(function () {
         Route::get('stores', [StoreController::class, 'index'])->name('stores.index');

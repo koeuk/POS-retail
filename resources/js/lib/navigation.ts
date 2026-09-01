@@ -4,6 +4,7 @@ import {
     Boxes,
     ChartNoAxesColumn,
     HandCoins,
+    History,
     LayoutGrid,
     MoreHorizontal,
     PackageSearch,
@@ -48,6 +49,7 @@ export const navGroups: NavGroup[] = [
         items: [
             { title: 'Customers', href: '/customers', icon: UsersRound, requires: 'customers' },
             { title: 'Staff', href: '/users', icon: Users, requires: 'users' },
+            { title: 'Activity Log', href: '/activity', icon: History, requires: 'activity' },
             /*
              * Stores is deliberately not in the nav: this is a single-store
              * shop, so the screen has nothing to choose between. The route is

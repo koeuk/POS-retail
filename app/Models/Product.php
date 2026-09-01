@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RecordsActivity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
-    use HasFactory;
+    use HasFactory, RecordsActivity;
 
     protected $fillable = [
         'category_id',
@@ -22,6 +23,21 @@ class Product extends Model
         'cost_price',
         'sell_price',
         'image',
+        'unit',
+        'units_per_pack',
+        'case_size',
+        'track_stock',
+        'is_active',
+    ];
+
+    /** Columns the audit trail records changes to — see RecordsActivity. */
+    protected array $auditable = [
+        'category_id',
+        'name',
+        'sku',
+        'barcode',
+        'cost_price',
+        'sell_price',
         'unit',
         'units_per_pack',
         'case_size',
