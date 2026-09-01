@@ -209,7 +209,7 @@ const quickActions = computed(() =>
             <!-- Phone summary: one swipeable rail, bleeding to the screen
                  edges — the half-visible card is the scroll affordance.
                  Desktop shows these figures in the wider tile rows below. -->
-            <div v-if="canSeeReports" class="stagger scrollbar-none -mx-2.5 mb-4 flex snap-x snap-proximity gap-2 overflow-x-auto px-2.5 md:hidden">
+            <div v-if="canSeeReports" class="stagger scrollbar-none mb-4 flex snap-x snap-proximity gap-2 overflow-x-auto rounded-2xl md:hidden">
                 <StatTile class="w-44 shrink-0 snap-start" label="Products" :value="String(catalogue.products)" :icon="Boxes" />
                 <StatTile class="w-44 shrink-0 snap-start" label="Categories" :value="String(catalogue.categories)" :icon="Shapes" />
                 <StatTile
