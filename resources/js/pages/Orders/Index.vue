@@ -93,14 +93,14 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
     <Head title="Order History" />
 
     <AppLayout :breadcrumbs="[{ title: 'Order History', href: '/orders' }]">
-        <div class="px-5 py-6 md:px-8">
+        <div class="px-2.5 py-6 md:px-8">
             <PageHeader
                 eyebrow="Selling"
                 title="Order History"
                 description="Every sale on the server, from every till. Sales still queued on a tablet appear once they sync."
             />
 
-            <div class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 60ms">
+            <div class="animate-rise shadow-soft rounded-xl border border-border bg-card" style="animation-delay: 60ms">
                 <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
                     <div class="relative min-w-[14rem] flex-1">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

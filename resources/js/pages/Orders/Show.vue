@@ -84,7 +84,7 @@ onMounted(() => {
             { title: order.order_no, href: `/orders/${order.id}` },
         ]"
     >
-        <div class="px-5 py-6 md:px-8">
+        <div class="px-2.5 py-6 md:px-8">
             <PageHeader eyebrow="Selling" :title="order.order_no" :description="soldAt">
                 <template #actions>
                     <Button as-child variant="ghost" class="press">
@@ -130,7 +130,7 @@ onMounted(() => {
             <div class="grid items-start gap-4 lg:grid-cols-3">
                 <!-- Line items + money -->
                 <div class="min-w-0 space-y-4 lg:col-span-2">
-                    <section class="animate-rise overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                    <section class="animate-rise shadow-soft overflow-hidden rounded-xl border border-border bg-card">
                         <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                             Items
                         </h2>
@@ -180,7 +180,7 @@ onMounted(() => {
                         </dl>
                     </section>
 
-                    <section class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 60ms">
+                    <section class="animate-rise shadow-soft rounded-xl border border-border bg-card" style="animation-delay: 60ms">
                         <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                             Payment
                         </h2>
@@ -208,7 +208,7 @@ onMounted(() => {
                 </div>
 
                 <!-- Provenance -->
-                <section class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 100ms">
+                <section class="animate-rise shadow-soft rounded-xl border border-border bg-card" style="animation-delay: 100ms">
                     <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                         Details
                     </h2>

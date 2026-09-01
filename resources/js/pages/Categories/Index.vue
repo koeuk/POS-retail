@@ -76,7 +76,7 @@ function confirmDelete() {
     <Head title="Categories" />
 
     <AppLayout :breadcrumbs="[{ title: 'Categories', href: '/categories' }]">
-        <div class="px-5 py-6 md:px-8">
+        <div class="px-2.5 py-6 md:px-8">
             <PageHeader eyebrow="Catalogue" title="Categories" description="Used to group products and filter the POS grid.">
                 <template #actions>
                     <Button class="press" @click="openCreate">

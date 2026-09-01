@@ -82,7 +82,7 @@ function confirmDelete() {
     <Head title="Customers" />
 
     <AppLayout :breadcrumbs="[{ title: 'Customers', href: '/customers' }]">
-        <div class="px-5 py-6 md:px-8">
+        <div class="px-2.5 py-6 md:px-8">
             <PageHeader eyebrow="People" title="Customers" description="Optional at the till — attach a customer to a sale to track loyalty points.">
                 <template #actions>
                     <Button class="press" @click="openCreate">

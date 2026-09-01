@@ -56,7 +56,7 @@ withDefaults(defineProps<Props>(), {
                 Content clears the fixed tab bar; the desktop has no tab bar
                 to clear.
             -->
-            <div class="pb-tabbar bg-muted/40 md:bg-transparent md:pb-0">
+            <div class="pb-tabbar bg-gradient-to-b from-primary/[0.08] via-muted/40 to-muted/40 md:bg-none md:pb-0">
                 <slot />
             </div>
         </AppContent>

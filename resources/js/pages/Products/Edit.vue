@@ -35,7 +35,7 @@ const tone = (s: Stock) => {
             { title: product.name, href: `/products/${product.id}/edit` },
         ]"
     >
-        <div class="px-5 py-6 md:px-8">
+        <div class="px-2.5 py-6 md:px-8">
             <PageHeader eyebrow="Catalogue" :title="product.name">
                 <template #actions>
                     <Badge :variant="product.is_active ? 'secondary' : 'outline'">
@@ -47,7 +47,7 @@ const tone = (s: Stock) => {
 
             <!-- Stock is read-only here: it may only change through a sale or an
                  explicit inventory movement, never by editing a product. -->
-            <section v-if="stocks.length" class="animate-rise mb-5 rounded-xl border border-border bg-card p-4 shadow-sm">
+            <section v-if="stocks.length" class="animate-rise shadow-soft mb-5 rounded-xl border border-border bg-card p-4">
                 <div class="mb-3 flex items-baseline justify-between">
                     <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Stock on hand</h2>
                     <p class="text-xs text-muted-foreground">Adjusted by sales and inventory movements only</p>

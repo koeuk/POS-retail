@@ -39,7 +39,7 @@ function go(href: string) {
         chrome that must never appear to move.
     -->
     <nav
-        class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md md:hidden"
+        class="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-card/70 backdrop-blur-xl md:hidden"
         style="padding-bottom: var(--safe-bottom)"
         aria-label="Primary"
     >
@@ -83,8 +83,8 @@ function go(href: string) {
             </SheetHeader>
 
             <div class="max-h-[60vh] overflow-y-auto px-2" style="padding-bottom: calc(1rem + var(--safe-bottom))">
-                <ul v-if="overflow.length" class="divide-y divide-border py-1">
-                    <li v-for="item in overflow" :key="item.href">
+                <ul v-if="overflow.length" class="py-1">
+                    <li v-for="(item, i) in overflow" :key="item.href" class="relative">
                         <button
                             type="button"
                             class="row-press flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left"
@@ -94,13 +94,15 @@ function go(href: string) {
                             <component :is="item.icon" class="size-5 shrink-0" />
                             <span class="text-[0.95rem] font-medium">{{ item.title }}</span>
                         </button>
+                        <!-- Inset separator: starts at the label, like an iOS list. -->
+                        <span v-if="i < overflow.length - 1" class="pointer-events-none absolute bottom-0 left-11 right-0 h-px bg-border" aria-hidden="true" />
                     </li>
                 </ul>
 
                 <div class="my-1 border-t border-border" />
 
-                <ul class="divide-y divide-border py-1">
-                    <li>
+                <ul class="py-1">
+                    <li class="relative">
                         <button
                             type="button"
                             class="row-press flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left"
@@ -109,6 +111,7 @@ function go(href: string) {
                             <Settings class="size-5 shrink-0" />
                             <span class="text-[0.95rem] font-medium">Settings</span>
                         </button>
+                        <span class="pointer-events-none absolute bottom-0 left-11 right-0 h-px bg-border" aria-hidden="true" />
                     </li>
                     <li>
                         <Link

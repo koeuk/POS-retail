@@ -323,7 +323,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
     <Head title="Inventory" />
 
     <AppLayout :breadcrumbs="[{ title: 'Inventory', href: '/inventory' }]">
-        <div class="px-5 py-6 md:px-8">
+        <div class="px-2.5 py-6 md:px-8">
             <PageHeader
                 eyebrow="Catalogue"
                 title="Inventory"
@@ -359,7 +359,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                 keeps a long product name from widening the grid.
             -->
             <div class="grid items-start gap-4 xl:grid-cols-[7fr_3fr]">
-                <div class="animate-rise min-w-0 rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 60ms">
+                <div class="animate-rise shadow-soft min-w-0 rounded-xl border border-border bg-card" style="animation-delay: 60ms">
                     <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
                         <div class="relative min-w-[14rem] flex-1">
                             <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -457,7 +457,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                 </div>
 
                 <!-- The ledger. Every row on the left got here through one of these. -->
-                <section class="animate-rise min-w-0 rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 120ms">
+                <section class="animate-rise shadow-soft min-w-0 rounded-xl border border-border bg-card" style="animation-delay: 120ms">
                     <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                         Recent movements
                     </h2>

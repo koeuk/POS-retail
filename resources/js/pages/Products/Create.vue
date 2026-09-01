@@ -17,7 +17,7 @@ defineProps<{ categories: Category[] }>();
             { title: 'New', href: '/products/create' },
         ]"
     >
-        <div class="px-5 py-6 md:px-8">
+        <div class="px-2.5 py-6 md:px-8">
             <PageHeader
                 eyebrow="Catalogue"
                 title="New product"

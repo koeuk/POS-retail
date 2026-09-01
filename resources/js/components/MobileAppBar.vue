@@ -25,7 +25,7 @@ const showBack = computed(() => !!parent.value && !isTelegram());
 
 <template>
     <header
-        class="sticky top-0 z-30 flex shrink-0 items-center gap-1 border-b border-border bg-background/90 px-2 backdrop-blur-md md:hidden"
+        class="sticky top-0 z-30 flex shrink-0 items-center gap-1 border-b border-border/60 bg-background/70 px-2 backdrop-blur-xl md:hidden"
         style="padding-top: var(--safe-top)"
     >
         <div class="flex w-full items-center gap-1" :style="{ height: 'var(--appbar-h)' }">

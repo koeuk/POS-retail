@@ -94,7 +94,7 @@ function stockTone(qty: number | null | undefined) {
     <Head title="Products" />
 
     <AppLayout :breadcrumbs="[{ title: 'Products', href: '/products' }]">
-        <div class="px-5 py-6 md:px-8">
+        <div class="px-2.5 py-6 md:px-8">
             <PageHeader eyebrow="Catalogue" title="Products" description="Everything you sell, with live stock across all stores.">
                 <template #actions>
                     <Button as-child class="press">

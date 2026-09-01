@@ -228,7 +228,7 @@ function submit() {
     <form class="grid gap-5 lg:grid-cols-3" @submit.prevent="submit">
         <!-- Main -->
         <div class="stagger space-y-5 lg:col-span-2">
-            <section class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
+            <section class="shadow-soft rounded-xl border border-border bg-card p-4 md:p-5">
                 <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Details</h2>
 
                 <div class="grid gap-4">
@@ -274,7 +274,7 @@ function submit() {
                 </div>
             </section>
 
-            <section class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
+            <section class="shadow-soft rounded-xl border border-border bg-card p-4 md:p-5">
                 <div class="mb-1 flex items-center justify-between gap-3">
                     <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Also sold in packs</h2>
                     <span class="text-xs text-muted-foreground">Optional</span>
@@ -350,7 +350,7 @@ function submit() {
                 </Button>
             </section>
 
-            <section class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
+            <section class="shadow-soft rounded-xl border border-border bg-card p-4 md:p-5">
                 <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Pricing</h2>
 
                 <div class="grid gap-2 sm:max-w-xs">
@@ -376,7 +376,7 @@ function submit() {
                 field is blank by default because it is an action — leaving it
                 filled would add the same delivery again on the next save.
             -->
-            <section v-if="isEdit" class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
+            <section v-if="isEdit" class="shadow-soft rounded-xl border border-border bg-card p-4 md:p-5">
                 <div class="mb-1 flex items-center justify-between gap-3">
                     <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Add stock</h2>
                     <span class="tabular text-right font-mono text-xs text-muted-foreground">
@@ -471,7 +471,7 @@ function submit() {
                 </div>
             </section>
 
-            <section v-if="!isEdit" class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
+            <section v-if="!isEdit" class="shadow-soft rounded-xl border border-border bg-card p-4 md:p-5">
                 <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Opening stock</h2>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
@@ -512,7 +512,7 @@ function submit() {
 
         <!-- Aside -->
         <div class="stagger space-y-5">
-            <section class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
+            <section class="shadow-soft rounded-xl border border-border bg-card p-4 md:p-5">
                 <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Image</h2>
 
                 <label
@@ -528,7 +528,7 @@ function submit() {
                 <InputError class="mt-2" :message="form.errors.image" />
             </section>
 
-            <section class="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
+            <section class="shadow-soft rounded-xl border border-border bg-card p-4 md:p-5">
                 <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Options</h2>
 
                 <div class="grid gap-4">

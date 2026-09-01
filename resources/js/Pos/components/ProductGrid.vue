@@ -131,7 +131,7 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                     type="search"
                     placeholder="Search or scan…"
                     autocomplete="off"
-                    class="h-12 w-full rounded-lg border border-input bg-background pl-11 pr-3 text-base outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                    class="h-12 w-full rounded-xl border border-input bg-background pl-11 pr-3 text-base outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
                 />
             </div>
 
@@ -164,12 +164,8 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                 <div v-for="product in visible" :key="product.id" class="relative">
                     <button
                         type="button"
-                        class="flex h-full w-full flex-col overflow-hidden rounded-xl border border-border bg-card text-left transition-colors"
-                        :class="
-                            outOfStock(product)
-                                ? 'cursor-not-allowed opacity-60'
-                                : 'press hover:border-primary/50 active:border-primary'
-                        "
+                        class="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-border bg-card text-left transition-colors"
+                        :class="outOfStock(product) ? 'cursor-not-allowed opacity-60' : 'press hover:border-primary/50 active:border-primary'"
                         :disabled="outOfStock(product)"
                         @click="tap(product)"
                     >

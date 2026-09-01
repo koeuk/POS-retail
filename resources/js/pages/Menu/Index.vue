@@ -97,7 +97,7 @@ const isStaff = computed(() => !!page.props.auth?.user);
             Colours come from the --brand pair, not --primary: painted signage
             should not lighten just because the screen went dark.
         -->
-        <header class="relative bg-brand text-brand-foreground">
+        <header class="surface-brand relative text-brand-foreground">
             <Link
                 v-if="isStaff"
                 :href="route('dashboard')"

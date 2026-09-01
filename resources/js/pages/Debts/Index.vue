@@ -244,7 +244,7 @@ function submitAdd() {
     <Head title="In Debt" />
 
     <AppLayout :breadcrumbs="[{ title: 'In Debt', href: '/debts' }]">
-        <div class="px-5 py-6 md:px-8">
+        <div class="px-2.5 py-6 md:px-8">
             <PageHeader
                 eyebrow="Selling"
                 title="In Debt"
@@ -268,7 +268,7 @@ function submitAdd() {
                 <StatTile label="Open debts" :value="String(summary.open_count)" :icon="HandCoins" hint="Customers who still owe something" />
             </div>
 
-            <div class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 60ms">
+            <div class="animate-rise shadow-soft rounded-xl border border-border bg-card" style="animation-delay: 60ms">
                 <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
                     <div class="relative min-w-[14rem] flex-1">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

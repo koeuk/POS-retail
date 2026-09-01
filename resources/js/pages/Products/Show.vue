@@ -60,7 +60,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
             { title: product.name, href: `/products/${product.id}` },
         ]"
     >
-        <div class="px-5 py-6 md:px-8">
+        <div class="px-2.5 py-6 md:px-8">
             <PageHeader eyebrow="Catalogue" :title="product.name" :description="product.category?.name">
                 <template #actions>
                     <Button as-child variant="ghost" class="press">
@@ -80,7 +80,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
 
             <div class="grid items-start gap-4 lg:grid-cols-3">
                 <!-- Identity -->
-                <section class="animate-rise rounded-xl border border-border bg-card p-5 shadow-sm">
+                <section class="animate-rise shadow-soft rounded-xl border border-border bg-card p-5">
                     <div
                         class="mb-4 flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40"
                     >
@@ -119,7 +119,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                      below its widest row, which pushed this column past the grid. -->
                 <div class="min-w-0 space-y-4 lg:col-span-2">
                     <!-- Money -->
-                    <section class="animate-rise rounded-xl border border-border bg-card p-5 shadow-sm" style="animation-delay: 60ms">
+                    <section class="animate-rise shadow-soft rounded-xl border border-border bg-card p-5" style="animation-delay: 60ms">
                         <h2 class="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Price</h2>
                         <div class="flex flex-wrap gap-6">
                             <div>
@@ -164,7 +164,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                     </section>
 
                     <!-- Stock -->
-                    <section class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 100ms">
+                    <section class="animate-rise shadow-soft rounded-xl border border-border bg-card" style="animation-delay: 100ms">
                         <div class="flex items-baseline justify-between border-b border-border px-4 py-3">
                             <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Stock on hand</h2>
                             <p class="tabular font-mono text-sm font-semibold">{{ onHand }} {{ product.unit }} total</p>
@@ -193,7 +193,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                     </section>
 
                     <!-- Ledger -->
-                    <section class="animate-rise rounded-xl border border-border bg-card shadow-sm" style="animation-delay: 140ms">
+                    <section class="animate-rise shadow-soft rounded-xl border border-border bg-card" style="animation-delay: 140ms">
                         <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                             Recent movements
                         </h2>

@@ -24,9 +24,13 @@ class EnsureRole
         }
 
         if (! $user->is_active) {
-            auth()->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+            // A token request has no session to tear down — the 403 alone
+            // shuts it out, and the token can be revoked from the server.
+            if ($request->hasSession()) {
+                auth()->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+            }
 
             abort(403, 'This account has been deactivated.');
         }

@@ -154,7 +154,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
     <Head title="Staff" />
 
     <AppLayout :breadcrumbs="[{ title: 'Staff', href: '/users' }]">
-        <div class="px-5 py-6 md:px-8">
+        <div class="px-2.5 py-6 md:px-8">
             <PageHeader
                 eyebrow="People"
                 title="Staff"

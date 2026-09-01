@@ -96,7 +96,7 @@ function submitRegister() {
     <Head title="Stores" />
 
     <AppLayout :breadcrumbs="[{ title: 'Stores', href: '/stores' }]">
-        <div class="px-5 py-6 md:px-8">
+        <div class="px-2.5 py-6 md:px-8">
             <PageHeader
                 eyebrow="People"
                 title="Stores"
@@ -118,7 +118,7 @@ function submitRegister() {
             </div>
 
             <div v-if="stores.length" class="stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <article v-for="store in stores" :key="store.id" class="lift rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
+                <article v-for="store in stores" :key="store.id" class="lift shadow-soft rounded-xl border border-border bg-card p-4 md:p-5">
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex items-center gap-3">
                             <div class="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
