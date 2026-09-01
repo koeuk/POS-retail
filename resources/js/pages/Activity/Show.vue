@@ -4,6 +4,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Paginated } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
@@ -28,102 +29,152 @@ interface ActivityRow {
     created_at: string | null;
 }
 
-const props = defineProps<{
+defineProps<{
     entries: Paginated<ActivityRow>;
     subject: { type: string; id: number; label: string; exists: boolean };
+    summary: { total: number; first_at: string | null; last_at: string | null };
+    /** The section this record lives in — Products, Customers, … */
+    parent: { title: string; href: string };
 }>();
 
-/** Colour by what happened to the record, so the timeline skims at a glance. */
-const toneFor: Record<string, string> = {
-    created: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    updated: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
-    deleted: 'bg-destructive/10 text-destructive',
-};
+/** Badge variant per event, mirroring the movement ledger's colour logic. */
+const eventTone = (event: string | null) =>
+    event === 'created' ? 'default' : event === 'deleted' ? 'destructive' : 'secondary';
 
-const dateFormat = new Intl.DateTimeFormat(undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-});
+const when = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : '—';
 
-const when = (iso: string | null) => (iso ? dateFormat.format(new Date(iso)) : '—');
+const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—');
 
 const fieldLabel = (field: string) =>
     field.replace(/_id$/, '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
-
-const title = `History — ${props.subject.label}`;
 </script>
 
 <template>
-    <Head :title="title" />
+    <Head :title="`History — ${subject.label}`" />
 
     <AppLayout
         :breadcrumbs="[
-            { title: 'Activity Log', href: '/activity' },
-            { title: subject.label, href: `/activity/${subject.type}/${subject.id}` },
+            { title: parent.title, href: parent.href },
+            { title: subject.label, href: `/history/${subject.type}/${subject.id}` },
         ]"
     >
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader
-                :eyebrow="`Audit · ${subject.type} #${subject.id}`"
-                :title="subject.label"
-                :description="
-                    subject.exists
-                        ? 'Every recorded change to this record, newest first.'
-                        : 'This record has since been deleted — its history remains.'
-                "
-            >
+            <PageHeader eyebrow="Audit" :title="subject.label" :description="`Everything recorded for this ${subject.type.toLowerCase()}.`">
                 <template #actions>
-                    <Button as-child variant="outline" class="press">
-                        <Link :href="route('activity.index')">
+                    <Button as-child variant="ghost" class="press">
+                        <Link :href="parent.href">
                             <ArrowLeft class="size-4" />
-                            Whole log
+                            Back
                         </Link>
                     </Button>
                 </template>
             </PageHeader>
 
-            <div class="list-panel animate-rise" style="animation-delay: 60ms">
-                <!-- One timeline, newest first. The rail keeps the eye moving
-                     down one record's life rather than scanning a table. -->
-                <ol v-if="entries.data.length" class="p-4 md:p-6">
-                    <li v-for="(a, i) in entries.data" :key="a.id" class="relative flex gap-4 pb-6 last:pb-0">
-                        <div class="flex flex-col items-center">
-                            <span
-                                class="grid size-8 shrink-0 place-items-center rounded-full"
-                                :class="toneFor[a.event ?? ''] ?? 'bg-muted text-muted-foreground'"
-                            >
-                                <History class="size-4" />
-                            </span>
-                            <span v-if="i < entries.data.length - 1" class="mt-1 w-px flex-1 bg-border" />
+            <div class="grid items-start gap-4 lg:grid-cols-3">
+                <!-- Identity -->
+                <section class="animate-rise shadow-soft rounded-xl border border-border bg-card p-5">
+                    <div class="mb-4 flex items-center justify-center rounded-lg border border-border bg-muted/40 py-10">
+                        <History class="size-8 text-muted-foreground/50" />
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <Badge variant="secondary">{{ subject.type }}</Badge>
+                        <Badge v-if="!subject.exists" variant="destructive">Deleted</Badge>
+                    </div>
+
+                    <p v-if="!subject.exists" class="mt-3 text-sm text-muted-foreground">
+                        This record has since been deleted — its history remains.
+                    </p>
+
+                    <dl class="mt-4 space-y-2.5 text-sm">
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-muted-foreground">Record</dt>
+                            <dd class="tabular font-mono">#{{ subject.id }}</dd>
                         </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-muted-foreground">Entries</dt>
+                            <dd class="tabular font-mono">{{ summary.total }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-muted-foreground">First recorded</dt>
+                            <dd>{{ day(summary.first_at) }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-muted-foreground">Last change</dt>
+                            <dd>{{ day(summary.last_at) }}</dd>
+                        </div>
+                    </dl>
+                </section>
 
-                        <div class="min-w-0 flex-1 pt-1">
-                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                <p class="font-medium leading-tight">{{ a.description }}</p>
-                                <Badge
-                                    v-if="a.event"
-                                    variant="secondary"
-                                    class="text-[10px]"
-                                    :class="toneFor[a.event] ?? ''"
-                                >
-                                    {{ fieldLabel(a.event) }}
-                                </Badge>
+                <!-- Ledger. min-w-0: a grid item defaults to min-width:auto and
+                     will not shrink below its widest row. -->
+                <section class="animate-rise shadow-soft min-w-0 rounded-xl border border-border bg-card lg:col-span-2" style="animation-delay: 60ms">
+                    <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                        Change history
+                    </h2>
+
+                    <!-- Desktop: the same table shape as every list screen. -->
+                    <div v-if="entries.data.length" class="hidden overflow-x-auto md:block">
+                        <Table>
+                            <TableHeader>
+                                <TableRow class="hover:bg-transparent">
+                                    <TableHead class="w-[1%] whitespace-nowrap">When</TableHead>
+                                    <TableHead class="w-[1%] whitespace-nowrap">Action</TableHead>
+                                    <TableHead>What changed</TableHead>
+                                    <TableHead>By</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <tbody class="[&_tr:last-child]:border-0">
+                                <TableRow v-for="a in entries.data" :key="a.id" class="align-top">
+                                    <TableCell class="tabular whitespace-nowrap font-mono text-xs text-muted-foreground">
+                                        {{ when(a.created_at) }}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge :variant="eventTone(a.event)" class="capitalize">{{ a.event ?? 'note' }}</Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <p class="text-sm font-medium leading-tight">{{ a.description }}</p>
+                                        <ul v-if="a.changes.length" class="mt-1.5 space-y-0.5">
+                                            <li v-for="c in a.changes" :key="c.field" class="text-xs leading-snug">
+                                                <span class="text-muted-foreground">{{ fieldLabel(c.field) }}:</span>
+                                                <span v-if="c.from" class="tabular font-mono text-muted-foreground line-through">{{ c.from }}</span>
+                                                <span v-else class="text-muted-foreground italic">empty</span>
+                                                <span class="text-muted-foreground"> → </span>
+                                                <span v-if="c.to" class="tabular font-mono">{{ c.to }}</span>
+                                                <span v-else class="text-muted-foreground italic">empty</span>
+                                            </li>
+                                        </ul>
+                                        <p v-if="Object.keys(a.properties).length" class="mt-1.5 text-xs text-muted-foreground">
+                                            <span v-for="(value, key) in a.properties" :key="key" class="mr-2 inline-block">
+                                                {{ fieldLabel(String(key)) }}: <span class="tabular font-mono">{{ value }}</span>
+                                            </span>
+                                        </p>
+                                    </TableCell>
+                                    <TableCell class="text-sm">
+                                        <span v-if="a.causer" class="font-medium">{{ a.causer.name }}</span>
+                                        <span v-else class="text-muted-foreground italic">System</span>
+                                        <span v-if="a.store" class="block text-xs text-muted-foreground">{{ a.store.name }}</span>
+                                        <span v-if="a.ip_address" class="tabular block font-mono text-xs text-muted-foreground">{{ a.ip_address }}</span>
+                                    </TableCell>
+                                </TableRow>
+                            </tbody>
+                        </Table>
+                    </div>
+
+                    <!-- Phone: one card per entry. -->
+                    <ul v-if="entries.data.length" class="divide-y divide-border md:hidden">
+                        <li v-for="a in entries.data" :key="a.id" class="px-4 py-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <p class="min-w-0 flex-1 text-sm font-medium leading-tight">{{ a.description }}</p>
+                                <Badge :variant="eventTone(a.event)" class="shrink-0 capitalize text-[10px]">{{ a.event ?? 'note' }}</Badge>
                             </div>
-
                             <p class="mt-0.5 text-xs text-muted-foreground">
                                 <span class="tabular font-mono">{{ when(a.created_at) }}</span>
-                                ·
-                                <span>{{ a.causer?.name ?? 'System' }}</span>
+                                · {{ a.causer?.name ?? 'System' }}
                                 <template v-if="a.store"> · {{ a.store.name }}</template>
-                                <template v-if="a.ip_address">
-                                    · <span class="tabular font-mono">{{ a.ip_address }}</span>
-                                </template>
                             </p>
-
-                            <ul v-if="a.changes.length" class="mt-2 space-y-0.5">
+                            <ul v-if="a.changes.length" class="mt-1.5 space-y-0.5">
                                 <li v-for="c in a.changes" :key="c.field" class="text-xs leading-snug">
                                     <span class="text-muted-foreground">{{ fieldLabel(c.field) }}:</span>
                                     <span v-if="c.from" class="tabular font-mono text-muted-foreground line-through">{{ c.from }}</span>
@@ -133,30 +184,29 @@ const title = `History — ${props.subject.label}`;
                                     <span v-else class="text-muted-foreground italic">empty</span>
                                 </li>
                             </ul>
-
-                            <p v-if="Object.keys(a.properties).length" class="mt-2 text-xs text-muted-foreground">
+                            <p v-if="Object.keys(a.properties).length" class="mt-1.5 text-xs text-muted-foreground">
                                 <span v-for="(value, key) in a.properties" :key="key" class="mr-2 inline-block">
                                     {{ fieldLabel(String(key)) }}: <span class="tabular font-mono">{{ value }}</span>
                                 </span>
                             </p>
-                        </div>
-                    </li>
-                </ol>
+                        </li>
+                    </ul>
 
-                <EmptyState
-                    v-else
-                    :icon="History"
-                    :title="`Nothing recorded for ${subject.label} yet`"
-                    description="This record has not been changed since the activity log was switched on."
-                />
+                    <EmptyState
+                        v-else
+                        :icon="History"
+                        :title="`Nothing recorded for ${subject.label} yet`"
+                        description="This record has not been changed since the activity log was switched on."
+                    />
 
-                <Pagination
-                    :links="entries.links"
-                    :from="entries.from"
-                    :to="entries.to"
-                    :total="entries.total"
-                    :per-page="entries.per_page"
-                />
+                    <Pagination
+                        :links="entries.links"
+                        :from="entries.from"
+                        :to="entries.to"
+                        :total="entries.total"
+                        :per-page="entries.per_page"
+                    />
+                </section>
             </div>
         </div>
     </AppLayout>

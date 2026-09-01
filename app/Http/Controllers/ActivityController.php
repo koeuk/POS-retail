@@ -110,6 +110,14 @@ class ActivityController extends Controller
             ->withQueryString()
             ->through(fn (Activity $activity) => $this->present($activity));
 
+        // The identity card's at-a-glance figures: how long this record has
+        // been on the books and when someone last touched it.
+        $bounds = Activity::query()
+            ->where('subject_type', $class)
+            ->where('subject_id', $subjectId)
+            ->selectRaw('min(created_at) as first_at, max(created_at) as last_at')
+            ->first();
+
         return Inertia::render('Activity/Show', [
             'entries' => $entries,
             'subject' => [
@@ -122,8 +130,28 @@ class ActivityController extends Controller
                     ?? "#{$subjectId}",
                 'exists' => $subject !== null,
             ],
+            'summary' => [
+                'total' => $entries->total(),
+                'first_at' => $bounds?->first_at,
+                'last_at' => $bounds?->last_at,
+            ],
+            'parent' => self::PARENTS[$subjectType],
         ]);
     }
+
+    /**
+     * Where each record type lives — the history page breadcrumbs into its
+     * own section (Products, Customers…), never into the Activity Log.
+     */
+    private const PARENTS = [
+        'Product' => ['title' => 'Products', 'href' => '/products'],
+        'Category' => ['title' => 'Categories', 'href' => '/categories'],
+        'Customer' => ['title' => 'Customers', 'href' => '/customers'],
+        'Store' => ['title' => 'Stores', 'href' => '/stores'],
+        'Register' => ['title' => 'Stores', 'href' => '/stores'],
+        'Stock' => ['title' => 'Inventory', 'href' => '/inventory'],
+        'User' => ['title' => 'Staff', 'href' => '/users'],
+    ];
 
     /** Short URL name → class, for the record-history page. */
     private const SUBJECTS = [

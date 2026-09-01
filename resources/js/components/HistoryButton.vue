@@ -18,6 +18,8 @@ const props = defineProps<{
     subjectId: number;
     /** What the record is called, for the accessible label. */
     label: string;
+    /** Render as a labelled bar button (phone action bars) instead of a bare icon. */
+    withLabel?: boolean;
 }>();
 
 const page = usePage<SharedData>();
@@ -28,9 +30,16 @@ const href = computed(() => route('activity.show', { subjectType: props.subjectT
 </script>
 
 <template>
-    <Button v-if="visible" as-child variant="ghost" size="icon" class="press size-8">
+    <Button
+        v-if="visible"
+        as-child
+        variant="ghost"
+        :size="withLabel ? 'default' : 'icon'"
+        :class="withLabel ? 'press h-11 flex-1 gap-1.5 rounded-none text-xs font-medium text-muted-foreground' : 'press size-8'"
+    >
         <Link :href="href" :aria-label="`History for ${label}`">
             <History class="size-4" />
+            <template v-if="withLabel">History</template>
         </Link>
     </Button>
 </template>

@@ -122,8 +122,27 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
     */
     Route::middleware('permission:activity')->group(function () {
         Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
-        Route::get('activity/{subjectType}/{subjectId}', [ActivityController::class, 'show'])
-            ->whereAlpha('subjectType')->whereNumber('subjectId')->name('activity.show');
+
+        /*
+        | A record's history page lives under the record, exactly like its
+        | show and edit pages — /products/21/history sits beside
+        | /products/21/edit, breadcrumbs into Products, and lights up the
+        | Products nav item. One controller serves them all; the route just
+        | pins which model the id refers to.
+        */
+        foreach ([
+            'products' => 'Product',
+            'categories' => 'Category',
+            'customers' => 'Customer',
+            'stores' => 'Store',
+            'inventory' => 'Stock',
+            'users' => 'User',
+        ] as $prefix => $type) {
+            Route::get("{$prefix}/{subjectId}/history", [ActivityController::class, 'show'])
+                ->whereNumber('subjectId')
+                ->defaults('subjectType', $type)
+                ->name("{$prefix}.history");
+        }
     });
 
     Route::middleware('permission:stores')->group(function () {

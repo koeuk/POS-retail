@@ -234,10 +234,10 @@ function stockTone(qty: number | null | undefined) {
                     </Table>
                 </div>
 
-                <!-- Phone list. Tap the row to edit; the trailing control deletes. -->
+                <!-- Phone list. Tap the row for details; every action sits labelled in the bar below. -->
                 <ul v-if="products.data.length" class="md:hidden">
-                    <li v-for="p in products.data" :key="p.id" class="list-row">
-                        <Link :href="route('products.edit', { product: p.id })" class="list-row-main">
+                    <li v-for="p in products.data" :key="p.id" class="list-row flex-col">
+                        <Link :href="route('products.show', { product: p.id })" class="list-row-main">
                             <div
                                 class="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/50"
                             >
@@ -263,9 +263,31 @@ function stockTone(qty: number | null | undefined) {
                             </div>
                         </Link>
 
-                        <button type="button" class="list-row-action" :aria-label="`Delete ${p.name}`" @click="pendingDelete = p">
-                            <Trash2 class="size-4" />
-                        </button>
+                        <div class="flex items-stretch divide-x divide-border border-t border-border">
+                            <Link
+                                :href="route('products.show', { product: p.id })"
+                                class="row-press flex h-11 flex-1 items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground"
+                            >
+                                <Eye class="size-4" />
+                                View
+                            </Link>
+                            <HistoryButton subject-type="Product" :subject-id="p.id" :label="p.name" with-label />
+                            <Link
+                                :href="route('products.edit', { product: p.id })"
+                                class="row-press flex h-11 flex-1 items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground"
+                            >
+                                <Pencil class="size-4" />
+                                Edit
+                            </Link>
+                            <button
+                                type="button"
+                                class="row-press flex h-11 flex-1 items-center justify-center gap-1.5 text-xs font-medium text-destructive"
+                                @click="pendingDelete = p"
+                            >
+                                <Trash2 class="size-4" />
+                                Delete
+                            </button>
+                        </div>
                     </li>
                 </ul>
 

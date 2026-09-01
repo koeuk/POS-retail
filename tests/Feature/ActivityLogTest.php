@@ -190,7 +190,7 @@ class ActivityLogTest extends TestCase
     public function test_an_unknown_subject_type_is_a_404(): void
     {
         $this->actingAs($this->admin)
-            ->get('/activity/Payment/1')
+            ->get('/history/Payment/1')
             ->assertNotFound();
     }
 
