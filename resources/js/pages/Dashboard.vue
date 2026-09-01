@@ -18,6 +18,7 @@ import {
     PackageSearch,
     Receipt,
     ScanBarcode,
+    Shapes,
     TriangleAlert,
     Utensils,
 } from 'lucide-vue-next';
@@ -59,6 +60,7 @@ const props = defineProps<{
     offlineToday: number;
     debts: { count: number; owed: string };
     myself: { week: Spent; month: Spent; year: Spent };
+    catalogue: { products: number; categories: number };
     canSeeReports: boolean;
 }>();
 
@@ -142,12 +144,12 @@ const quickActions = computed(() =>
                     </p>
                 </div>
 
-                <div class="mt-5 flex items-start justify-around gap-2 md:mt-0 md:justify-end md:gap-7">
+                <div class="hidden items-start gap-2 md:flex md:justify-end md:gap-7">
                     <Link
                         v-for="action in quickActions"
                         :key="action.href"
                         :href="action.href"
-                        class="press flex flex-1 flex-col items-center gap-1.5 md:flex-none"
+                        class="press flex flex-col items-center gap-1.5 md:flex-none"
                     >
                         <span
                             class="flex size-12 items-center justify-center rounded-full bg-brand-foreground/15 transition-colors hover:bg-brand-foreground/25"
@@ -158,6 +160,37 @@ const quickActions = computed(() =>
                     </Link>
                 </div>
             </section>
+
+            <!-- Phone: the shortcuts live in their own card under the figure,
+                 so the green banner stays a single clean number. -->
+            <nav class="animate-rise mb-4 flex items-stretch gap-2 md:hidden" style="animation-delay: 40ms" aria-label="Quick actions">
+                <Link
+                    v-for="action in quickActions"
+                    :key="action.href"
+                    :href="action.href"
+                    class="press shadow-soft flex flex-1 flex-col items-center gap-1.5 rounded-2xl border border-border bg-card px-2 py-3"
+                >
+                    <span class="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <component :is="action.icon" class="size-5" />
+                    </span>
+                    <span class="text-[0.7rem] font-medium text-muted-foreground">{{ action.title }}</span>
+                </Link>
+            </nav>
+
+            <!-- Phone summary: the shelf and the shop's own money, two-up.
+                 Desktop shows these figures in the wider tile rows below. -->
+            <div v-if="canSeeReports" class="stagger mb-4 grid grid-cols-2 gap-2 md:hidden">
+                <StatTile label="Products" :value="String(catalogue.products)" :icon="Boxes" />
+                <StatTile label="Categories" :value="String(catalogue.categories)" :icon="Shapes" />
+                <StatTile
+                    label="In debt"
+                    :value="money(debts.owed)"
+                    :icon="HandCoins"
+                    :tone="debts.count > 0 ? 'warning' : 'default'"
+                    :hint="`${debts.count} sale${debts.count === 1 ? '' : 's'} on credit`"
+                />
+                <StatTile label="Myself · month" :value="money(myself.month.value)" :icon="Utensils" :hint="times(myself.month.count)" />
+            </div>
 
             <div class="stagger hidden gap-4 md:grid md:grid-cols-3">
                 <StatTile label="Orders" :value="String(today.orders)" :icon="Receipt" :previous="yesterday.orders" />

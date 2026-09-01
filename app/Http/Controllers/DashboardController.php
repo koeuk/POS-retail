@@ -37,6 +37,12 @@ class DashboardController extends Controller
                 'offlineToday' => $reporter->offlineOrdersToday($today),
                 'debts' => $reporter->outstandingDebts(),
                 'myself' => $reporter->myselfSpent(),
+
+                // How big the shelf is — shown as summary tiles on the phone.
+                'catalogue' => [
+                    'products' => \App\Models\Product::query()->active()->base()->count(),
+                    'categories' => \App\Models\Category::query()->count(),
+                ],
                 'canSeeReports' => $user->role->canAccessAdmin(),
             ]);
         } catch (QueryException $e) {
@@ -55,6 +61,7 @@ class DashboardController extends Controller
                 'offlineToday' => 0,
                 'debts' => ['count' => 0, 'owed' => '0.00'],
                 'myself' => ['week' => ['count' => 0, 'value' => '0.00'], 'month' => ['count' => 0, 'value' => '0.00'], 'year' => ['count' => 0, 'value' => '0.00']],
+                'catalogue' => ['products' => 0, 'categories' => 0],
                 'canSeeReports' => $user->role->canAccessAdmin(),
             ]);
         }
