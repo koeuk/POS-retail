@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { PaginationLink } from '@/types';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
@@ -28,8 +29,8 @@ const perPage = computed(() => props.perPage ?? 20);
  * to 10 rows could land past the end of a short list and show nothing.
  * Every other filter in the query string is kept.
  */
-function changePerPage(event: Event) {
-    const value = Number((event.target as HTMLSelectElement).value);
+function changePerPage(value: unknown) {
+    if (value == null) return;
     const url = new URL(page.url, window.location.origin);
 
     url.searchParams.set('per_page', String(value));
@@ -67,17 +68,19 @@ const hasPages = computed(() => numbered.value.length > 1);
                 preference set before the list grows — a control that only
                 appears once it is needed is one nobody can find.
             -->
-            <label class="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span class="hidden sm:inline">Show</span>
-                <select
-                    :value="perPage"
-                    class="tabular h-8 rounded-md border border-input bg-background px-2 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    aria-label="Rows per page"
-                    @change="changePerPage"
-                >
-                    <option v-for="n in PER_PAGE_OPTIONS" :key="n" :value="n">{{ n }}</option>
-                </select>
-            </label>
+                <Select :model-value="String(perPage)" @update:model-value="changePerPage">
+                    <SelectTrigger class="tabular h-8 w-[4.75rem] font-mono text-xs" aria-label="Rows per page">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem v-for="n in PER_PAGE_OPTIONS" :key="n" :value="String(n)" class="tabular font-mono text-xs">
+                            {{ n }}
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
         </div>
 
         <!-- Phone: two large targets. -->
