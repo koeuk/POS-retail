@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { currentPerPage } from '@/lib/utils';
 import type { Paginated } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Search, Utensils } from 'lucide-vue-next';
@@ -48,7 +49,7 @@ let debounce: ReturnType<typeof setTimeout>;
 function reload() {
     router.get(
         route('consumption.index'),
-        { filter: { search: search.value || undefined, from: from.value || undefined, to: to.value || undefined } },
+        { filter: { search: search.value || undefined, from: from.value || undefined, to: to.value || undefined }, per_page: currentPerPage() },
         { preserveState: true, preserveScroll: true, replace: true },
     );
 }

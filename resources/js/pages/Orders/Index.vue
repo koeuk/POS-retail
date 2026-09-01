@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { currentPerPage } from '@/lib/utils';
 import type { Paginated } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { CloudOff, Eye, HandCoins, Printer, ReceiptText, Search, Utensils } from 'lucide-vue-next';
@@ -61,6 +62,7 @@ function reload() {
                 from: from.value || undefined,
                 to: to.value || undefined,
             },
+            per_page: currentPerPage(),
         },
         { preserveState: true, preserveScroll: true, replace: true },
     );

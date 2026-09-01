@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { currentPerPage } from '@/lib/utils';
 import type { Paginated, SharedData, Store, User } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { Pencil, Plus, Search, Trash2, Users } from 'lucide-vue-next';
@@ -45,8 +46,7 @@ const permissionGroups = computed(() => {
     return [...groups.entries()];
 });
 
-const roleDefaults = (role: string) =>
-    Object.fromEntries(props.permissionOptions.map((o) => [o.value, o.defaults[role] ?? false]));
+const roleDefaults = (role: string) => Object.fromEntries(props.permissionOptions.map((o) => [o.value, o.defaults[role] ?? false]));
 
 const ALL = 'all';
 const NONE = 'none';
@@ -63,6 +63,7 @@ function reload() {
                 search: search.value || undefined,
                 role: roleFilter.value === ALL ? undefined : roleFilter.value,
             },
+            per_page: currentPerPage(),
         },
         { preserveState: true, preserveScroll: true, replace: true },
     );
@@ -371,9 +372,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                         <div v-if="canEditPermissions && form.role !== 'admin'" class="rounded-lg border border-border">
                             <div class="border-b border-border px-3 py-2.5">
                                 <p class="text-sm font-medium">Permissions</p>
-                                <p class="text-xs text-muted-foreground">
-                                    Pre-set by the role — switch anything on or off for this person alone.
-                                </p>
+                                <p class="text-xs text-muted-foreground">Pre-set by the role — switch anything on or off for this person alone.</p>
                             </div>
                             <div class="grid gap-4 p-3 sm:grid-cols-2">
                                 <div v-for="[group, options] in permissionGroups" :key="group" class="space-y-2">

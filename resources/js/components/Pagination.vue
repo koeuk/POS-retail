@@ -14,15 +14,16 @@ const props = defineProps<{
     perPage?: number;
 }>();
 
-/**
- * Must match App\Support\PerPage::OPTIONS. The server whitelists the value
- * rather than clamping it, so a size missing from this list would be silently
- * ignored — keep the two in step.
- */
-const PER_PAGE_OPTIONS = [10, 20, 50, 100, 150, 200];
-
 const page = usePage();
-const perPage = computed(() => props.perPage ?? 20);
+
+/*
+ * Straight from App\Support\PerPage via the shared Inertia props — one
+ * source of truth, so the two whitelists cannot drift. The literals only
+ * cover a stale client bundle talking to a newer server.
+ */
+const shared = computed(() => (page.props.pagination as { options?: number[]; default?: number } | undefined) ?? {});
+const PER_PAGE_OPTIONS = computed(() => shared.value.options ?? [10, 20, 50, 100, 150, 200]);
+const perPage = computed(() => props.perPage ?? shared.value.default ?? 20);
 
 /*
  * Changing the page size restarts at page 1: keeping `page=3` while shrinking
@@ -30,10 +31,20 @@ const perPage = computed(() => props.perPage ?? 20);
  * Every other filter in the query string is kept.
  */
 function changePerPage(value: unknown) {
-    if (value == null) return;
+    const size = Number(value);
+
+    /*
+     * Refuse anything off the whitelist — junk in the URL would be silently
+     * swapped for the default server-side while the URL kept lying — and
+     * refuse a re-pick of the current size: reka emits those (a native
+     * select never did), and navigating would only reset the reader to
+     * page 1 for nothing.
+     */
+    if (!PER_PAGE_OPTIONS.value.includes(size) || size === perPage.value) return;
+
     const url = new URL(page.url, window.location.origin);
 
-    url.searchParams.set('per_page', String(value));
+    url.searchParams.set('per_page', String(size));
     url.searchParams.delete('page');
 
     router.get(url.pathname + url.search, {}, { preserveState: true, preserveScroll: true, replace: true });
@@ -72,7 +83,8 @@ const hasPages = computed(() => numbered.value.length > 1);
                 <span class="hidden sm:inline">Show</span>
                 <Select :model-value="String(perPage)" @update:model-value="changePerPage">
                     <SelectTrigger class="tabular h-8 w-[4.75rem] font-mono text-xs" aria-label="Rows per page">
-                        <SelectValue />
+                        <!-- The placeholder is the current size, so an off-list value can never render a blank trigger. -->
+                        <SelectValue :placeholder="String(perPage)" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem v-for="n in PER_PAGE_OPTIONS" :key="n" :value="String(n)" class="tabular font-mono text-xs">

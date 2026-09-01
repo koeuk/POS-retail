@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { currentPerPage } from '@/lib/utils';
 import type { Customer, Paginated } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { Pencil, Plus, Search, Trash2, UsersRound } from 'lucide-vue-next';
@@ -29,7 +30,7 @@ watch(search, () => {
     debounce = setTimeout(() => {
         router.get(
             route('customers.index'),
-            { filter: { search: search.value || undefined } },
+            { filter: { search: search.value || undefined }, per_page: currentPerPage() },
             { preserveState: true, preserveScroll: true, replace: true },
         );
     }, 300);

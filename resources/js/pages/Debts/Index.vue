@@ -15,6 +15,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { currentPerPage } from '@/lib/utils';
 import type { Paginated } from '@/types';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { Eye, HandCoins, Plus, Search, X } from 'lucide-vue-next';
@@ -54,7 +55,7 @@ let debounce: ReturnType<typeof setTimeout>;
 function reload() {
     router.get(
         route('debts.index'),
-        { filter: { search: search.value || undefined, state: state.value } },
+        { filter: { search: search.value || undefined, state: state.value }, per_page: currentPerPage() },
         { preserveState: true, preserveScroll: true, replace: true },
     );
 }

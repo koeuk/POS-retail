@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { currentPerPage } from '@/lib/utils';
 import type { Paginated } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { Boxes, Layers, LoaderCircle, PackageSearch, Plus, Search, TriangleAlert } from 'lucide-vue-next';
@@ -69,6 +70,7 @@ function reload() {
                 state: state.value === ALL ? undefined : state.value,
             },
             sort: sort.value === 'qty' ? undefined : sort.value,
+            per_page: currentPerPage(),
         },
         { preserveState: true, preserveScroll: true, replace: true },
     );

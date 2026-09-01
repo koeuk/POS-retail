@@ -67,4 +67,16 @@ class PerPageTest extends TestCase
         $this->assertSame([10, 20, 50, 100, 150, 200], PerPage::OPTIONS);
         $this->assertContains(PerPage::DEFAULT, PerPage::OPTIONS);
     }
+
+    public function test_the_whitelist_is_shared_with_the_client_so_the_two_lists_cannot_drift(): void
+    {
+        // Pagination.vue reads these shared props instead of keeping its own
+        // copy; this pins the contract so removing the share breaks loudly.
+        $this->actingAs($this->admin)
+            ->get(route('products.index'))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('pagination.options', PerPage::OPTIONS)
+                ->where('pagination.default', PerPage::DEFAULT)
+            );
+    }
 }

@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { currentPerPage } from '@/lib/utils';
 import type { Category, Paginated, Product } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Boxes, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
@@ -46,6 +47,7 @@ function applyFilters() {
                 category_id: categoryId.value === ALL ? undefined : categoryId.value,
                 status: status.value === ALL ? undefined : status.value,
             },
+            per_page: currentPerPage(),
         },
         { preserveState: true, preserveScroll: true, replace: true },
     );
