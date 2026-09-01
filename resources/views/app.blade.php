@@ -24,9 +24,13 @@
             <link rel="icon" href="{{ asset('storage/'.$favicon) }}">
         @endif
 
-        <link rel="preconnect" href="https://fonts.bunny.net">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        {{-- Kantumruy Pro carries the Khmer glyphs — product names like
+             ទឹកសុទ្ធ render in a face that matches the Latin type instead of
+             falling back to whatever the OS ships. --}}
         <link
-            href="https://fonts.bunny.net/css?family=bricolage-grotesque:600,700|ibm-plex-sans:400,500,600|ibm-plex-mono:400,500"
+            href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Kantumruy+Pro:wght@400;500;600&display=swap"
             rel="stylesheet"
         />
 

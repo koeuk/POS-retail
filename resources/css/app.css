@@ -15,8 +15,8 @@
 
 @layer base {
     :root {
-        --font-display: 'Bricolage Grotesque', 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
-        --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+        --font-display: 'Bricolage Grotesque', 'Kantumruy Pro', 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+        --font-sans: 'IBM Plex Sans', 'Kantumruy Pro', ui-sans-serif, system-ui, sans-serif;
         --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
         --background: 40 33% 98%;
