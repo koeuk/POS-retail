@@ -96,7 +96,7 @@ function confirmDelete() {
                 <div class="border-b border-border p-3">
                     <div class="relative md:max-w-sm">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input v-model="search" placeholder="Search name, phone or email…" class="pl-9" autocomplete="off" />
+                        <Input v-model="search" placeholder="Search name, phone or email…" class="h-10 rounded-full pl-9" autocomplete="off" />
                     </div>
                 </div>
 

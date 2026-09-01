@@ -90,7 +90,7 @@ function confirmDelete() {
                 <div class="border-b border-border p-3">
                     <div class="relative max-w-sm">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input v-model="search" placeholder="Search categories…" class="pl-9" autocomplete="off" />
+                        <Input v-model="search" placeholder="Search categories…" class="h-10 rounded-full pl-9" autocomplete="off" />
                     </div>
                 </div>
 

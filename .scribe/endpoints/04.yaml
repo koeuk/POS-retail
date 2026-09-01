@@ -92,7 +92,7 @@ endpoints:
         name: 'orders[].sale_type'
         description: ''
         required: false
-        example: myself
+        example: debt
         type: string
         enumValues:
           - customer
@@ -106,7 +106,7 @@ endpoints:
         name: 'orders[].created_offline_at'
         description: 'Must be a valid date.'
         required: false
-        example: '2026-09-01T08:07:13'
+        example: '2026-09-01T08:12:31'
         type: string
         enumValues: []
         exampleWasSpecified: false
@@ -207,7 +207,7 @@ endpoints:
         name: 'orders[].payments[].method'
         description: ''
         required: true
-        example: cash
+        example: credit
         type: string
         enumValues:
           - cash
@@ -246,8 +246,8 @@ endpoints:
           store_id: 16
           register_id: 16
           customer_id: 16
-          sale_type: myself
-          created_offline_at: '2026-09-01T08:07:13'
+          sale_type: debt
+          created_offline_at: '2026-09-01T08:12:31'
           discount_amount: 39
           items:
             - product_id: 16
@@ -256,7 +256,7 @@ endpoints:
               unit_price: 12
               discount: 77
           payments:
-            - method: cash
+            - method: credit
               amount: 27
               reference_no: 'n'
     fileParameters: []

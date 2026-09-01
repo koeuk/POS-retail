@@ -108,34 +108,37 @@ function stockTone(qty: number | null | undefined) {
 
             <div class="list-panel animate-rise" style="animation-delay: 60ms">
                 <!-- Filters -->
-                <div class="grid grid-cols-2 gap-2 border-b border-border p-3 md:flex md:flex-wrap md:items-center">
-                    <div class="relative col-span-2 md:min-w-[14rem] md:flex-1">
+                <!-- Same shape as Order History: full-width search, chips below. -->
+                <div class="space-y-2 border-b border-border p-3">
+                    <div class="relative">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input v-model="search" placeholder="Search name, SKU or barcode…" class="pl-9" autocomplete="off" />
+                        <Input v-model="search" placeholder="Search name, SKU or barcode…" class="h-10 rounded-full pl-9" autocomplete="off" />
                     </div>
 
-                    <Select v-model="categoryId">
-                        <SelectTrigger class="w-full md:w-[11rem]">
-                            <SelectValue placeholder="Category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem :value="ALL">All categories</SelectItem>
-                            <SelectItem v-for="c in categories" :key="c.id" :value="String(c.id)">
-                                {{ c.name }}
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <div class="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 py-2">
+                        <Select v-model="categoryId">
+                            <SelectTrigger class="h-9 w-auto min-w-[7.5rem] shrink-0 rounded-full">
+                                <SelectValue placeholder="Category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem :value="ALL">All categories</SelectItem>
+                                <SelectItem v-for="c in categories" :key="c.id" :value="String(c.id)">
+                                    {{ c.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
 
-                    <Select v-model="status">
-                        <SelectTrigger class="w-full md:w-[9rem]">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem :value="ALL">All status</SelectItem>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                        </SelectContent>
-                    </Select>
+                        <Select v-model="status">
+                            <SelectTrigger class="h-9 w-auto min-w-[7rem] shrink-0 rounded-full">
+                                <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem :value="ALL">All status</SelectItem>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="inactive">Inactive</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 <!-- Table -->

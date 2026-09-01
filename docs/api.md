@@ -1,6 +1,6 @@
 # POS Retail — Token API (v1)
 
-The same app through a second door. Every endpoint lives under `/api/v1`, speaks JSON, and sits behind **the same permission gates as its web screen** — there is no separate API permission model to configure or drift. Access control itself is documented in [roles-and-permissions.md](roles-and-permissions.md); this file is the endpoint reference.
+The same app through a second door. Every endpoint lives under `/api/v1`, speaks JSON, and sits behind **the same permission gates as its web screen** — there is no separate API permission model to configure or drift. Access control itself is documented in [roles-and-permissions.md](roles-and-permissions.md); this file is the endpoint reference. **New to it? Start with the [integration guide](api-guide.md)**, which walks through getting a token, reading, selling and handling failures in order.
 
 Implemented with Laravel Sanctum personal access tokens: [routes/api.php](../routes/api.php), controllers in [app/Http/Controllers/Api](../app/Http/Controllers/Api).
 

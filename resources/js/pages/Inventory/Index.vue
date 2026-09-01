@@ -337,7 +337,11 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                 </template>
             </PageHeader>
 
-            <div class="stagger mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <!-- Phone: a swipeable tile rail; a five-tile stack costs a screen
+                 and a half of scrolling before the list even starts. -->
+            <div
+                class="stagger scrollbar-none -mx-2.5 mb-4 flex gap-2 overflow-x-auto px-2.5 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:px-0 lg:grid-cols-3 xl:grid-cols-5 [&>*]:min-w-[11rem] [&>*]:flex-1 sm:[&>*]:min-w-0"
+            >
                 <StatTile label="Tracked" :value="String(summary.tracked)" :icon="Boxes" hint="Product / store rows" />
                 <StatTile label="In stock" :value="summary.units.toLocaleString()" :icon="Layers" hint="Units on hand, all products" />
                 <StatTile label="Low stock" :value="String(summary.low)" :icon="TriangleAlert" hint="At or below the alert level" />
@@ -360,43 +364,83 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
             -->
             <div class="grid items-start gap-4 xl:grid-cols-[7fr_3fr]">
                 <div class="animate-rise shadow-soft min-w-0 rounded-xl border border-border bg-card" style="animation-delay: 60ms">
-                    <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
-                        <div class="relative min-w-[14rem] flex-1">
+                    <!-- Same shape as Order History: full-width search, chips below. -->
+                    <div class="space-y-2 border-b border-border p-3">
+                        <div class="relative">
                             <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input v-model="search" placeholder="Search name, SKU or barcode…" class="pl-9" autocomplete="off" />
+                            <Input v-model="search" placeholder="Search name, SKU or barcode…" class="h-10 rounded-full pl-9" autocomplete="off" />
                         </div>
 
-                        <Select v-if="stores.length > 1" v-model="storeId">
-                            <SelectTrigger class="w-[11rem]"><SelectValue placeholder="Store" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem :value="ALL">All stores</SelectItem>
-                                <SelectItem v-for="s in stores" :key="s.id" :value="String(s.id)">{{ s.name }}</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <div class="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 py-2">
+                            <Select v-if="stores.length > 1" v-model="storeId">
+                                <SelectTrigger class="h-9 w-auto min-w-[7rem] shrink-0 rounded-full"><SelectValue placeholder="Store" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem :value="ALL">All stores</SelectItem>
+                                    <SelectItem v-for="s in stores" :key="s.id" :value="String(s.id)">{{ s.name }}</SelectItem>
+                                </SelectContent>
+                            </Select>
 
-                        <Select v-model="state">
-                            <SelectTrigger class="w-[11rem]"><SelectValue placeholder="Anything" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem :value="ALL">Anything</SelectItem>
-                                <SelectItem value="low">Low stock</SelectItem>
-                                <SelectItem value="out">Out of stock</SelectItem>
-                                <SelectItem value="oversold">Oversold</SelectItem>
-                            </SelectContent>
-                        </Select>
+                            <Select v-model="state">
+                                <SelectTrigger class="h-9 w-auto min-w-[7rem] shrink-0 rounded-full"><SelectValue placeholder="Anything" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem :value="ALL">Anything</SelectItem>
+                                    <SelectItem value="low">Low stock</SelectItem>
+                                    <SelectItem value="out">Out of stock</SelectItem>
+                                    <SelectItem value="oversold">Oversold</SelectItem>
+                                </SelectContent>
+                            </Select>
 
-                        <!-- Order, separate from the state filter: "what is oversold"
-                         and "show me the emptiest first" are different questions. -->
-                        <Select v-model="sort">
-                            <SelectTrigger class="w-[11.5rem]" aria-label="Sort by"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="qty">Stock: low to high</SelectItem>
-                                <SelectItem value="-qty">Stock: high to low</SelectItem>
-                                <SelectItem value="name">Name A–Z</SelectItem>
-                            </SelectContent>
-                        </Select>
+                            <!-- Order, separate from the state filter: "what is oversold"
+                             and "show me the emptiest first" are different questions. -->
+                            <Select v-model="sort">
+                                <SelectTrigger class="h-9 w-auto min-w-[10rem] shrink-0 rounded-full" aria-label="Sort by"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="qty">Stock: low to high</SelectItem>
+                                    <SelectItem value="-qty">Stock: high to low</SelectItem>
+                                    <SelectItem value="name">Name A–Z</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
 
-                    <div v-if="stocks.data.length" class="overflow-x-auto">
+                    <!-- Phone: one card per shelf row. -->
+                    <ul v-if="stocks.data.length" class="space-y-2 p-2.5 md:hidden">
+                        <li v-for="stock in stocks.data" :key="stock.id" class="shadow-soft rounded-xl border border-border bg-card px-3.5 py-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="truncate font-medium leading-tight">{{ stock.product?.name }}</p>
+                                    <p class="tabular truncate font-mono text-xs text-muted-foreground">
+                                        {{ stock.product?.sku }}<template v-if="stores.length > 1"> · {{ stock.store?.name }}</template>
+                                    </p>
+                                </div>
+                                <p class="shrink-0 text-right">
+                                    <span class="tabular font-mono text-lg font-semibold" :class="tone(stock)">{{ stock.qty.toLocaleString() }}</span>
+                                    <span class="ml-1 text-xs text-muted-foreground">{{ stock.product?.unit }}</span>
+                                </p>
+                            </div>
+
+                            <p v-if="packed(stock)" class="tabular mt-1 font-mono text-xs text-muted-foreground">
+                                {{ packed(stock)!.count }} {{ packed(stock)!.label }} · {{ packed(stock)!.each }} each<template
+                                    v-if="packed(stock)!.loose"
+                                >
+                                    + {{ packed(stock)!.loose }} loose</template
+                                >
+                            </p>
+
+                            <div class="mt-2 flex items-center justify-between gap-2 border-t border-border pt-2">
+                                <button
+                                    type="button"
+                                    class="press tabular rounded-md px-2 py-1 font-mono text-xs text-muted-foreground"
+                                    @click="openThreshold(stock)"
+                                >
+                                    Alert at {{ stock.low_stock_threshold ?? '—' }}
+                                </button>
+                                <Button size="sm" variant="outline" class="press" @click="openAdjust(stock)">Adjust</Button>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <div v-if="stocks.data.length" class="hidden overflow-x-auto md:block">
                         <Table>
                             <TableHeader>
                                 <TableRow class="hover:bg-transparent">

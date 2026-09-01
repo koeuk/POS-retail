@@ -13,7 +13,7 @@ Before writing ANY code that touches roles, permissions, route gating, policies,
 
 ## Conventions
 
-- The token API (`/api/v1/*`) is documented in [docs/api.md](docs/api.md); it reuses the web permission gates — never add API-only auth logic.
+- The token API (`/api/v1/*`) is documented in [docs/api.md](docs/api.md) (reference) and [docs/api-guide.md](docs/api-guide.md) (integrator walkthrough); it reuses the web permission gates — never add API-only auth logic.
 - `/docs` (Scribe) renders from generated files that are gitignored — after a fresh clone, or any change to an API controller's annotations, run `php artisan scribe:generate` or the docs routes 500.
 
 - Frontend assets are served from `public/build` — run `npm run build` after JS/Vue changes (no vite dev server is usually running).
