@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Action;
 use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\Concerns\RecordsActivity;
@@ -89,13 +90,72 @@ class User extends Authenticatable
 
         $override = $this->permissions[$permission->value] ?? null;
 
-        return $override !== null
-            ? (bool) $override
-            : $permission->defaultFor($this->role);
+        if ($override === null) {
+            return $permission->defaultFor($this->role);
+        }
+
+        // A per-action map means the area is reachable — the actions inside
+        // it decide the rest. Every action off is the same as no access.
+        if (is_array($override)) {
+            return in_array(true, array_map(fn ($v) => (bool) $v, $override), true);
+        }
+
+        return (bool) $override;
     }
 
-    /** Every permission resolved to its effective value, as {key: bool}. */
+    /**
+     * May this user perform one particular action inside an area?
+     *
+     * The area gate comes first — someone who cannot open Products cannot
+     * edit one either. Beyond that, the stored override for a key is read
+     * one of two ways:
+     *
+     *   true / false  → the whole area, every action (the original shape,
+     *                   still what a role default resolves to)
+     *   {"view": true, "delete": false}
+     *                 → per action; an action the map omits falls back to
+     *                   the area's own answer, so a partial map is safe.
+     */
+    public function can(Permission $permission, Action $action): bool
+    {
+        if ($this->role === Role::Admin) {
+            return true;
+        }
+
+        if (! $this->hasPermission($permission)) {
+            return false;
+        }
+
+        $override = $this->permissions[$permission->value] ?? null;
+
+        if (! is_array($override)) {
+            return true; // plain grant: the whole area
+        }
+
+        return (bool) ($override[$action->value] ?? true);
+    }
+
+    /**
+     * Every permission resolved for this user.
+     *
+     * Each key carries both the area answer and the per-action breakdown,
+     * so the Staff dialog and `auth.can` render from one shape:
+     * `['products' => ['allowed' => true, 'actions' => ['view' => true, …]]]`
+     */
     public function effectivePermissions(): array
+    {
+        return collect(Permission::cases())
+            ->mapWithKeys(fn (Permission $p) => [$p->value => [
+                'allowed' => $this->hasPermission($p),
+                'actions' => collect(Action::cases())
+                    ->mapWithKeys(fn (Action $a) => [$a->value => $this->can($p, $a)])
+                    ->all(),
+            ]])
+            ->all();
+    }
+
+    /** Just the area flags, as {key: bool} — what the nav renders from. */
+    public function permissionFlags(): array
     {
         return collect(Permission::cases())
             ->mapWithKeys(fn (Permission $p) => [$p->value => $this->hasPermission($p)])
