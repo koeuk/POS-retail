@@ -25,6 +25,17 @@ use Spatie\QueryBuilder\QueryBuilder;
  */
 class DebtController extends Controller
 {
+    /**
+     * List debts
+     *
+     * Each row carries the whole story: customer, items, payments (any
+     * deposit included).
+     *
+     * @group Debts
+     *
+     * @queryParam filter[state] string `open` (default — still owed) or `settled`. Example: open
+     * @queryParam filter[search] string Order no., customer name or phone. Example: GoJo
+     */
     public function index(Request $request): JsonResponse
     {
         $debts = QueryBuilder::for($this->scoped($request->user()))
@@ -47,6 +58,17 @@ class DebtController extends Controller
         return response()->json($debts);
     }
 
+    /**
+     * Settle a debt
+     *
+     * Records money received; `paid_amount` is recomputed from the payments
+     * ledger, so a double-submit cannot drift it. Paying more than is owed
+     * is refused.
+     *
+     * @group Debts
+     *
+     * @response {"order_no": "S1-R1-260901-0001", "paid_amount": "15000.00", "outstanding": "0.00", "settled": true}
+     */
     public function settle(Request $request, Order $order): JsonResponse
     {
         $this->scoped($request->user())->whereKey($order->id)->firstOrFail();

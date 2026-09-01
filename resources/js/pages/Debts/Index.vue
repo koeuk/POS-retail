@@ -258,7 +258,8 @@ function submitAdd() {
                 </template>
             </PageHeader>
 
-            <div class="stagger mb-4 grid gap-4 sm:grid-cols-2">
+            <!-- Two facts, one row — even on a phone. -->
+            <div class="stagger mb-4 grid grid-cols-2 gap-2 md:gap-4">
                 <StatTile
                     label="Still owed"
                     :value="money(summary.owed)"
@@ -269,21 +270,62 @@ function submitAdd() {
             </div>
 
             <div class="animate-rise shadow-soft rounded-xl border border-border bg-card" style="animation-delay: 60ms">
-                <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
-                    <div class="relative min-w-[14rem] flex-1">
+                <!-- Same shape as Order History: full-width search, chips below. -->
+                <div class="space-y-2 border-b border-border p-3">
+                    <div class="relative">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input v-model="search" placeholder="Customer, phone or order no…" class="pl-9" autocomplete="off" />
+                        <Input v-model="search" placeholder="Customer, phone or order no…" class="h-10 rounded-full pl-9" autocomplete="off" />
                     </div>
-                    <Select v-model="state">
-                        <SelectTrigger class="w-[10rem]"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="open">Still owed</SelectItem>
-                            <SelectItem value="settled">Settled</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <div class="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 py-2">
+                        <Select v-model="state">
+                            <SelectTrigger class="h-9 w-auto min-w-[8rem] shrink-0 rounded-full"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="open">Still owed</SelectItem>
+                                <SelectItem value="settled">Settled</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
-                <div v-if="debts.data.length" class="overflow-x-auto">
+                <!-- Phone: one card per debt — who, how much still owed, and the
+                     two actions the conversation ends with. -->
+                <ul v-if="debts.data.length" class="space-y-2 p-2.5 md:hidden">
+                    <li v-for="d in debts.data" :key="d.id" class="shadow-soft overflow-hidden rounded-xl border border-border bg-card">
+                        <button type="button" class="row-press block w-full px-3.5 py-3 text-left" @click="viewing = d">
+                            <div class="flex items-baseline justify-between gap-3">
+                                <p class="truncate font-medium leading-tight">{{ d.customer?.name ?? '—' }}</p>
+                                <Badge v-if="owed(d) <= 0" variant="secondary" class="shrink-0">Settled</Badge>
+                                <span v-else class="tabular shrink-0 font-mono text-[0.95rem] font-semibold text-destructive">
+                                    {{ money(owed(d)) }}
+                                </span>
+                            </div>
+                            <p class="mt-1 truncate text-xs text-muted-foreground">
+                                <span v-if="d.customer?.phone" class="tabular font-mono">{{ d.customer.phone }} · </span>
+                                <span class="tabular font-mono">{{ d.order_no }}</span> · {{ soldAt(d) }}
+                            </p>
+                            <p class="tabular mt-1 font-mono text-xs text-muted-foreground">
+                                Total {{ money(d.total) }} · Paid {{ money(d.paid_amount) }}
+                            </p>
+                        </button>
+
+                        <div v-if="owed(d) > 0 || d.customer" class="flex gap-2 border-t border-border px-3.5 py-2">
+                            <Button
+                                v-if="d.customer"
+                                variant="outline"
+                                size="sm"
+                                class="press flex-1"
+                                :aria-label="`Add more debt for ${d.customer.name}`"
+                                @click="openAdd(d.customer)"
+                            >
+                                <Plus class="size-3.5" />
+                                Add
+                            </Button>
+                            <Button v-if="owed(d) > 0" size="sm" class="press flex-1" @click="openSettle(d)">Record payment</Button>
+                        </div>
+                    </li>
+                </ul>
+
+                <div v-if="debts.data.length" class="hidden overflow-x-auto md:block">
                     <Table>
                         <TableHeader>
                             <TableRow class="hover:bg-transparent">
@@ -607,7 +649,7 @@ function submitAdd() {
         </Dialog>
 
         <Dialog :open="!!settling" @update:open="(v) => !v && (settling = null)">
-            <DialogContent class="max-w-sm">
+            <DialogContent class="sm:max-w-sm">
                 <form @submit.prevent="submitSettle">
                     <DialogHeader>
                         <DialogTitle>Record a payment</DialogTitle>

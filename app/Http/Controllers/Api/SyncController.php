@@ -14,6 +14,20 @@ use Illuminate\Http\JsonResponse;
  */
 class SyncController extends Controller
 {
+    /**
+     * Sync orders
+     *
+     * The till's own contract, over a token: up to 200 orders per batch,
+     * idempotent on `client_uuid`, always 200 with one result per order.
+     * Statuses: `created` (landed now), `already_synced` (a retry collapsed
+     * into an earlier flush — stock moves once), `failed` (this order only;
+     * fix and resend the same uuid). On a `debt`, payments are the deposit —
+     * capped at the bill; `myself` moves stock but records no revenue.
+     *
+     * @group Selling
+     *
+     * @response {"synced_at": "2026-09-01T10:15:02+07:00", "results": [{"client_uuid": "3f6c...", "status": "created", "order_id": 42, "order_no": "S1-R1-260901-0007", "message": null}]}
+     */
     public function sync(SyncOrdersRequest $request, OrderSyncService $sync): JsonResponse
     {
         $orders = $request->validated('orders');

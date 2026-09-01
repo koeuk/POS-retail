@@ -19,6 +19,17 @@ use Illuminate\Validation\ValidationException;
  */
 class AuthController extends Controller
 {
+    /**
+     * Issue a token
+     *
+     * Exchange credentials for a bearer token. Deactivated accounts are refused.
+     *
+     * @group Auth
+     *
+     * @unauthenticated
+     *
+     * @response 201 {"token": "1|kANNnRWFrw...", "user": {"id": 1, "name": "bobo", "email": "owner@shop.test", "role": "admin", "store_id": null}, "can": {"pos": true, "orders": true, "reports": true}}
+     */
     public function issue(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -46,7 +57,15 @@ class AuthController extends Controller
         ], 201);
     }
 
-    /** Revoke the token this very request authenticated with. */
+    /**
+     * Revoke this token
+     *
+     * Revokes the very token that authenticated the request.
+     *
+     * @group Auth
+     *
+     * @response {"ok": true}
+     */
     public function revoke(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
@@ -54,6 +73,16 @@ class AuthController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /**
+     * Who am I
+     *
+     * The token's user and the resolved permission map — recomputed on every
+     * request, so a Staff-screen grant or revoke applies without reissuing.
+     *
+     * @group Auth
+     *
+     * @response {"user": {"id": 1, "name": "bobo", "email": "owner@shop.test", "role": "admin", "store_id": null}, "can": {"pos": true, "orders": true}}
+     */
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();

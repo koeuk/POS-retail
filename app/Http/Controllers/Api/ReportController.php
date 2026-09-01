@@ -11,6 +11,19 @@ use Illuminate\Support\Carbon;
 /** The same figures the Reports screen shows, as plain JSON. */
 class ReportController extends Controller
 {
+    /**
+     * Sales summary
+     *
+     * The Reports screen as JSON. Defaults to the last 30 days, clamped to a
+     * year; only completed, non-`myself` orders count, bucketed by business day.
+     *
+     * @group Reports
+     *
+     * @queryParam from string Y-m-d. Example: 2026-08-01
+     * @queryParam to string Y-m-d. Example: 2026-08-31
+     *
+     * @response {"from": "2026-08-01", "to": "2026-08-31", "totals": {"orders": 13, "sales": "232000.00", "items": 47, "basket": "17846.15"}, "by_day": [{"day": "2026-08-28", "orders": 5, "sales": "76000.00"}], "by_product": [{"product_name": "Wurkz", "qty": 9, "revenue": "18000.00"}], "by_payment": [{"method": "cash", "count": 7, "amount": "96000.00"}], "debts_outstanding": {"count": 8, "owed": "101000.00"}}
+     */
     public function summary(Request $request): JsonResponse
     {
         [$from, $to] = $this->range($request);

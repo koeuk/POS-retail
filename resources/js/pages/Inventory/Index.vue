@@ -533,7 +533,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
         </Dialog>
 
         <Dialog :open="!!adjusting" @update:open="(v) => !v && (adjusting = null)">
-            <DialogContent class="max-w-md">
+            <DialogContent class="sm:max-w-md">
                 <form @submit.prevent="submitAdjust">
                     <DialogHeader>
                         <DialogTitle>{{ adjusting?.product?.name }}</DialogTitle>
@@ -645,7 +645,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
 
         <!-- Threshold is a setting, not a movement, so it gets its own small form. -->
         <Dialog :open="!!thresholdFor" @update:open="(v) => !v && (thresholdFor = null)">
-            <DialogContent class="max-w-sm">
+            <DialogContent class="sm:max-w-sm">
                 <form @submit.prevent="submitThreshold">
                     <DialogHeader>
                         <DialogTitle>Low-stock alert</DialogTitle>

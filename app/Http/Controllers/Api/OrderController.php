@@ -18,6 +18,20 @@ use Spatie\QueryBuilder\QueryBuilder;
  */
 class OrderController extends Controller
 {
+    /**
+     * List orders
+     *
+     * Store-scoped: admins see every store, everyone else their own. Date
+     * filters bucket by the shop's business day, not server time.
+     *
+     * @group Orders
+     *
+     * @queryParam filter[search] string Order no. or customer name. Example: S1-R1
+     * @queryParam filter[status] string `completed`, `refunded` or `void`. Example: completed
+     * @queryParam filter[sale_type] string `customer`, `debt` or `myself`. Example: debt
+     * @queryParam filter[from] string Y-m-d business day. Example: 2026-08-01
+     * @queryParam filter[to] string Y-m-d business day. Example: 2026-08-31
+     */
     public function index(Request $request): JsonResponse
     {
         $orders = QueryBuilder::for($this->scoped($request->user()))
@@ -41,6 +55,14 @@ class OrderController extends Controller
         return response()->json($orders);
     }
 
+    /**
+     * One order
+     *
+     * Items, payments, customer, cashier, store — plus `outstanding`, what a
+     * debt still owes.
+     *
+     * @group Orders
+     */
     public function show(Request $request, Order $order): JsonResponse
     {
         $this->scoped($request->user())->whereKey($order->id)->firstOrFail();

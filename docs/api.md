@@ -4,6 +4,8 @@ The same app through a second door. Every endpoint lives under `/api/v1`, speaks
 
 Implemented with Laravel Sanctum personal access tokens: [routes/api.php](../routes/api.php), controllers in [app/Http/Controllers/Api](../app/Http/Controllers/Api).
 
+**Interactive docs** (Scribe, staff-only): **`/docs`** in the running app — with _Try it out_, plus the machine-readable specs at `/docs.openapi` (OpenAPI 3) and `/docs.postman` (Postman collection). Regenerate after changing an API controller or its annotations: `php artisan scribe:generate`. The rendered page, its assets and the spec files are **gitignored build output** — on a fresh clone the three `/docs*` routes 500 until that command has been run once.
+
 ## Conventions
 
 **Headers.** Send both on every request:

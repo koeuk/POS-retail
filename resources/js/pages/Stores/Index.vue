@@ -282,7 +282,7 @@ function submitRegister() {
 
         <!-- Delete confirmation -->
         <Dialog :open="!!pendingDelete" @update:open="(v) => !v && (pendingDelete = null)">
-            <DialogContent class="max-w-md">
+            <DialogContent class="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Delete “{{ pendingDelete?.name }}”?</DialogTitle>
                     <DialogDescription>

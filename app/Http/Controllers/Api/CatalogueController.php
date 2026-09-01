@@ -19,6 +19,21 @@ use Spatie\QueryBuilder\QueryBuilder;
  */
 class CatalogueController extends Controller
 {
+    /**
+     * List products
+     *
+     * Base products only; a pack rides along inside its parent. Requires the
+     * `products` permission.
+     *
+     * @group Catalogue
+     *
+     * @queryParam filter[search] string Matches name, SKU or barcode. Example: cola
+     * @queryParam filter[category_id] integer Example: 2
+     * @queryParam filter[status] string `active` or `inactive`. Example: active
+     * @queryParam per_page integer One of 10, 20, 50, 100, 150, 200. Example: 20
+     *
+     * @response {"current_page": 1, "data": [{"id": 19, "name": "Wurkz", "sku": "SKU-0010", "sell_price": "2000.00", "unit": "can", "is_active": true, "stock_qty": "17", "category": {"id": 2, "name": "Drinks"}, "packs": []}], "per_page": 20, "total": 1}
+     */
     public function products(Request $request): JsonResponse
     {
         $products = QueryBuilder::for(Product::class)
@@ -43,6 +58,13 @@ class CatalogueController extends Controller
         return response()->json($products);
     }
 
+    /**
+     * One product
+     *
+     * With its category, pack sizes, and per-store stock rows.
+     *
+     * @group Catalogue
+     */
     public function product(Product $product): JsonResponse
     {
         return response()->json($product->load([
@@ -52,6 +74,13 @@ class CatalogueController extends Controller
         ]));
     }
 
+    /**
+     * List categories
+     *
+     * Alphabetical, with a product count each. Requires the `categories` permission.
+     *
+     * @group Catalogue
+     */
     public function categories(): JsonResponse
     {
         return response()->json(

@@ -128,7 +128,7 @@ const money = (v: number) => (props.currency ? formatMoney(v, props.currency) : 
 
 <template>
     <Dialog :open="open" @update:open="(v) => !v && emit('close')">
-        <DialogContent class="max-w-sm">
+        <DialogContent class="sm:max-w-sm">
             <DialogHeader>
                 <DialogTitle>Who owes this?</DialogTitle>
                 <DialogDescription>

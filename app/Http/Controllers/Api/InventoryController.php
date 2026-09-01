@@ -16,6 +16,19 @@ use Spatie\QueryBuilder\QueryBuilder;
 /** Shelf truth, read-only. Movements still go through the web screen or sync. */
 class InventoryController extends Controller
 {
+    /**
+     * List stock
+     *
+     * Read-only shelf truth per product and store. Movements are recorded on
+     * the web screen or by order sync, never here.
+     *
+     * @group Inventory
+     *
+     * @queryParam filter[search] string Product name, SKU or barcode. Example: cola
+     * @queryParam filter[store_id] integer Example: 1
+     * @queryParam filter[state] string `low`, `out` or `oversold`. Example: low
+     * @queryParam sort string `qty` (default, lowest first) or `-qty`. Example: qty
+     */
     public function index(Request $request): JsonResponse
     {
         $stocks = QueryBuilder::for($this->scoped($request->user()))

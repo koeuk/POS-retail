@@ -16,6 +16,13 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class CustomerController extends Controller
 {
+    /**
+     * List customers
+     *
+     * @group Customers
+     *
+     * @queryParam filter[search] string Matches name, phone or email. Example: Dara
+     */
     public function index(Request $request): JsonResponse
     {
         $customers = QueryBuilder::for(Customer::class)
@@ -36,6 +43,14 @@ class CustomerController extends Controller
         return response()->json($customers);
     }
 
+    /**
+     * Create a customer
+     *
+     * @group Customers
+     *
+     * @response 201 {"id": 7, "name": "Dara", "phone": "012 345 678"}
+     * @response 503 {"message": "The customer could not be saved — try again."}
+     */
     public function store(CustomerRequest $request): JsonResponse
     {
         try {
