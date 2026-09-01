@@ -75,7 +75,7 @@ function go(href: string) {
     <!-- Overflow destinations + account, as a bottom sheet. -->
     <Sheet v-model:open="moreOpen">
         <SheetContent side="bottom" class="rounded-t-2xl px-0 pb-0">
-            <SheetHeader class="px-5 text-left">
+            <SheetHeader class="border-b border-border px-5 text-left">
                 <SheetTitle class="sr-only">More</SheetTitle>
                 <div v-if="user" class="flex items-center gap-3 pb-2">
                     <UserInfo :user="user" :show-email="true" />
@@ -83,7 +83,7 @@ function go(href: string) {
             </SheetHeader>
 
             <div class="max-h-[60vh] overflow-y-auto px-2" style="padding-bottom: calc(1rem + var(--safe-bottom))">
-                <ul v-if="overflow.length" class="py-1">
+                <ul v-if="overflow.length" class="divide-y divide-border py-1">
                     <li v-for="item in overflow" :key="item.href">
                         <button
                             type="button"
@@ -99,7 +99,7 @@ function go(href: string) {
 
                 <div class="my-1 border-t border-border" />
 
-                <ul class="py-1">
+                <ul class="divide-y divide-border py-1">
                     <li>
                         <button
                             type="button"

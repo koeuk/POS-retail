@@ -15,8 +15,8 @@
 
 @layer base {
     :root {
-        --font-display: 'Poppins', 'Kantumruy Pro', 'Nunito Sans', ui-sans-serif, system-ui, sans-serif;
-        --font-sans: 'Nunito Sans', 'Kantumruy Pro', ui-sans-serif, system-ui, sans-serif;
+        --font-display: 'Plus Jakarta Sans', 'Kantumruy Pro', ui-sans-serif, system-ui, sans-serif;
+        --font-sans: 'Plus Jakarta Sans', 'Kantumruy Pro', ui-sans-serif, system-ui, sans-serif;
         --font-mono: 'IBM Plex Mono', 'Kantumruy Pro', ui-monospace, SFMono-Regular, Menlo, monospace;
 
         --background: 40 33% 98%;
