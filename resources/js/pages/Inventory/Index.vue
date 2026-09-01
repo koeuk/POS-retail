@@ -442,11 +442,14 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                                 <button
                                     type="button"
                                     class="press tabular rounded-md px-2 py-1 font-mono text-xs text-muted-foreground"
+                                    :disabled="!may('inventory', 'update')"
                                     @click="openThreshold(stock)"
                                 >
                                     Alert at {{ stock.low_stock_threshold ?? '—' }}
                                 </button>
-                                <Button size="sm" variant="outline" class="press" @click="openAdjust(stock)">Adjust</Button>
+                                <Button v-if="may('inventory', 'update')" size="sm" variant="outline" class="press" @click="openAdjust(stock)">
+                                    Adjust
+                                </Button>
                             </div>
                         </li>
                     </ul>
@@ -491,7 +494,8 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                                         <button
                                             type="button"
                                             class="press tabular rounded-md px-2 py-1 font-mono text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                                            @click="openThreshold(stock)"
+                                            :disabled="!may('inventory', 'update')"
+                                    @click="openThreshold(stock)"
                                         >
                                             {{ stock.low_stock_threshold ?? '—' }}
                                         </button>
