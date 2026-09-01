@@ -56,6 +56,11 @@ class UserController extends Controller
                 'defaults' => collect(Role::cases())
                     ->mapWithKeys(fn (Role $r) => [$r->value => $p->defaultFor($r)]),
             ]),
+            // The columns of the permissions grid — view / add / edit / delete.
+            'actionOptions' => collect(Action::cases())->map(fn (Action $a) => [
+                'value' => $a->value,
+                'label' => $a->label(),
+            ]),
             'filters' => ['search' => (string) $request->input('filter.search', ''), 'role' => (string) $request->input('filter.role', '')],
         ]);
     }

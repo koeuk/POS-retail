@@ -26,11 +26,20 @@ type PermissionOption = {
     defaults: Record<string, boolean>;
 };
 
+type ActionOption = { value: string; label: string };
+
+/** One area's switches: {view: true, delete: false}. */
+type ActionMap = Record<string, boolean>;
+
+/** What the server sends per user: the area answer plus its actions. */
+type EffectivePermission = { allowed: boolean; actions: ActionMap };
+
 const props = defineProps<{
-    users: Paginated<User & { store?: Pick<Store, 'id' | 'name'> | null; effective_permissions: Record<string, boolean> }>;
+    users: Paginated<User & { store?: Pick<Store, 'id' | 'name'> | null; effective_permissions: Record<string, EffectivePermission> }>;
     stores: Store[];
     roles: { value: string; label: string }[];
     permissionOptions: PermissionOption[];
+    actionOptions: ActionOption[];
     filters: { search?: string; role?: string };
 }>();
 
@@ -47,7 +56,18 @@ const permissionGroups = computed(() => {
     return [...groups.entries()];
 });
 
-const roleDefaults = (role: string) => Object.fromEntries(props.permissionOptions.map((o) => [o.value, o.defaults[role] ?? false]));
+/** The role's baseline as a full matrix — every action follows the area. */
+const roleDefaults = (role: string): Record<string, ActionMap> =>
+    Object.fromEntries(
+        props.permissionOptions.map((o) => [
+            o.value,
+            Object.fromEntries(props.actionOptions.map((a) => [a.value, o.defaults[role] ?? false])),
+        ]),
+    );
+
+/** Server shape → form shape: keep the actions, drop the area summary. */
+const toActionMatrix = (effective: Record<string, EffectivePermission>): Record<string, ActionMap> =>
+    Object.fromEntries(Object.entries(effective).map(([key, value]) => [key, { ...value.actions }]));
 
 const ALL = 'all';
 const NONE = 'none';
@@ -87,7 +107,7 @@ const form = useForm({
     role: 'cashier',
     store_id: NONE,
     is_active: true as boolean,
-    permissions: {} as Record<string, boolean>,
+    permissions: {} as Record<string, ActionMap>,
 });
 
 /** A cashier cannot open /pos without a store, so the field becomes required. */
@@ -112,7 +132,7 @@ function openCreate() {
     dialogOpen.value = true;
 }
 
-function openEdit(user: User & { effective_permissions: Record<string, boolean> }) {
+function openEdit(user: User & { effective_permissions: Record<string, EffectivePermission> }) {
     editing.value = user;
     form.clearErrors();
     form.name = user.name;
@@ -122,7 +142,7 @@ function openEdit(user: User & { effective_permissions: Record<string, boolean> 
     form.role = user.role;
     form.store_id = user.store_id ? String(user.store_id) : NONE;
     form.is_active = user.is_active;
-    form.permissions = { ...user.effective_permissions };
+    form.permissions = toActionMatrix(user.effective_permissions);
     dialogOpen.value = true;
 }
 
@@ -144,16 +164,23 @@ function submit() {
  * stale field on screen could quietly overwrite a colleague's edit. This
  * sends only the switches.
  */
-const permissionsFor = ref<(User & { effective_permissions: Record<string, boolean> }) | null>(null);
+const permissionsFor = ref<(User & { effective_permissions: Record<string, EffectivePermission> }) | null>(null);
 const permissionsOpen = ref(false);
-const permissionsForm = useForm({ permissions: {} as Record<string, boolean> });
+const permissionsForm = useForm({ permissions: {} as Record<string, ActionMap> });
 
-function openPermissions(user: User & { effective_permissions: Record<string, boolean> }) {
+function openPermissions(user: User & { effective_permissions: Record<string, EffectivePermission> }) {
     permissionsFor.value = user;
     permissionsForm.clearErrors();
-    permissionsForm.permissions = { ...user.effective_permissions };
+    permissionsForm.permissions = toActionMatrix(user.effective_permissions);
     permissionsOpen.value = true;
 }
+
+/** Whole-row toggle: the area's checkbox drives all four of its actions. */
+function toggleArea(area: string, granted: boolean) {
+    permissionsForm.permissions[area] = Object.fromEntries(props.actionOptions.map((a) => [a.value, granted]));
+}
+
+const areaGranted = (area: string) => props.actionOptions.some((a) => permissionsForm.permissions[area]?.[a.value]);
 
 /** Back to what the role alone grants — clears every per-user override. */
 function resetToRoleDefaults() {
@@ -441,12 +468,24 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                 <p class="text-sm font-medium">Permissions</p>
                                 <p class="text-xs text-muted-foreground">Pre-set by the role — switch anything on or off for this person alone.</p>
                             </div>
+                            <!-- Area access only. Which actions they may take
+                                 inside it is the shield button's grid, so this
+                                 dialog stays about the account itself. -->
                             <div class="grid gap-4 p-3 sm:grid-cols-2">
                                 <div v-for="[group, options] in permissionGroups" :key="group" class="space-y-2">
                                     <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">{{ group }}</p>
                                     <div v-for="option in options" :key="option.value" class="flex items-center justify-between gap-3">
                                         <span class="text-sm">{{ option.label }}</span>
-                                        <Switch v-model="form.permissions[option.value]" :aria-label="option.label" />
+                                        <Switch
+                                            :model-value="actionOptions.some((a) => form.permissions[option.value]?.[a.value])"
+                                            :aria-label="option.label"
+                                            @update:model-value="
+                                                (v) =>
+                                                    (form.permissions[option.value] = Object.fromEntries(
+                                                        actionOptions.map((a) => [a.value, v === true]),
+                                                    ))
+                                            "
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -487,12 +526,54 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div class="grid gap-4 py-5 sm:grid-cols-2">
-                        <div v-for="[group, options] in permissionGroups" :key="group" class="space-y-2">
+                    <!-- Area down the side, action across the top. The area
+                         name is itself a toggle for the whole row, because
+                         "all of Products" is the common case and clicking
+                         four boxes for it would be the tax on the norm. -->
+                    <div class="space-y-5 py-5">
+                        <div v-for="[group, options] in permissionGroups" :key="group" class="space-y-1">
                             <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">{{ group }}</p>
-                            <div v-for="option in options" :key="option.value" class="flex items-center justify-between gap-3">
-                                <span class="text-sm">{{ option.label }}</span>
-                                <Switch v-model="permissionsForm.permissions[option.value]" :aria-label="option.label" />
+
+                            <div class="overflow-hidden rounded-lg border border-border">
+                                <div class="flex items-center gap-2 border-b border-border bg-muted/40 px-3 py-2">
+                                    <span class="min-w-0 flex-1 text-[0.7rem] font-medium text-muted-foreground">Area</span>
+                                    <span
+                                        v-for="action in actionOptions"
+                                        :key="action.value"
+                                        class="w-12 shrink-0 text-center text-[0.7rem] font-medium text-muted-foreground"
+                                    >
+                                        {{ action.label }}
+                                    </span>
+                                </div>
+
+                                <div
+                                    v-for="option in options"
+                                    :key="option.value"
+                                    class="flex items-center gap-2 border-b border-border px-3 py-2 last:border-b-0"
+                                >
+                                    <button
+                                        type="button"
+                                        class="press min-w-0 flex-1 truncate text-left text-sm hover:text-primary"
+                                        :title="`Turn every action ${areaGranted(option.value) ? 'off' : 'on'} for ${option.label}`"
+                                        @click="toggleArea(option.value, !areaGranted(option.value))"
+                                    >
+                                        {{ option.label }}
+                                    </button>
+
+                                    <label
+                                        v-for="action in actionOptions"
+                                        :key="action.value"
+                                        class="flex w-12 shrink-0 items-center justify-center"
+                                    >
+                                        <span class="sr-only">{{ action.label }} {{ option.label }}</span>
+                                        <Checkbox
+                                            :model-value="permissionsForm.permissions[option.value]?.[action.value] ?? false"
+                                            @update:model-value="
+                                                (v) => (permissionsForm.permissions[option.value][action.value] = v === true)
+                                            "
+                                        />
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
