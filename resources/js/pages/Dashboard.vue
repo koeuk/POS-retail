@@ -87,6 +87,12 @@ const times = (n: number) => `${n} time${n === 1 ? '' : 's'}, at shelf price`;
 const page = usePage<SharedData>();
 const user = computed(() => page.props.auth.user);
 
+/** "Good morning" / "Good afternoon" / "Good evening", by the clock. */
+const greeting = computed(() => {
+    const h = new Date().getHours();
+    return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+});
+
 const { money } = useCurrency();
 
 const time = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '—');
@@ -121,7 +127,12 @@ const quickActions = computed(() =>
 
     <AppLayout :breadcrumbs="[{ title: 'Dashboard', href: '/dashboard' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader :title="user?.name ?? 'Dashboard'" description="Today across the shop floor.">
+            <PageHeader description="Today across the shop floor.">
+                <!-- Soft hello, bold name: the greeting is furniture, the name is the title. -->
+                <template #title>
+                    <span class="font-normal text-muted-foreground">{{ greeting }},</span>
+                    {{ user?.name ?? 'Dashboard' }}
+                </template>
                 <template #actions>
                     <DatePicker v-model="date" aria-label="Show figures for a day" class="h-10 rounded-full" />
                 </template>

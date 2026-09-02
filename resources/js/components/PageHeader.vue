@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineProps<{
-    title: string;
+    title?: string;
     description?: string;
 }>();
 </script>
@@ -15,8 +15,10 @@ defineProps<{
     -->
     <header class="animate-rise flex flex-wrap items-end justify-between gap-3 pb-4 md:gap-4 md:pb-6">
         <div class="hidden space-y-1.5 md:block">
+            <!-- The slot lets a page mix tones inside the heading — the
+                 Dashboard greets softly and leaves only the name bold. -->
             <h1 class="font-display text-3xl font-semibold leading-none tracking-tight">
-                {{ title }}
+                <slot name="title">{{ title }}</slot>
             </h1>
             <p v-if="description" class="max-w-prose text-sm text-muted-foreground">
                 {{ description }}
