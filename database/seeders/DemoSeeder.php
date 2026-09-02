@@ -257,7 +257,7 @@ class DemoSeeder extends Seeder
         $accounts = [
             [
                 'name' => 'សុខា (Sokha) — Senior cashier',
-                'email' => 'sokha@pos.test',
+                'email' => 'sokha@gmail.com',
                 'role' => Role::Cashier,
                 'store_id' => $this->store->id,
                 // Trusted at the till and allowed to read the numbers, but
@@ -271,7 +271,7 @@ class DemoSeeder extends Seeder
             ],
             [
                 'name' => 'ដារ៉ា (Dara) — Stock manager',
-                'email' => 'dara@pos.test',
+                'email' => 'dara@gmail.com',
                 'role' => Role::Manager,
                 'store_id' => $this->store->id,
                 // Runs the shelf: may add and correct, but may not delete —
@@ -285,7 +285,7 @@ class DemoSeeder extends Seeder
             ],
             [
                 'name' => 'បុប្ផា (Bopha) — Weekend cashier',
-                'email' => 'bopha@pos.test',
+                'email' => 'bopha@gmail.com',
                 'role' => Role::Cashier,
                 'store_id' => $this->store->id,
                 // The plainest account there is: the till and nothing else.
@@ -293,7 +293,7 @@ class DemoSeeder extends Seeder
             ],
             [
                 'name' => 'វិជា (Vichea) — Left the shop',
-                'email' => 'vichea@pos.test',
+                'email' => 'vichea@gmail.com',
                 'role' => Role::Cashier,
                 'store_id' => $this->store->id,
                 'is_active' => false,

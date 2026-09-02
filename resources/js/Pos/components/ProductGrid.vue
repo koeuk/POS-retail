@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import type { CurrencyDef } from '@/composables/useCurrency';
 import { useCart } from '@/Pos/composables/useCart';
 import { formatMoney } from '@/Pos/lib/money';
+import { imageSrc } from '@/lib/utils';
 import type { PosCategory, PosProduct } from '@/Pos/types';
 import { ChevronRight, Layers, PackageOpen, Search } from 'lucide-vue-next';
 import { computed, ref } from 'vue';

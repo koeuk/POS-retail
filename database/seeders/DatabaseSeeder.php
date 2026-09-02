@@ -50,8 +50,8 @@ class DatabaseSeeder extends Seeder
 
         User::create([
             'name' => 'Admin',
-            'email' => 'admin@pos.test',
-            'password' => Hash::make('password'),
+            'email' => 'admin@gmail.com',
+            'password' => Hash::make('12345678'),
             'email_verified_at' => now(),
             'role' => Role::Admin,
             'store_id' => null,
@@ -60,8 +60,8 @@ class DatabaseSeeder extends Seeder
 
         User::create([
             'name' => 'Manager',
-            'email' => 'manager@pos.test',
-            'password' => Hash::make('password'),
+            'email' => 'manager@gmail.com',
+            'password' => Hash::make('12345678'),
             'email_verified_at' => now(),
             'role' => Role::Manager,
             'store_id' => $store->id,
@@ -71,8 +71,8 @@ class DatabaseSeeder extends Seeder
         // A cashier must be store-bound — /pos cannot resolve stock without it.
         User::create([
             'name' => 'Cashier',
-            'email' => 'cashier@pos.test',
-            'password' => Hash::make('password'),
+            'email' => 'cashier@gmail.com',
+            'password' => Hash::make('12345678'),
             'email_verified_at' => now(),
             'role' => Role::Cashier,
             'store_id' => $store->id,

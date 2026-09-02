@@ -3,6 +3,7 @@ import ThemeToggle from '@/components/ThemeToggle.vue';
 import { Input } from '@/components/ui/input';
 import { formatCurrency, type CurrencyDef } from '@/composables/useCurrency';
 import type { SharedData } from '@/types';
+import { imageSrc } from '@/lib/utils';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, Search, UtensilsCrossed } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
