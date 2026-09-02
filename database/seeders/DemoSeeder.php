@@ -17,6 +17,7 @@ use App\Models\Register;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\Currency;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -119,89 +120,98 @@ class DemoSeeder extends Seeder
     {
         // [name, category, cost, sell, unit, packs[]]
         // packs: [suffix, units_per_pack, cost, sell, unit]
+        /*
+         * Prices are riel, stored exactly as a Cambodian shelf tag reads —
+         * the shop's currency is KHR (see DatabaseSeeder), so 2500 IS ២៥០០៛.
+         *
+         * Every beer sells in four tiers: the can, six, twelve, and the full
+         * case of 24 — each tier its own product row drawing off the base
+         * can's shelf.
+         */
+        $beerTiers = fn (int $costCan) => [
+            ['៦ កំប៉ុង', 6, $costCan * 6 - 400, 14500, 'កញ្ចប់'],
+            ['១២ កំប៉ុង', 12, $costCan * 12 - 1300, 28000, 'កញ្ចប់'],
+            ['កេស ២៤', 24, $costCan * 24 - 3600, 55000, 'កេស'],
+        ];
+
         $catalogue = [
-            // ស្រាបៀរ — sold by the can, the six-pack and the case.
-            ['ស្រាបៀរ អង្គរ (Angkor Beer) 330ml', 'ស្រាបៀរ (Beer)', 0.55, 1.10, 'កំប៉ុង', [
-                ['ប្រាំមួយកំប៉ុង', 6, 3.10, 6.30, 'កញ្ចប់'],
-                ['ថង់ ២៤', 24, 12.00, 24.00, 'ថង់'],
-            ]],
-            ['ស្រាបៀរ កម្ពុជា (Cambodia Beer) 330ml', 'ស្រាបៀរ (Beer)', 0.58, 1.15, 'កំប៉ុង', [
-                ['ថង់ ២៤', 24, 12.60, 25.50, 'ថង់'],
-            ]],
-            ['ស្រាបៀរ ហ្គាន់ស្បឺក (Ganzberg) 330ml', 'ស្រាបៀរ (Beer)', 0.60, 1.20, 'កំប៉ុង', [
-                ['ថង់ ២៤', 24, 13.20, 26.50, 'ថង់'],
-            ]],
-            ['ស្រាបៀរ ហាណូយ (Hanuman) 330ml', 'ស្រាបៀរ (Beer)', 0.52, 1.05, 'កំប៉ុង', []],
+            // ស្រាបៀរ — ១កំប៉ុង 2500៛, ៦ 14,500៛, ១២ 28,000៛, ២៤ 55,000៛
+            ['ស្រាបៀរ អង្គរ (Angkor) 330ml', 'ស្រាបៀរ (Beer)', 1900, 2500, 'កំប៉ុង', $beerTiers(1900)],
+            ['ស្រាបៀរ កម្ពុជា (Cambodia) 330ml', 'ស្រាបៀរ (Beer)', 1900, 2500, 'កំប៉ុង', $beerTiers(1900)],
+            ['ស្រាបៀរ ហនុមាន (Hanuman) 330ml', 'ស្រាបៀរ (Beer)', 1950, 2500, 'កំប៉ុង', $beerTiers(1950)],
+            ['ស្រាបៀរ ហ្គាន់ស្បឺក (Ganzberg) 330ml', 'ស្រាបៀរ (Beer)', 1950, 2500, 'កំប៉ុង', $beerTiers(1950)],
+            ['ស្រាបៀរ គ្រុត (Krud) 330ml', 'ស្រាបៀរ (Beer)', 1950, 2500, 'កំប៉ុង', $beerTiers(1950)],
+            ['ស្រាបៀរ ដ្រាហ្គន (Dragon) 330ml', 'ស្រាបៀរ (Beer)', 1850, 2500, 'កំប៉ុង', $beerTiers(1850)],
 
             // ភេសជ្ជៈ
-            ['កូកា កូឡា (Coca-Cola) 330ml', 'ភេសជ្ជៈ (Drinks)', 0.35, 0.75, 'កំប៉ុង', [
-                ['ប្រាំមួយកំប៉ុង', 6, 2.00, 4.20, 'កញ្ចប់'],
+            ['កូកា កូឡា (Coca-Cola) 330ml', 'ភេសជ្ជៈ (Drinks)', 1800, 2500, 'កំប៉ុង', [
+                ['៦ កំប៉ុង', 6, 10200, 14000, 'កញ្ចប់'],
             ]],
-            ['ស្ព្រាយ (Sprite) 330ml', 'ភេសជ្ជៈ (Drinks)', 0.35, 0.75, 'កំប៉ុង', []],
-            ['ភេសជ្ជៈ ស្ទីង (Sting) 330ml', 'ភេសជ្ជៈ (Drinks)', 0.40, 0.85, 'ដប', []],
-            ['ទឹកក្រូច (Orange Juice) 250ml', 'ភេសជ្ជៈ (Drinks)', 0.33, 0.70, 'ប្រអប់', []],
+            ['ស្ព្រាយ (Sprite) 330ml', 'ភេសជ្ជៈ (Drinks)', 1800, 2500, 'កំប៉ុង', []],
+            ['ភេសជ្ជៈ ស្ទីង (Sting) 330ml', 'ភេសជ្ជៈ (Drinks)', 1400, 2000, 'ដប', []],
+            ['ទឹកក្រូច (Orange Juice) 250ml', 'ភេសជ្ជៈ (Drinks)', 1900, 2800, 'ប្រអប់', []],
 
             // ទឹកសុទ្ធ
-            ['ទឹកសុទ្ធ វិត្តាល់ (Vital) 500ml', 'ទឹកសុទ្ធ (Water)', 0.12, 0.30, 'ដប', [
-                ['ថង់ ២៤', 24, 2.60, 6.50, 'ថង់'],
+            ['ទឹកសុទ្ធ វិត្តាល់ (Vital) 500ml', 'ទឹកសុទ្ធ (Water)', 600, 1000, 'ដប', [
+                ['កេស ២៤', 24, 13000, 22000, 'កេស'],
             ]],
-            ['ទឹកសុទ្ធ វិត្តាល់ (Vital) 1.5L', 'ទឹកសុទ្ធ (Water)', 0.25, 0.60, 'ដប', []],
-            ['ទឹកសុទ្ធ គីរីរម្យ (Kirirom) 500ml', 'ទឹកសុទ្ធ (Water)', 0.11, 0.28, 'ដប', [
-                ['ថង់ ២៤', 24, 2.40, 6.00, 'ថង់'],
+            ['ទឹកសុទ្ធ វិត្តាល់ (Vital) 1.5L', 'ទឹកសុទ្ធ (Water)', 1500, 2500, 'ដប', []],
+            ['ទឹកសុទ្ធ គីរីរម្យ (Kirirom) 500ml', 'ទឹកសុទ្ធ (Water)', 550, 1000, 'ដប', [
+                ['កេស ២៤', 24, 12000, 20000, 'កេស'],
             ]],
 
             // មី និង បាយ
-            ['មីកញ្ចប់ ម៉ាម៉ា (MAMA) សាច់ជ្រូក', 'មី និង បាយ (Noodles & Rice)', 0.22, 0.50, 'កញ្ចប់', [
-                ['ថង់ ៣០', 30, 6.00, 13.50, 'ថង់'],
+            ['មីកញ្ចប់ ម៉ាម៉ា (MAMA) សាច់ជ្រូក', 'មី និង បាយ (Noodles & Rice)', 1300, 2000, 'កញ្ចប់', [
+                ['ថង់ ៣០', 30, 36000, 55000, 'ថង់'],
             ]],
-            ['មីកញ្ចប់ ម៉ាម៉ា (MAMA) ត្រី', 'មី និង បាយ (Noodles & Rice)', 0.22, 0.50, 'កញ្ចប់', []],
-            ['មីកញ្ចប់ យ៉ាំយ៉ាំ (YumYum)', 'មី និង បាយ (Noodles & Rice)', 0.20, 0.45, 'កញ្ចប់', [
-                ['ថង់ ៣០', 30, 5.50, 12.50, 'ថង់'],
+            ['មីកញ្ចប់ ម៉ាម៉ា (MAMA) ត្រី', 'មី និង បាយ (Noodles & Rice)', 1300, 2000, 'កញ្ចប់', []],
+            ['មីកញ្ចប់ យ៉ាំយ៉ាំ (YumYum)', 'មី និង បាយ (Noodles & Rice)', 1200, 1800, 'កញ្ចប់', [
+                ['ថង់ ៣០', 30, 33000, 50000, 'ថង់'],
             ]],
-            ['អង្ករ ផ្កាម្លិះ (Jasmine Rice)', 'មី និង បាយ (Noodles & Rice)', 0.85, 1.30, 'គីឡូ', [
-                ['បាវ ៥០គីឡូ', 50, 40.00, 62.00, 'បាវ'],
+            ['អង្ករ ផ្កាម្លិះ (Jasmine Rice)', 'មី និង បាយ (Noodles & Rice)', 3800, 5500, 'គីឡូ', [
+                ['បាវ ៥០គីឡូ', 50, 180000, 260000, 'បាវ'],
             ]],
-            ['មីស៊ុប (Instant Porridge)', 'មី និង បាយ (Noodles & Rice)', 0.25, 0.55, 'កញ្ចប់', []],
+            ['មីស៊ុប (Instant Porridge)', 'មី និង បាយ (Noodles & Rice)', 1500, 2200, 'កញ្ចប់', []],
 
             // ត្រី និង សាច់
-            ['ត្រីខ (Trey Kho) កំប៉ុង', 'ត្រី និង សាច់ (Fish & Meat)', 0.90, 1.75, 'កំប៉ុង', []],
-            ['ត្រីខ ឆាការី (Fried Fish) កំប៉ុង', 'ត្រី និង សាច់ (Fish & Meat)', 0.95, 1.85, 'កំប៉ុង', []],
-            ['ប្រហុក (Prahok) កំប៉ុង', 'ត្រី និង សាច់ (Fish & Meat)', 1.10, 2.20, 'កំប៉ុង', []],
-            ['សាច់ជ្រូកកំប៉ុង (Canned Pork)', 'ត្រី និង សាច់ (Fish & Meat)', 1.20, 2.40, 'កំប៉ុង', []],
-            ['ស៊ុត (Eggs)', 'ត្រី និង សាច់ (Fish & Meat)', 0.15, 0.30, 'គ្រាប់', [
-                ['ថាស ៣០', 30, 4.20, 8.50, 'ថាស'],
+            ['ត្រីខ (Trey Kho) កំប៉ុង', 'ត្រី និង សាច់ (Fish & Meat)', 4500, 7000, 'កំប៉ុង', []],
+            ['ត្រីខ ឆាការី (Fried Fish) កំប៉ុង', 'ត្រី និង សាច់ (Fish & Meat)', 4800, 7500, 'កំប៉ុង', []],
+            ['ប្រហុក (Prahok) កំប៉ុង', 'ត្រី និង សាច់ (Fish & Meat)', 5800, 9000, 'កំប៉ុង', []],
+            ['សាច់ជ្រូកកំប៉ុង (Canned Pork)', 'ត្រី និង សាច់ (Fish & Meat)', 6500, 10000, 'កំប៉ុង', []],
+            ['ស៊ុត (Eggs)', 'ត្រី និង សាច់ (Fish & Meat)', 800, 1200, 'គ្រាប់', [
+                ['ថាស ៣០', 30, 21000, 33000, 'ថាស'],
             ]],
 
             // នំ
-            ['នំកញ្ចប់ បន្ទះដំឡូង (Potato Chips)', 'នំ (Snacks)', 0.80, 1.90, 'កញ្ចប់', []],
-            ['នំកញ្ចប់ ខ្ទឹម (Prawn Crackers)', 'នំ (Snacks)', 0.60, 1.50, 'កញ្ចប់', []],
-            ['នំប៉័ង (Bread)', 'នំ (Snacks)', 0.30, 0.75, 'ដុំ', []],
-            ['នំខូឃី សូកូឡា (Chocolate Biscuits)', 'នំ (Snacks)', 1.10, 2.60, 'កញ្ចប់', []],
-            ['នំអូរីអូ (Oreo)', 'នំ (Snacks)', 0.45, 1.00, 'កញ្ចប់', []],
+            ['នំកញ្ចប់ បន្ទះដំឡូង (Potato Chips)', 'នំ (Snacks)', 4800, 7500, 'កញ្ចប់', []],
+            ['នំកញ្ចប់ ខ្ទឹម (Prawn Crackers)', 'នំ (Snacks)', 3800, 6000, 'កញ្ចប់', []],
+            ['នំប៉័ង (Bread)', 'នំ (Snacks)', 1800, 3000, 'ដុំ', []],
+            ['នំខូឃី សូកូឡា (Chocolate Biscuits)', 'នំ (Snacks)', 6800, 10500, 'កញ្ចប់', []],
+            ['នំអូរីអូ (Oreo)', 'នំ (Snacks)', 2600, 4000, 'កញ្ចប់', []],
 
             // គ្រឿងផ្សំ
-            ['ទឹកត្រី (Fish Sauce) 500ml', 'គ្រឿងផ្សំ (Seasoning)', 0.70, 1.50, 'ដប', []],
-            ['ទឹកស៊ីអ៊ីវ (Soy Sauce) 500ml', 'គ្រឿងផ្សំ (Seasoning)', 0.65, 1.40, 'ដប', []],
-            ['ស្ករស (Sugar)', 'គ្រឿងផ្សំ (Seasoning)', 0.60, 1.10, 'គីឡូ', []],
-            ['អំបិល (Salt)', 'គ្រឿងផ្សំ (Seasoning)', 0.20, 0.50, 'កញ្ចប់', []],
-            ['ប្រេងឆា (Cooking Oil) 1L', 'គ្រឿងផ្សំ (Seasoning)', 1.60, 2.90, 'ដប', []],
+            ['ទឹកត្រី (Fish Sauce) 500ml', 'គ្រឿងផ្សំ (Seasoning)', 3800, 6000, 'ដប', []],
+            ['ទឹកស៊ីអ៊ីវ (Soy Sauce) 500ml', 'គ្រឿងផ្សំ (Seasoning)', 3500, 5500, 'ដប', []],
+            ['ស្ករស (Sugar)', 'គ្រឿងផ្សំ (Seasoning)', 3000, 4500, 'គីឡូ', []],
+            ['អំបិល (Salt)', 'គ្រឿងផ្សំ (Seasoning)', 1200, 2000, 'កញ្ចប់', []],
+            ['ប្រេងឆា (Cooking Oil) 1L', 'គ្រឿងផ្សំ (Seasoning)', 8500, 12000, 'ដប', []],
 
             // កាហ្វេ និង តែ
-            ['កាហ្វេ ណេស្កាហ្វេ (Nescafé) 3in1', 'កាហ្វេ និង តែ (Coffee & Tea)', 0.12, 0.30, 'កញ្ចប់', [
-                ['ប្រអប់ ៣០', 30, 3.30, 8.00, 'ប្រអប់'],
+            ['កាហ្វេ ណេស្កាហ្វេ (Nescafé) 3in1', 'កាហ្វេ និង តែ (Coffee & Tea)', 700, 1200, 'កញ្ចប់', [
+                ['ប្រអប់ ៣០', 30, 20000, 32000, 'ប្រអប់'],
             ]],
-            ['កាហ្វេខ្មែរ (Khmer Coffee) 200g', 'កាហ្វេ និង តែ (Coffee & Tea)', 1.50, 3.00, 'កញ្ចប់', []],
-            ['តែបៃតង (Green Tea) 25 bags', 'កាហ្វេ និង តែ (Coffee & Tea)', 1.40, 3.20, 'ប្រអប់', []],
+            ['កាហ្វេខ្មែរ (Khmer Coffee) 200g', 'កាហ្វេ និង តែ (Coffee & Tea)', 7500, 12000, 'កញ្ចប់', []],
+            ['តែបៃតង (Green Tea) 25 bags', 'កាហ្វេ និង តែ (Coffee & Tea)', 8500, 13000, 'ប្រអប់', []],
 
             // សម្អាត
-            ['សាប៊ូលាងចាន (Dish Soap) 500ml', 'សម្អាត (Cleaning)', 1.20, 2.75, 'ដប', []],
-            ['ម្សៅបោកខោអាវ (Detergent) 1kg', 'សម្អាត (Cleaning)', 1.40, 2.80, 'កញ្ចប់', []],
-            ['ក្រដាសអនាម័យ (Toilet Paper) 4 rolls', 'សម្អាត (Cleaning)', 1.50, 3.20, 'កញ្ចប់', []],
+            ['សាប៊ូលាងចាន (Dish Soap) 500ml', 'សម្អាត (Cleaning)', 7000, 11000, 'ដប', []],
+            ['ម្សៅបោកខោអាវ (Detergent) 1kg', 'សម្អាត (Cleaning)', 7500, 11500, 'កញ្ចប់', []],
+            ['ក្រដាសអនាម័យ (Toilet Paper) 4 rolls', 'សម្អាត (Cleaning)', 8500, 13000, 'កញ្ចប់', []],
 
             // ប្រើប្រាស់ផ្ទាល់ខ្លួន
-            ['សាប៊ូដុំ (Bar Soap) 100g', 'ប្រើប្រាស់ផ្ទាល់ខ្លួន (Personal Care)', 0.40, 1.00, 'ដុំ', []],
-            ['សាប៊ូកក់សក់ (Shampoo) 400ml', 'ប្រើប្រាស់ផ្ទាល់ខ្លួន (Personal Care)', 2.30, 5.10, 'ដប', []],
-            ['ថ្នាំដុសធ្មេញ (Toothpaste) 120g', 'ប្រើប្រាស់ផ្ទាល់ខ្លួន (Personal Care)', 1.10, 2.50, 'ដប', []],
+            ['សាប៊ូដុំ (Bar Soap) 100g', 'ប្រើប្រាស់ផ្ទាល់ខ្លួន (Personal Care)', 2500, 4000, 'ដុំ', []],
+            ['សាប៊ូកក់សក់ (Shampoo) 400ml', 'ប្រើប្រាស់ផ្ទាល់ខ្លួន (Personal Care)', 14000, 21000, 'ដប', []],
+            ['ថ្នាំដុសធ្មេញ (Toothpaste) 120g', 'ប្រើប្រាស់ផ្ទាល់ខ្លួន (Personal Care)', 6500, 10000, 'ដប', []],
         ];
 
         $seq = 0;
@@ -224,7 +234,7 @@ class DemoSeeder extends Seeder
                 // an http(s) source is stored as-is and rendered directly,
                 // never copied into /storage. Seeded picsum URLs are stable
                 // per SKU, so the same product keeps the same face.
-                'image' => $this->imageLink($sku),
+                'image' => self::REAL_IMAGES[$name] ?? $this->imageLink($sku),
                 'gallery' => [
                     $this->imageLink($sku, 'g1'),
                     $this->imageLink($sku, 'g2'),
@@ -478,9 +488,10 @@ class DemoSeeder extends Seeder
         $subtotal = round(array_sum(array_column($lines, 'subtotal')), 2);
 
         // A small discount on maybe one sale in ten, and never on the owner's
-        // own consumption — there is nobody to discount it for.
+        // own consumption — there is nobody to discount it for. Riel comes
+        // off in note-shaped amounts, not loose change.
         $discount = ($saleType !== SaleType::Myself && random_int(1, 10) === 1)
-            ? round(min($subtotal * 0.1, random_int(1, 3)), 2)
+            ? (float) min(floor($subtotal * 0.1 / 500) * 500, [500, 1000, 2000][random_int(0, 2)])
             : 0.00;
 
         $total = round($subtotal - $discount, 2);
@@ -500,7 +511,7 @@ class DemoSeeder extends Seeder
                 default => null,
             },
             'sale_type' => $saleType,
-            'currency' => 'USD',
+            'currency' => Currency::current()->code,
             'subtotal' => $subtotal,
             'discount_amount' => $discount,
             'total' => $total,
@@ -597,8 +608,9 @@ class DemoSeeder extends Seeder
 
         if ($saleType === SaleType::Debt) {
             // Some tabs are opened with a deposit, most with nothing down.
+            // Deposits are handed over in notes: whole 500s, never odd riel.
             $deposit = random_int(1, 3) === 1
-                ? round(min($total * 0.5, random_int(1, max(1, (int) $total))), 2)
+                ? (float) (floor($total * random_int(20, 50) / 100 / 500) * 500)
                 : 0.00;
 
             return [
@@ -619,8 +631,10 @@ class DemoSeeder extends Seeder
             return [$total, 0.00, [[$method, $total]]];
         }
 
-        // Cash is handed over in whole notes, so change is the norm.
-        $tendered = (float) max($total, ceil($total));
+        // Cash is handed over in notes — the till rounds up to the next
+        // 500៛ and gives the difference back, which is where change_amount
+        // comes from in a shop whose smallest common note is 500.
+        $tendered = (float) (ceil($total / 500) * 500);
 
         return [$tendered, round($tendered - $total, 2), [[$method, $tendered]]];
     }
@@ -732,6 +746,23 @@ class DemoSeeder extends Seeder
             ->setTime($hour, $minute)
             ->setTimezone('UTC');
     }
+
+    /**
+     * Real photos for the products the world has photographed (hotlinked
+     * from Wikimedia Commons, verified live), and a brand-coloured label
+     * card for the ones it has not — so every shelf face at least matches
+     * its name. Swap any of these for a shop's own photo in the edit form.
+     *
+     * @var array<string, string>
+     */
+    private const REAL_IMAGES = [
+        'ស្រាបៀរ អង្គរ (Angkor) 330ml' => 'https://thumb.wikimedia.org/wikipedia/commons/thumb/8/85/Angkor_beer_bottle.jpg/960px-Angkor_beer_bottle.jpg',
+        'ស្រាបៀរ កម្ពុជា (Cambodia) 330ml' => 'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/Cambodia_Lager.jpg/960px-Cambodia_Lager.jpg',
+        'ស្រាបៀរ ហ្គាន់ស្បឺក (Ganzberg) 330ml' => 'https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2a/Ganzberg_Brewery_Cambodia.jpg/960px-Ganzberg_Brewery_Cambodia.jpg',
+        'ស្រាបៀរ ហនុមាន (Hanuman) 330ml' => 'https://placehold.co/600x600/14324f/f5d67b.png?text=Hanuman%0ABeer',
+        'ស្រាបៀរ គ្រុត (Krud) 330ml' => 'https://placehold.co/600x600/1d4ed8/ffffff.png?text=Krud%0ABeer',
+        'ស្រាបៀរ ដ្រាហ្គន (Dragon) 330ml' => 'https://placehold.co/600x600/7f1d1d/fbbf24.png?text=Dragon%0ABeer',
+    ];
 
     /** A stable per-product photo link — same SKU, same picture, every seed. */
     private function imageLink(string $sku, string $variant = 'main'): string

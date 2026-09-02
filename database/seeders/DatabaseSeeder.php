@@ -85,8 +85,9 @@ class DatabaseSeeder extends Seeder
         $defaults = [
             'receipt_header' => $store->name,
             'receipt_footer' => 'Thank you for shopping with us!',
-            // Display currency and the rate that converts stored USD prices.
-            'currency' => 'USD',
+            // Riel-native: prices are stored and shown in riel, exactly as
+            // typed — this is a Cambodian shop, 2,500៛ means 2,500៛.
+            'currency' => 'KHR',
             'riel_per_usd' => '4100',
         ];
 
