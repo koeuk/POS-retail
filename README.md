@@ -72,9 +72,9 @@ Serve it with `php artisan serve` and sign in at http://127.0.0.1:8000.
 
 | Email | Password | Role |
 | --- | --- | --- |
-| `admin@pos.test` | `password` | Admin |
-| `manager@pos.test` | `password` | Manager |
-| `cashier@pos.test` | `password` | Cashier |
+| `admin@gmail.com` | `12345678` | Admin |
+| `manager@gmail.com` | `12345678` | Manager |
+| `cashier@gmail.com` | `12345678` | Cashier |
 
 The seeder creates one store, one register, and the shop settings — but **no catalogue**,
 since products are the shop's own. For a demo shelf to click around:
