@@ -156,13 +156,13 @@ class ApiTest extends TestCase
         $this->assertSame('20.00', $debt['total']);
 
         $settled = $this->withToken($this->token($this->admin))
-            ->postJson("/api/v1/debts/{$debt['id']}/settle", ['amount' => '20.00', 'method' => 'cash'])
+            ->postJson("/api/v1/debts/{$debt['uuid']}/settle", ['amount' => '20.00', 'method' => 'cash'])
             ->assertOk()->json();
         $this->assertTrue($settled['settled']);
 
         // Paying more than is owed is refused, same as the web screen.
         $this->withToken($this->token($this->admin))
-            ->postJson("/api/v1/debts/{$debt['id']}/settle", ['amount' => '1.00', 'method' => 'cash'])
+            ->postJson("/api/v1/debts/{$debt['uuid']}/settle", ['amount' => '1.00', 'method' => 'cash'])
             ->assertUnprocessable();
     }
 

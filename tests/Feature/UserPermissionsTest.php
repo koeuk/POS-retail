@@ -36,7 +36,7 @@ class UserPermissionsTest extends TestCase
 
     private function url(User $user): string
     {
-        return route('users.permissions', ['user' => $user->id]);
+        return route('users.permissions', ['user' => $user->uuid]);
     }
 
     /** @return array<string, bool> */
@@ -169,7 +169,7 @@ class UserPermissionsTest extends TestCase
         $product = Product::factory()->create(['name' => 'Keep Me']);
 
         $this->actingAs($manager)
-            ->put(route('products.update', ['product' => $product->id]), [
+            ->put(route('products.update', ['product' => $product->uuid]), [
                 'category_id' => $product->category_id,
                 'name' => 'Renamed',
                 'sku' => $product->sku,
@@ -181,7 +181,7 @@ class UserPermissionsTest extends TestCase
         $this->assertSame('Renamed', $product->fresh()->name);
 
         $this->actingAs($manager)
-            ->delete(route('products.destroy', ['product' => $product->id]))
+            ->delete(route('products.destroy', ['product' => $product->uuid]))
             ->assertForbidden();
 
         $this->assertModelExists($product);

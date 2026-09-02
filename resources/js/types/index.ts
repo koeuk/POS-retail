@@ -62,6 +62,8 @@ export interface SharedData {
 
 export interface User {
     id: number;
+    /** Public identity — what URLs and route bindings use. */
+    uuid: string;
     name: string;
     email: string;
     avatar?: string;
@@ -79,6 +81,7 @@ export interface User {
 
 export interface Store {
     id: number;
+    uuid: string;
     name: string;
     address: string | null;
     phone: string | null;
@@ -89,6 +92,7 @@ export interface Store {
 
 export interface Register {
     id: number;
+    uuid: string;
     store_id: number;
     name: string;
     is_active: boolean;
@@ -96,12 +100,14 @@ export interface Register {
 
 export interface Category {
     id: number;
+    uuid: string;
     name: string;
     products_count?: number;
 }
 
 export interface Product {
     id: number;
+    uuid: string;
     category_id: number;
     /** Set when this row is a pack of another product — a case of the base unit. */
     parent_product_id?: number | null;
@@ -132,6 +138,7 @@ export interface Product {
 
 export interface Stock {
     id: number;
+    uuid: string;
     product_id: number;
     store_id: number;
     qty: number;
@@ -141,6 +148,7 @@ export interface Stock {
 
 export interface Customer {
     id: number;
+    uuid: string;
     name: string;
     phone: string | null;
     email: string | null;

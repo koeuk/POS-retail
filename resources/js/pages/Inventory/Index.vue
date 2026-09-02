@@ -22,6 +22,7 @@ import { computed, ref, watch } from 'vue';
 
 interface StockRow {
     id: number;
+    uuid: string;
     qty: number;
     low_stock_threshold: number | null;
     product: {
@@ -504,7 +505,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                                         <div class="flex items-center justify-end gap-1">
                                             <!-- Stock-row audit: threshold edits and the like.
                                                  Movements themselves live in the ledger below. -->
-                                            <HistoryButton subject-type="Stock" :subject-id="stock.id" :label="stock.product?.name ?? 'stock'" />
+                                            <HistoryButton subject-type="Stock" :subject-id="stock.uuid" :label="stock.product?.name ?? 'stock'" />
                                             <Button
                                                 v-if="may('inventory', 'update')"
                                                 size="sm"

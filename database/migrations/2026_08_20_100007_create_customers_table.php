@@ -10,6 +10,9 @@ return new class extends Migration
     {
         Schema::create('customers', function (Blueprint $table) {
             $table->id();
+            // Public identity: what URLs and route bindings use. The numeric
+            // id stays the key every FK points at, but never leaves the server.
+            $table->uuid('uuid')->unique();
             $table->string('name');
             $table->string('phone')->nullable();
             $table->string('email')->nullable();

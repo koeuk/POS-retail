@@ -240,7 +240,7 @@ function submit() {
             // SINGLE is a sentinel the Select needs; the server wants a real
             // pack id or nothing at all.
             add_stock_pack_id: data.add_stock_pack_id === SINGLE ? null : data.add_stock_pack_id,
-        })).post(route('products.update', { product: props.product!.id }), {
+        })).post(route('products.update', { product: props.product!.uuid }), {
             forceFormData: true,
             /*
              * Receiving is an action, not a setting. The update redirects away

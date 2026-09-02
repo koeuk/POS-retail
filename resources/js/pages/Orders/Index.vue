@@ -18,6 +18,7 @@ import { ref, watch } from 'vue';
 
 interface OrderRow {
     id: number;
+    uuid: string;
     order_no: string;
     total: string;
     status: string;
@@ -133,7 +134,7 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                      scroll nobody discovers. -->
                 <ul v-if="orders.data.length" class="space-y-2 p-2.5 md:hidden">
                     <li v-for="order in orders.data" :key="order.id" class="shadow-soft relative overflow-hidden rounded-xl border border-border bg-card">
-                        <Link :href="route('orders.show', { order: order.id })" class="row-press block px-3.5 py-3">
+                        <Link :href="route('orders.show', { order: order.uuid })" class="row-press block px-3.5 py-3">
                             <div class="flex items-baseline justify-between gap-3">
                                 <span class="tabular truncate font-mono text-xs font-semibold">{{ order.order_no }}</span>
                                 <Money :value="order.total" :muted="false" class="shrink-0 text-[0.95rem] font-semibold" />
@@ -168,7 +169,7 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
 
                         <!-- A sibling, not a nested link — see the desktop print note below. -->
                         <Link
-                            :href="route('orders.show', { order: order.id, print: 1 })"
+                            :href="route('orders.show', { order: order.uuid, print: 1 })"
                             class="press absolute bottom-2 right-2 flex size-8 items-center justify-center rounded-md text-muted-foreground"
                             :aria-label="`Print receipt for ${order.order_no}`"
                         >
@@ -194,7 +195,7 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                         <tbody class="[&_tr:last-child]:border-0">
                             <TableRow v-for="order in orders.data" :key="order.id" class="group cursor-pointer">
                                 <TableCell>
-                                    <Link :href="route('orders.show', { order: order.id })" class="block">
+                                    <Link :href="route('orders.show', { order: order.uuid })" class="block">
                                         <span class="tabular font-mono text-xs font-medium">{{ order.order_no }}</span>
                                         <span v-if="order.customer" class="block text-[0.7rem] text-muted-foreground">
                                             {{ order.customer.name }}
@@ -239,7 +240,7 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                                 <TableCell>
                                     <div class="flex items-center gap-1">
                                         <Link
-                                            :href="route('orders.show', { order: order.id })"
+                                            :href="route('orders.show', { order: order.uuid })"
                                             class="press flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                                             :aria-label="`View ${order.order_no}`"
                                             title="View details"
@@ -253,7 +254,7 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                                         list row that has not loaded the line items.
                                     -->
                                         <Link
-                                            :href="route('orders.show', { order: order.id, print: 1 })"
+                                            :href="route('orders.show', { order: order.uuid, print: 1 })"
                                             class="press flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                                             :aria-label="`Print receipt for ${order.order_no}`"
                                             title="Print receipt"

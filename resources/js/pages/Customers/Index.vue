@@ -66,7 +66,7 @@ function submit() {
     const opts = { onSuccess: () => (dialogOpen.value = false), preserveScroll: true };
 
     if (editing.value) {
-        form.put(route('customers.update', { customer: editing.value.id }), opts);
+        form.put(route('customers.update', { customer: editing.value.uuid }), opts);
     } else {
         form.post(route('customers.store'), opts);
     }
@@ -76,7 +76,7 @@ const pendingDelete = ref<Customer | null>(null);
 
 function confirmDelete() {
     if (!pendingDelete.value) return;
-    router.delete(route('customers.destroy', { customer: pendingDelete.value.id }), {
+    router.delete(route('customers.destroy', { customer: pendingDelete.value.uuid }), {
         preserveScroll: true,
         onFinish: () => (pendingDelete.value = null),
     });
@@ -147,7 +147,7 @@ function confirmDelete() {
                                 </TableCell>
                                 <TableCell>
                                     <div class="flex items-center gap-1">
-                                        <HistoryButton subject-type="Customer" :subject-id="c.id" :label="c.name" />
+                                        <HistoryButton subject-type="Customer" :subject-id="c.uuid" :label="c.name" />
                                         <Button
                                             v-if="may('customers', 'update')"
                                             variant="ghost"

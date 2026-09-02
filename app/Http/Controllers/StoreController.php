@@ -10,6 +10,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -59,6 +60,9 @@ class StoreController extends Controller
                     ->base()
                     ->pluck('id')
                     ->map(fn (int $productId) => [
+                        // Bulk insert skips Eloquent, so the uuid the model
+                        // would auto-fill has to be supplied by hand here.
+                        'uuid' => (string) Str::uuid(),
                         'product_id' => $productId,
                         'store_id' => $store->id,
                         'qty' => 0,

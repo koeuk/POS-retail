@@ -96,7 +96,7 @@ function nextSlide() {
                         </Link>
                     </Button>
                     <Button as-child class="press">
-                        <Link :href="route('products.edit', { product: product.id })">
+                        <Link :href="route('products.edit', { product: product.uuid })">
                             <Pencil class="size-4" />
                             Edit
                         </Link>

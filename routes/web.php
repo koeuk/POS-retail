@@ -144,8 +144,10 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
             'inventory' => 'Stock',
             'users' => 'User',
         ] as $prefix => $type) {
+            // The uuid is the public identity; bare digits still work so a
+            // deleted record's history stays reachable from an old link.
             Route::get("{$prefix}/{subjectId}/history", [ActivityController::class, 'show'])
-                ->whereNumber('subjectId')
+                ->where('subjectId', '[0-9a-f\-]+')
                 ->defaults('subjectType', $type)
                 ->name("{$prefix}.history");
         }

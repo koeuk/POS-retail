@@ -70,7 +70,7 @@ const pendingDelete = ref<Product | null>(null);
 
 function confirmDelete() {
     if (!pendingDelete.value) return;
-    router.delete(route('products.destroy', { product: pendingDelete.value.id }), {
+    router.delete(route('products.destroy', { product: pendingDelete.value.uuid }), {
         preserveScroll: true,
         onFinish: () => (pendingDelete.value = null),
     });
@@ -179,7 +179,7 @@ function stockTone(qty: number | null | undefined) {
                                         </div>
                                         <div class="min-w-0">
                                             <Link
-                                                :href="route('products.show', { product: p.id })"
+                                                :href="route('products.show', { product: p.uuid })"
                                                 class="block truncate font-medium leading-tight hover:underline"
                                             >
                                                 {{ p.name }}
@@ -213,13 +213,13 @@ function stockTone(qty: number | null | undefined) {
                                 <TableCell>
                                     <div class="flex items-center gap-1">
                                         <Button as-child variant="ghost" size="icon" class="press size-8">
-                                            <Link :href="route('products.show', { product: p.id })" aria-label="View">
+                                            <Link :href="route('products.show', { product: p.uuid })" aria-label="View">
                                                 <Eye class="size-4" />
                                             </Link>
                                         </Button>
-                                        <HistoryButton subject-type="Product" :subject-id="p.id" :label="p.name" />
+                                        <HistoryButton subject-type="Product" :subject-id="p.uuid" :label="p.name" />
                                         <Button v-if="may('products', 'update')" as-child variant="ghost" size="icon" class="press size-8">
-                                            <Link :href="route('products.edit', { product: p.id })" aria-label="Edit">
+                                            <Link :href="route('products.edit', { product: p.uuid })" aria-label="Edit">
                                                 <Pencil class="size-4" />
                                             </Link>
                                         </Button>
@@ -243,7 +243,7 @@ function stockTone(qty: number | null | undefined) {
                 <!-- Phone list. Tap the row for details; every action sits labelled in the bar below. -->
                 <ul v-if="products.data.length" class="md:hidden">
                     <li v-for="p in products.data" :key="p.id" class="list-row flex-col">
-                        <Link :href="route('products.show', { product: p.id })" class="list-row-main">
+                        <Link :href="route('products.show', { product: p.uuid })" class="list-row-main">
                             <div
                                 class="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/50"
                             >
@@ -271,16 +271,16 @@ function stockTone(qty: number | null | undefined) {
 
                         <div class="flex items-stretch gap-2 border-t border-border p-2">
                             <Link
-                                :href="route('products.show', { product: p.id })"
+                                :href="route('products.show', { product: p.uuid })"
                                 class="press flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground"
                             >
                                 <Eye class="size-4" />
                                 View
                             </Link>
-                            <HistoryButton subject-type="Product" :subject-id="p.id" :label="p.name" with-label />
+                            <HistoryButton subject-type="Product" :subject-id="p.uuid" :label="p.name" with-label />
                             <Link
                                 v-if="may('products', 'update')"
-                                :href="route('products.edit', { product: p.id })"
+                                :href="route('products.edit', { product: p.uuid })"
                                 class="press flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground"
                             >
                                 <Pencil class="size-4" />

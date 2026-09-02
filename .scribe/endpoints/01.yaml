@@ -96,7 +96,7 @@ endpoints:
     custom: []
     httpMethods:
       - GET
-    uri: 'api/v1/products/{id}'
+    uri: 'api/v1/products/{uuid}'
     metadata:
       custom: []
       groupName: Catalogue
@@ -112,19 +112,19 @@ endpoints:
       Content-Type: application/json
       Accept: application/json
     urlParameters:
-      id:
+      uuid:
         custom: []
-        name: id
-        description: 'The ID of the product.'
+        name: uuid
+        description: ''
         required: true
-        example: 1
-        type: integer
+        example: 6ff8f7f6-1eb3-3525-be4a-3932c805afed
+        type: string
         enumValues: []
         exampleWasSpecified: false
         nullable: false
         deprecated: false
     cleanUrlParameters:
-      id: 1
+      uuid: 6ff8f7f6-1eb3-3525-be4a-3932c805afed
     queryParameters: []
     cleanQueryParameters: []
     bodyParameters: []

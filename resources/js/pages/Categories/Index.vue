@@ -60,7 +60,7 @@ function submit() {
     const payload = { onSuccess: () => (dialogOpen.value = false), preserveScroll: true };
 
     if (editing.value) {
-        form.put(route('categories.update', { category: editing.value.id }), payload);
+        form.put(route('categories.update', { category: editing.value.uuid }), payload);
     } else {
         form.post(route('categories.store'), payload);
     }
@@ -70,7 +70,7 @@ const pendingDelete = ref<Category | null>(null);
 
 function confirmDelete() {
     if (!pendingDelete.value) return;
-    router.delete(route('categories.destroy', { category: pendingDelete.value.id }), {
+    router.delete(route('categories.destroy', { category: pendingDelete.value.uuid }), {
         preserveScroll: true,
         onFinish: () => (pendingDelete.value = null),
     });
@@ -122,7 +122,7 @@ function confirmDelete() {
                         </button>
 
                         <div class="flex shrink-0 items-center">
-                            <HistoryButton subject-type="Category" :subject-id="c.id" :label="c.name" />
+                            <HistoryButton subject-type="Category" :subject-id="c.uuid" :label="c.name" />
                         </div>
 
                         <button

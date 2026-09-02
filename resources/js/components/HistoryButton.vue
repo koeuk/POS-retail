@@ -15,7 +15,8 @@ import { computed } from 'vue';
 const props = defineProps<{
     /** Short model class name, e.g. 'Product' — matches subject_type. */
     subjectType: string;
-    subjectId: number;
+    /** The record's uuid — what the history route binds on. */
+    subjectId: string;
     /** What the record is called, for the accessible label. */
     label: string;
     /** Render as a labelled bar button (phone action bars) instead of a bare icon. */

@@ -153,7 +153,7 @@ function submit() {
     form.transform((d) => ({ ...d, store_id: d.store_id === NONE ? null : d.store_id }));
 
     if (editing.value) {
-        form.put(route('users.update', { user: editing.value.id }), opts);
+        form.put(route('users.update', { user: editing.value.uuid }), opts);
     } else {
         form.post(route('users.store'), opts);
     }
@@ -192,7 +192,7 @@ function resetToRoleDefaults() {
 function submitPermissions() {
     if (!permissionsFor.value) return;
 
-    permissionsForm.put(route('users.permissions', { user: permissionsFor.value.id }), {
+    permissionsForm.put(route('users.permissions', { user: permissionsFor.value.uuid }), {
         preserveScroll: true,
         onSuccess: () => (permissionsOpen.value = false),
     });
@@ -202,7 +202,7 @@ const pendingDelete = ref<User | null>(null);
 
 function confirmDelete() {
     if (!pendingDelete.value) return;
-    router.delete(route('users.destroy', { user: pendingDelete.value.id }), {
+    router.delete(route('users.destroy', { user: pendingDelete.value.uuid }), {
         preserveScroll: true,
         onFinish: () => (pendingDelete.value = null),
     });
@@ -312,7 +312,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                         >
                                             <ShieldCheck class="size-4" />
                                         </Button>
-                                        <HistoryButton subject-type="User" :subject-id="u.id" :label="u.name" />
+                                        <HistoryButton subject-type="User" :subject-id="u.uuid" :label="u.name" />
                                         <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(u)">
                                             <Pencil class="size-4" />
                                         </Button>

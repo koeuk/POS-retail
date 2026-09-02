@@ -75,7 +75,7 @@ endpoints:
     custom: []
     httpMethods:
       - POST
-    uri: 'api/v1/debts/{order_id}/settle'
+    uri: 'api/v1/debts/{order_uuid}/settle'
     metadata:
       custom: []
       groupName: Debts
@@ -94,19 +94,19 @@ endpoints:
       Content-Type: application/json
       Accept: application/json
     urlParameters:
-      order_id:
+      order_uuid:
         custom: []
-        name: order_id
-        description: 'The ID of the order.'
+        name: order_uuid
+        description: ''
         required: true
-        example: 1
-        type: integer
+        example: 6ff8f7f6-1eb3-3525-be4a-3932c805afed
+        type: string
         enumValues: []
         exampleWasSpecified: false
         nullable: false
         deprecated: false
     cleanUrlParameters:
-      order_id: 1
+      order_uuid: 6ff8f7f6-1eb3-3525-be4a-3932c805afed
     queryParameters: []
     cleanQueryParameters: []
     bodyParameters:

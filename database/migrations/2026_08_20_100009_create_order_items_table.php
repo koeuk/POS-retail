@@ -10,6 +10,9 @@ return new class extends Migration
     {
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
+            // Public identity: what URLs and route bindings use. The numeric
+            // id stays the key every FK points at, but never leaves the server.
+            $table->uuid('uuid')->unique();
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
             /*
              * Nullable: a debt can be typed straight onto a customer —

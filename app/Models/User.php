@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Action;
 use App\Enums\Permission;
 use App\Enums\Role;
+use App\Models\Concerns\HasUuid;
 use App\Models\Concerns\RecordsActivity;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,7 +18,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, RecordsActivity;
+    use HasApiTokens, HasFactory, HasUuid, Notifiable, RecordsActivity;
 
     protected $fillable = [
         'name',

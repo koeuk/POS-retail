@@ -157,7 +157,7 @@ class ActivityLogTest extends TestCase
         $product = Product::factory()->create(['name' => 'Angkor']);
         $product->update(['sell_price' => '4000']);
 
-        $this->get(route('products.history', ['subjectId' => $product->id]))
+        $this->get(route('products.history', ['subjectId' => $product->uuid]))
             ->assertOk()
             ->assertInertia(
                 fn (AssertableInertia $page) => $page
@@ -177,6 +177,8 @@ class ActivityLogTest extends TestCase
         $id = $product->id;
         $product->delete();
 
+        // The uuid died with the row; the numeric id is the address that
+        // still finds the history it left behind.
         $this->get(route('products.history', ['subjectId' => $id]))
             ->assertOk()
             ->assertInertia(

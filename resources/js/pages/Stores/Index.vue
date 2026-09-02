@@ -32,7 +32,7 @@ const pendingDelete = ref<Store | null>(null);
 function confirmDelete() {
     if (!pendingDelete.value) return;
 
-    router.delete(route('stores.destroy', { store: pendingDelete.value.id }), {
+    router.delete(route('stores.destroy', { store: pendingDelete.value.uuid }), {
         preserveScroll: true,
         onFinish: () => (pendingDelete.value = null),
     });
@@ -55,7 +55,7 @@ function submitStore() {
     const opts = { onSuccess: () => (storeDialog.value = false), preserveScroll: true };
 
     if (editingStore.value) {
-        storeForm.put(route('stores.update', { store: editingStore.value.id }), opts);
+        storeForm.put(route('stores.update', { store: editingStore.value.uuid }), opts);
     } else {
         storeForm.post(route('stores.store'), opts);
     }
@@ -82,13 +82,13 @@ function submitRegister() {
     if (editingRegister.value) {
         registerForm.put(
             route('stores.registers.update', {
-                store: registerStore.value.id,
-                register: editingRegister.value.id,
+                store: registerStore.value.uuid,
+                register: editingRegister.value.uuid,
             }),
             opts,
         );
     } else {
-        registerForm.post(route('stores.registers.store', { store: registerStore.value.id }), opts);
+        registerForm.post(route('stores.registers.store', { store: registerStore.value.uuid }), opts);
     }
 }
 </script>
@@ -133,7 +133,7 @@ function submitRegister() {
                             </div>
                         </div>
                         <div v-if="canManage" class="flex shrink-0 items-center gap-1">
-                            <HistoryButton subject-type="Store" :subject-id="store.id" :label="store.name" />
+                            <HistoryButton subject-type="Store" :subject-id="store.uuid" :label="store.name" />
                             <Button variant="ghost" size="sm" class="press touch-target" @click="openStore(store)"> Edit </Button>
                             <!--
                                 Disabled rather than hidden when it is the only

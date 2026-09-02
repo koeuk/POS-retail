@@ -11,6 +11,9 @@ return new class extends Migration
     {
         Schema::create('inventory_logs', function (Blueprint $table) {
             $table->id();
+            // Public identity: what URLs and route bindings use. The numeric
+            // id stays the key every FK points at, but never leaves the server.
+            $table->uuid('uuid')->unique();
             $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->foreignId('store_id')->constrained()->cascadeOnDelete();
             $table->enum('type', InventoryLogType::values());

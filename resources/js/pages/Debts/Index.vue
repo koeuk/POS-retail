@@ -23,6 +23,7 @@ import { computed, ref, watch } from 'vue';
 
 interface Debt {
     id: number;
+    uuid: string;
     order_no: string;
     total: string;
     paid_amount: string;
@@ -93,7 +94,7 @@ const leftAfter = computed(() => (settling.value ? Math.max(0, owed(settling.val
 
 function submitSettle() {
     if (!settling.value) return;
-    form.post(route('debts.settle', { order: settling.value.id }), {
+    form.post(route('debts.settle', { order: settling.value.uuid }), {
         preserveScroll: true,
         onSuccess: () => (settling.value = null),
     });
@@ -343,7 +344,7 @@ function submitAdd() {
                                     <p v-if="d.customer?.phone" class="tabular font-mono text-xs text-muted-foreground">{{ d.customer.phone }}</p>
                                 </TableCell>
                                 <TableCell>
-                                    <Link :href="route('orders.show', { order: d.id })" class="tabular font-mono text-xs hover:underline">{{
+                                    <Link :href="route('orders.show', { order: d.uuid })" class="tabular font-mono text-xs hover:underline">{{
                                         d.order_no
                                     }}</Link>
                                 </TableCell>
@@ -469,7 +470,7 @@ function submitAdd() {
 
                 <div v-if="viewing" class="flex shrink-0 items-center gap-2 border-t border-border p-4">
                     <Button as-child variant="outline" class="press">
-                        <Link :href="route('orders.show', { order: viewing.id })">Full order</Link>
+                        <Link :href="route('orders.show', { order: viewing.uuid })">Full order</Link>
                     </Button>
                     <Button
                         v-if="owed(viewing) > 0"

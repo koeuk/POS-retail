@@ -17,6 +17,7 @@ import { ref, watch } from 'vue';
 
 interface Row {
     id: number;
+    uuid: string;
     order_no: string;
     total: string;
     created_at: string;
@@ -100,7 +101,7 @@ const summarise = (r: Row) => r.items.map((i) => (i.qty > 1 ? `${i.product_name}
                 <!-- Phone: one card per take. -->
                 <ul v-if="rows.data.length" class="space-y-2 p-2.5 md:hidden">
                     <li v-for="r in rows.data" :key="r.id" class="shadow-soft overflow-hidden rounded-xl border border-border bg-card">
-                        <Link :href="route('orders.show', { order: r.id })" class="row-press block px-3.5 py-3">
+                        <Link :href="route('orders.show', { order: r.uuid })" class="row-press block px-3.5 py-3">
                             <div class="flex items-baseline justify-between gap-3">
                                 <p class="min-w-0 flex-1 truncate font-medium leading-snug">{{ summarise(r) }}</p>
                                 <Money :value="r.total" :muted="false" class="shrink-0 text-[0.95rem] font-semibold" />
@@ -124,7 +125,7 @@ const summarise = (r: Row) => r.items.map((i) => (i.qty > 1 ? `${i.product_name}
                         <tbody class="[&_tr:last-child]:border-0">
                             <TableRow v-for="r in rows.data" :key="r.id">
                                 <TableCell>
-                                    <Link :href="route('orders.show', { order: r.id })" class="block max-w-md truncate font-medium hover:underline">{{
+                                    <Link :href="route('orders.show', { order: r.uuid })" class="block max-w-md truncate font-medium hover:underline">{{
                                         summarise(r)
                                     }}</Link>
                                     <p class="tabular font-mono text-xs text-muted-foreground">{{ r.order_no }}</p>

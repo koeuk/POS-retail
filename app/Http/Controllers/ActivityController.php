@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -97,10 +98,23 @@ class ActivityController extends Controller
     {
         $this->authorize('viewAny', Activity::class);
 
-        $subjectId = (int) $subjectId; // whereNumber guarantees digits
         $class = self::SUBJECTS[$subjectType] ?? abort(404);
 
-        $subject = $class::find($subjectId);
+        /*
+         * The URL carries the record's uuid; the activity table stores the
+         * numeric key. Resolve one to the other — and keep accepting bare
+         * digits, because a deleted record's uuid resolves to nothing while
+         * its numeric id still finds the history it left behind.
+         */
+        if (Str::isUuid($subjectId)) {
+            $subject = $class::where('uuid', $subjectId)->first() ?? abort(404);
+            $subjectId = $subject->id;
+        } elseif (ctype_digit($subjectId)) {
+            $subjectId = (int) $subjectId;
+            $subject = $class::find($subjectId);
+        } else {
+            abort(404);
+        }
 
         $entries = Activity::query()
             ->where('subject_type', $class)
@@ -137,7 +151,9 @@ class ActivityController extends Controller
                 'last_at' => $bounds?->last_at,
             ],
             'parent' => self::PARENTS[$subjectType],
-            'self_href' => self::PARENTS[$subjectType]['href']."/{$subjectId}/history",
+            // Breadcrumb by uuid when the record still exists; a deleted
+            // record's page keeps its numeric address.
+            'self_href' => self::PARENTS[$subjectType]['href'].'/'.($subject?->uuid ?? $subjectId).'/history',
         ]);
     }
 
