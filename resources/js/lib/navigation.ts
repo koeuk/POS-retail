@@ -25,7 +25,7 @@ export const navGroups: NavGroup[] = [
     {
         label: 'Selling',
         items: [
-            { title: 'Home', href: '/dashboard', icon: LayoutGrid },
+            { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
             { title: 'Point of Sale', href: '/pos', icon: ScanBarcode, requires: 'pos' },
             { title: 'Order History', href: '/orders', icon: ReceiptText, requires: 'orders' },
             { title: 'In Debt', href: '/debts', icon: HandCoins, requires: 'debts' },
