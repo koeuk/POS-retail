@@ -100,7 +100,7 @@ class ProductController extends Controller
             $galleryUrls = $data['gallery_urls'] ?? [];
             unset(
                 $data['opening_qty'], $data['low_stock_threshold'], $data['packs'],
-                $data['image_url'], $data['gallery'], $data['gallery_urls'], $data['remove_image_ids'],
+                $data['image_url'], $data['gallery'], $data['gallery_urls'], $data['gallery_existing'],
             );
 
             if ($request->hasFile('image')) {
@@ -111,11 +111,12 @@ class ProductController extends Controller
                 $data['image'] = $imageUrl;
             }
 
-            $product = DB::transaction(function () use ($data, $openingQty, $threshold, $packs, $galleryUrls, $request) {
+            $data['gallery'] = $this->buildGallery($request->file('gallery') ?? [], $galleryUrls);
+
+            $product = DB::transaction(function () use ($data, $openingQty, $threshold, $packs, $request) {
                 $product = Product::create($data);
 
                 $this->syncPacks($product, $packs);
-                $this->addGalleryImages($product, $request->file('gallery') ?? [], $galleryUrls);
 
                 // A pack draws stock from its parent, so it must not own rows of
                 // its own — two shelves for one physical crate is the exact
@@ -225,7 +226,7 @@ class ProductController extends Controller
             ];
             $imageUrl = $data['image_url'] ?? null;
             $galleryUrls = $data['gallery_urls'] ?? [];
-            $removeImageIds = $data['remove_image_ids'] ?? [];
+            $galleryKept = $data['gallery_existing'] ?? [];
             unset(
                 $data['opening_qty'],
                 $data['low_stock_threshold'],
@@ -240,7 +241,7 @@ class ProductController extends Controller
                 $data['image_url'],
                 $data['gallery'],
                 $data['gallery_urls'],
-                $data['remove_image_ids'],
+                $data['gallery_existing'],
             );
 
             if ($request->hasFile('image')) {
@@ -253,17 +254,21 @@ class ProductController extends Controller
                 unset($data['image']);
             }
 
-            DB::transaction(function () use ($product, $data, $packs, $receipt, $galleryUrls, $removeImageIds, $request) {
+            /*
+             * The kept list is authoritative: whatever was saved before and is
+             * no longer in it is being removed, so its local file goes too.
+             * Only sources the product really had count — the client cannot
+             * delete arbitrary files by "keeping" paths it invents.
+             */
+            $old = $product->gallery ?? [];
+            $kept = array_values(array_intersect($old, $galleryKept));
+            foreach (array_diff($old, $kept) as $droppedSrc) {
+                $this->deleteLocalImage($droppedSrc);
+            }
+            $data['gallery'] = [...$kept, ...$this->buildGallery($request->file('gallery') ?? [], $galleryUrls)];
+
+            DB::transaction(function () use ($product, $data, $packs, $receipt, $request) {
                 $product->update($data);
-
-                foreach ($product->images()->whereIn('id', $removeImageIds)->get() as $img) {
-                    if (! $img->isExternal()) {
-                        Storage::disk('public')->delete($img->src);
-                    }
-                    $img->delete();
-                }
-
-                $this->addGalleryImages($product, $request->file('gallery') ?? [], $galleryUrls);
 
                 // A pack has no packs of its own, so the list is only meaningful on
                 // a base product and is ignored entirely on a pack.
@@ -504,13 +509,37 @@ class ProductController extends Controller
                 $product->delete();
             });
 
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
+            $this->deleteLocalImage($product->image);
+            foreach ($product->gallery ?? [] as $src) {
+                $this->deleteLocalImage($src);
             }
 
             return back()->with('success', "“{$name}” was deleted.");
         } catch (QueryException $e) {
             return $this->failed($e, 'The product could not be deleted. Nothing was changed — try again.');
+        }
+    }
+
+    /**
+     * Gallery sources for what this request supplied: uploads become
+     * public-disk paths, pasted links are kept verbatim.
+     */
+    private function buildGallery(array $files, array $urls): array
+    {
+        $sources = [];
+
+        foreach ($files as $file) {
+            $sources[] = $file->store('products', 'public');
+        }
+
+        return [...$sources, ...$urls];
+    }
+
+    /** Remove a stored image file — but a pasted link owns no file here. */
+    private function deleteLocalImage(?string $src): void
+    {
+        if ($src && ! str_starts_with($src, 'http://') && ! str_starts_with($src, 'https://')) {
+            Storage::disk('public')->delete($src);
         }
     }
 }

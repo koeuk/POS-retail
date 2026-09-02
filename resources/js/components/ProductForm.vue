@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useCurrency } from '@/composables/useCurrency';
+import { imageSrc } from '@/lib/utils';
 import type { Category, Product } from '@/types';
 import { Link, useForm } from '@inertiajs/vue3';
-import { ImageUp, LoaderCircle, Plus, Trash2 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { ImageUp, LoaderCircle, Plus, Trash2, X } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 
 interface PackRow {
     /* Inertia's useForm only accepts FormDataConvertible values, and an array
@@ -84,6 +85,12 @@ const form = useForm({
     track_stock: props.product?.track_stock ?? true,
     is_active: props.product?.is_active ?? true,
     image: null as File | null,
+    image_url: '',
+    // Gallery: files picked now, links pasted now, and (on edit) the saved
+    // sources being kept — dropping one from the kept list removes it.
+    gallery: [] as File[],
+    gallery_urls: [] as string[],
+    gallery_existing: (props.product?.gallery ?? []) as string[],
     opening_qty: 0,
     low_stock_threshold: 10,
 
@@ -125,12 +132,54 @@ function perUnit(pack: PackRow): number | null {
 
 const packError = (index: number, field: string) => (form.errors as Record<string, string | undefined>)[`packs.${index}.${field}`];
 
-const preview = ref<string | null>(props.product?.image ? `/storage/${props.product.image}` : null);
+const preview = ref<string | null>(imageSrc(props.product?.image) ?? null);
 
 function onFile(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0] ?? null;
     form.image = file;
     preview.value = file ? URL.createObjectURL(file) : preview.value;
+}
+
+/** A pasted link previews immediately; an actual upload still wins on save. */
+watch(
+    () => form.image_url,
+    (url) => {
+        if (!form.image && url && /^https?:\/\//.test(url)) preview.value = url;
+    },
+);
+
+/* Gallery. Pending uploads preview through object URLs; pasted links and
+   already-saved sources render directly. */
+const galleryPending = ref<string[]>([]);
+const galleryUrlDraft = ref('');
+
+function onGalleryFiles(event: Event) {
+    const files = Array.from((event.target as HTMLInputElement).files ?? []);
+    for (const file of files) {
+        form.gallery.push(file);
+        galleryPending.value.push(URL.createObjectURL(file));
+    }
+    (event.target as HTMLInputElement).value = '';
+}
+
+function addGalleryUrl() {
+    const url = galleryUrlDraft.value.trim();
+    if (!url || !/^https?:\/\//.test(url)) return;
+    form.gallery_urls.push(url);
+    galleryUrlDraft.value = '';
+}
+
+function removeExisting(index: number) {
+    form.gallery_existing.splice(index, 1);
+}
+
+function removePendingFile(index: number) {
+    form.gallery.splice(index, 1);
+    galleryPending.value.splice(index, 1);
+}
+
+function removePendingUrl(index: number) {
+    form.gallery_urls.splice(index, 1);
 }
 
 /**

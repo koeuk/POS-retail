@@ -121,6 +121,8 @@ export interface Product {
     cost_price: string;
     sell_price: string;
     image: string | null;
+    /** Extra photos: public-disk paths or full external URLs. */
+    gallery: string[] | null;
     unit: string;
     track_stock: boolean;
     is_active: boolean;

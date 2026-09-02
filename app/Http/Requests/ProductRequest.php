@@ -69,13 +69,15 @@ class ProductRequest extends FormRequest
             // Pasted link as an alternative to uploading; a real upload wins.
             'image_url' => ['nullable', 'url:http,https', 'max:2048'],
 
-            // Gallery: extra photos, uploaded and/or pasted as links.
+            // Gallery: extra photos, uploaded and/or pasted as links. On an
+            // edit, gallery_existing is the kept subset of what was saved —
+            // anything missing from it is being removed.
             'gallery' => ['nullable', 'array', 'max:12'],
             'gallery.*' => ['image', 'max:2048'],
             'gallery_urls' => ['nullable', 'array', 'max:12'],
             'gallery_urls.*' => ['url:http,https', 'max:2048'],
-            'remove_image_ids' => ['nullable', 'array'],
-            'remove_image_ids.*' => ['integer'],
+            'gallery_existing' => ['nullable', 'array', 'max:12'],
+            'gallery_existing.*' => ['string', 'max:2048'],
 
             // Opening stock, only meaningful on create.
             'opening_qty' => ['nullable', 'integer', 'min:0'],

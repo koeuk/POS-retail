@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\InventoryLog;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\Stock;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoSeeder;
@@ -81,14 +84,14 @@ class DemoSeederTest extends TestCase
 
     public function test_no_shelf_was_sold_into_the_negative(): void
     {
-        $this->assertSame(0, \App\Models\Stock::where('qty', '<', 0)->count());
+        $this->assertSame(0, Stock::where('qty', '<', 0)->count());
     }
 
     /** Every quantity on the shelf is explained by the movements behind it. */
     public function test_the_ledger_reconciles_with_the_shelf(): void
     {
-        foreach (\App\Models\Stock::all() as $stock) {
-            $ledger = (int) \App\Models\InventoryLog::where('product_id', $stock->product_id)
+        foreach (Stock::all() as $stock) {
+            $ledger = (int) InventoryLog::where('product_id', $stock->product_id)
                 ->where('store_id', $stock->store_id)
                 ->sum('qty_change');
 
@@ -99,9 +102,9 @@ class DemoSeederTest extends TestCase
     /** A pack sells from its parent's shelf and never has one of its own. */
     public function test_packs_share_the_base_product_shelf(): void
     {
-        $packs = \App\Models\Product::whereNotNull('parent_product_id');
+        $packs = Product::whereNotNull('parent_product_id');
 
         $this->assertGreaterThan(0, (clone $packs)->count());
-        $this->assertSame(0, \App\Models\Stock::whereIn('product_id', (clone $packs)->select('id'))->count());
+        $this->assertSame(0, Stock::whereIn('product_id', (clone $packs)->select('id'))->count());
     }
 }

@@ -15,3 +15,13 @@ export function cn(...inputs: ClassValue[]) {
 export function currentPerPage(): string | undefined {
     return new URLSearchParams(window.location.search).get('per_page') ?? undefined;
 }
+
+/**
+ * Renderable src for a stored image reference, which is either a public-disk
+ * path (products/abc.jpg) or a full external URL pasted as a link.
+ */
+export function imageSrc(src: string | null | undefined): string | undefined {
+    if (!src) return undefined;
+
+    return /^https?:\/\//.test(src) ? src : `/storage/${src}`;
+}
