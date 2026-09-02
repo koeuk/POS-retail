@@ -5,8 +5,8 @@ import { formatCurrency, type CurrencyDef } from '@/composables/useCurrency';
 import type { SharedData } from '@/types';
 import { imageSrc } from '@/lib/utils';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { ArrowLeft, Eye, Search, UtensilsCrossed } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { ArrowLeft, ChevronLeft, ChevronRight, Eye, Search, UtensilsCrossed } from 'lucide-vue-next';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 
 interface MenuPack {
     id: number;
@@ -84,6 +84,35 @@ const year = new Date().getFullYear();
  */
 const page = usePage<SharedData>();
 const isStaff = computed(() => !!page.props.auth?.user);
+
+/*
+ * The category rail as a carousel: chevrons page it left and right, and each
+ * one only shows while there is somewhere left to go in its direction. The
+ * native scrollbar is hidden — swiping still works on touch.
+ */
+const chipRail = ref<HTMLElement | null>(null);
+const canScrollLeft = ref(false);
+const canScrollRight = ref(false);
+
+function updateChipArrows() {
+    const el = chipRail.value;
+    if (!el) return;
+    canScrollLeft.value = el.scrollLeft > 4;
+    canScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+}
+
+function scrollChips(direction: 1 | -1) {
+    const el = chipRail.value;
+    if (!el) return;
+    el.scrollBy({ left: direction * Math.round(el.clientWidth * 0.7), behavior: 'smooth' });
+}
+
+onMounted(() => {
+    void nextTick(updateChipArrows);
+    window.addEventListener('resize', updateChipArrows);
+});
+
+onBeforeUnmount(() => window.removeEventListener('resize', updateChipArrows));
 </script>
 
 <template>
@@ -139,7 +168,32 @@ const isStaff = computed(() => !!page.props.auth?.user);
                     <Input v-model="search" type="search" placeholder="Search the menu…" class="pl-9" aria-label="Search the menu" />
                 </div>
 
-                <nav v-if="categories.length" class="mt-3 flex gap-1.5 overflow-x-auto pb-1">
+                <div v-if="categories.length" class="relative mt-3">
+                    <!-- Paging chevrons: only rendered while that direction has more chips. -->
+                    <button
+                        v-if="canScrollLeft"
+                        type="button"
+                        class="press absolute -left-2 top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-colors hover:text-foreground"
+                        aria-label="Scroll categories left"
+                        @click="scrollChips(-1)"
+                    >
+                        <ChevronLeft class="size-4" />
+                    </button>
+                    <button
+                        v-if="canScrollRight"
+                        type="button"
+                        class="press absolute -right-2 top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-colors hover:text-foreground"
+                        aria-label="Scroll categories right"
+                        @click="scrollChips(1)"
+                    >
+                        <ChevronRight class="size-4" />
+                    </button>
+
+                    <!-- Soft edges hint that the rail continues past the fold. -->
+                    <div v-if="canScrollLeft" class="pointer-events-none absolute inset-y-0 left-0 z-[5] w-10 bg-gradient-to-r from-card to-transparent" />
+                    <div v-if="canScrollRight" class="pointer-events-none absolute inset-y-0 right-0 z-[5] w-10 bg-gradient-to-l from-card to-transparent" />
+
+                    <nav ref="chipRail" class="scrollbar-none flex gap-1.5 overflow-x-auto" @scroll.passive="updateChipArrows">
                     <button
                         type="button"
                         class="press shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors"
@@ -166,7 +220,8 @@ const isStaff = computed(() => !!page.props.auth?.user);
                     >
                         {{ c.name }}
                     </button>
-                </nav>
+                    </nav>
+                </div>
             </div>
         </div>
 
