@@ -66,6 +66,16 @@ class ProductRequest extends FormRequest
             'track_stock' => ['boolean'],
             'is_active' => ['boolean'],
             'image' => ['nullable', 'image', 'max:2048'],
+            // Pasted link as an alternative to uploading; a real upload wins.
+            'image_url' => ['nullable', 'url:http,https', 'max:2048'],
+
+            // Gallery: extra photos, uploaded and/or pasted as links.
+            'gallery' => ['nullable', 'array', 'max:12'],
+            'gallery.*' => ['image', 'max:2048'],
+            'gallery_urls' => ['nullable', 'array', 'max:12'],
+            'gallery_urls.*' => ['url:http,https', 'max:2048'],
+            'remove_image_ids' => ['nullable', 'array'],
+            'remove_image_ids.*' => ['integer'],
 
             // Opening stock, only meaningful on create.
             'opening_qty' => ['nullable', 'integer', 'min:0'],

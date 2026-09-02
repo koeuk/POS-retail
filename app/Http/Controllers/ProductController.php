@@ -96,16 +96,26 @@ class ProductController extends Controller
             $openingQty = (int) ($data['opening_qty'] ?? 0);
             $threshold = $data['low_stock_threshold'] ?? null;
             $packs = $data['packs'] ?? [];
-            unset($data['opening_qty'], $data['low_stock_threshold'], $data['packs']);
+            $imageUrl = $data['image_url'] ?? null;
+            $galleryUrls = $data['gallery_urls'] ?? [];
+            unset(
+                $data['opening_qty'], $data['low_stock_threshold'], $data['packs'],
+                $data['image_url'], $data['gallery'], $data['gallery_urls'], $data['remove_image_ids'],
+            );
 
             if ($request->hasFile('image')) {
                 $data['image'] = $request->file('image')->store('products', 'public');
+            } elseif ($imageUrl) {
+                // A pasted link is stored as-is; the frontend renders http(s)
+                // sources directly instead of prefixing /storage.
+                $data['image'] = $imageUrl;
             }
 
-            $product = DB::transaction(function () use ($data, $openingQty, $threshold, $packs, $request) {
+            $product = DB::transaction(function () use ($data, $openingQty, $threshold, $packs, $galleryUrls, $request) {
                 $product = Product::create($data);
 
                 $this->syncPacks($product, $packs);
+                $this->addGalleryImages($product, $request->file('gallery') ?? [], $galleryUrls);
 
                 // A pack draws stock from its parent, so it must not own rows of
                 // its own — two shelves for one physical crate is the exact
@@ -213,6 +223,9 @@ class ProductController extends Controller
                 'store_id' => $data['add_stock_store_id'] ?? null,
                 'note' => $data['add_stock_note'] ?? null,
             ];
+            $imageUrl = $data['image_url'] ?? null;
+            $galleryUrls = $data['gallery_urls'] ?? [];
+            $removeImageIds = $data['remove_image_ids'] ?? [];
             unset(
                 $data['opening_qty'],
                 $data['low_stock_threshold'],
@@ -224,19 +237,33 @@ class ProductController extends Controller
                 $data['add_stock_loose'],
                 $data['add_stock_store_id'],
                 $data['add_stock_note'],
+                $data['image_url'],
+                $data['gallery'],
+                $data['gallery_urls'],
+                $data['remove_image_ids'],
             );
 
             if ($request->hasFile('image')) {
-                if ($product->image) {
-                    Storage::disk('public')->delete($product->image);
-                }
+                $this->deleteLocalImage($product->image);
                 $data['image'] = $request->file('image')->store('products', 'public');
+            } elseif ($imageUrl) {
+                $this->deleteLocalImage($product->image);
+                $data['image'] = $imageUrl;
             } else {
                 unset($data['image']);
             }
 
-            DB::transaction(function () use ($product, $data, $packs, $receipt, $request) {
+            DB::transaction(function () use ($product, $data, $packs, $receipt, $galleryUrls, $removeImageIds, $request) {
                 $product->update($data);
+
+                foreach ($product->images()->whereIn('id', $removeImageIds)->get() as $img) {
+                    if (! $img->isExternal()) {
+                        Storage::disk('public')->delete($img->src);
+                    }
+                    $img->delete();
+                }
+
+                $this->addGalleryImages($product, $request->file('gallery') ?? [], $galleryUrls);
 
                 // A pack has no packs of its own, so the list is only meaningful on
                 // a base product and is ignored entirely on a pack.

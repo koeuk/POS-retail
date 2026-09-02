@@ -335,7 +335,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                 description="Stock is never typed in directly — record what happened and the quantity follows, so every change has a reason attached."
             >
                 <template #actions>
-                    <Button class="press" @click="openPicker">
+                    <Button class="press hidden md:inline-flex" @click="openPicker">
                         <Plus class="size-4" />
                         Adjust stock
                     </Button>
@@ -740,5 +740,15 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                 </form>
             </DialogContent>
         </Dialog>
+
+        <!-- Phone: adjust floats bottom-right above the tab bar, in thumb reach. -->
+        <Button
+            class="press fixed right-4 z-40 h-12 rounded-full px-5 shadow-lg md:hidden"
+            style="bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 1rem)"
+            @click="openPicker"
+        >
+            <Plus class="size-5" />
+            Adjust stock
+        </Button>
     </AppLayout>
 </template>

@@ -23,6 +23,7 @@ class Product extends Model
         'cost_price',
         'sell_price',
         'image',
+        'gallery',
         'unit',
         'units_per_pack',
         'case_size',
@@ -48,6 +49,7 @@ class Product extends Model
     protected function casts(): array
     {
         return [
+            'gallery' => 'array',
             'cost_price' => 'decimal:2',
             'sell_price' => 'decimal:2',
             'units_per_pack' => 'integer',

@@ -34,6 +34,14 @@ return new class extends Migration
             $table->decimal('sell_price', 12, 2)->default(0);
 
             $table->string('image')->nullable();
+
+            /*
+             * Extra photos: an array of sources, each either a public-disk
+             * path (products/abc.jpg) or a full external URL — shops often
+             * reuse a supplier's product shot instead of photographing the
+             * shelf, so a pasted link is a first-class source.
+             */
+            $table->json('gallery')->nullable();
             $table->string('unit')->default('pcs');
             $table->unsignedInteger('units_per_pack')->default(1);
             // Units per case, for counting the shelf only ("18 cases + 22") — a

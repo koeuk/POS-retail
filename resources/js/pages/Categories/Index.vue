@@ -84,7 +84,7 @@ function confirmDelete() {
         <div class="px-2.5 py-6 md:px-8">
             <PageHeader eyebrow="Catalogue" title="Categories" description="Used to group products and filter the POS grid.">
                 <template #actions>
-                    <Button v-if="may('categories', 'create')" class="press" @click="openCreate">
+                    <Button v-if="may('categories', 'create')" class="press hidden md:inline-flex" @click="openCreate">
                         <Plus class="size-4" />
                         New category
                     </Button>
@@ -147,6 +147,17 @@ function confirmDelete() {
                 </EmptyState>
             </div>
         </div>
+
+        <!-- Phone: create floats bottom-right above the tab bar, in thumb reach. -->
+        <Button
+            v-if="may('categories', 'create')"
+            class="press fixed right-4 z-40 h-12 rounded-full px-5 shadow-lg md:hidden"
+            style="bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 1rem)"
+            @click="openCreate"
+        >
+            <Plus class="size-5" />
+            New category
+        </Button>
 
         <!-- Create / edit -->
         <Dialog v-model:open="dialogOpen">

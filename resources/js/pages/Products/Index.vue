@@ -103,7 +103,7 @@ function stockTone(qty: number | null | undefined) {
         <div class="px-2.5 py-6 md:px-8">
             <PageHeader eyebrow="Catalogue" title="Products" description="Everything you sell, with live stock across all stores.">
                 <template #actions>
-                    <Button v-if="may('products', 'create')" as-child class="press">
+                    <Button v-if="may('products', 'create')" as-child class="press hidden md:inline-flex">
                         <Link :href="route('products.create')">
                             <Plus class="size-4" />
                             New product
@@ -313,6 +313,19 @@ function stockTone(qty: number | null | undefined) {
                 <Pagination :links="products.links" :from="products.from" :to="products.to" :total="products.total" :per-page="products.per_page" />
             </div>
         </div>
+
+        <!-- Phone: create floats bottom-right above the tab bar, in thumb reach. -->
+        <Button
+            v-if="may('products', 'create')"
+            as-child
+            class="press fixed right-4 z-40 h-12 rounded-full px-5 shadow-lg md:hidden"
+            style="bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 1rem)"
+        >
+            <Link :href="route('products.create')">
+                <Plus class="size-5" />
+                New product
+            </Link>
+        </Button>
 
         <AlertDialog :open="!!pendingDelete" @update:open="(v) => !v && (pendingDelete = null)">
             <AlertDialogContent>
