@@ -4,6 +4,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { imageSrc } from '@/lib/utils';
 import type { Product, Stock } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { ArrowLeft, Boxes, PackageSearch, Pencil } from 'lucide-vue-next';
@@ -84,8 +85,21 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                     <div
                         class="mb-4 flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40"
                     >
-                        <img v-if="product.image" :src="`/storage/${product.image}`" :alt="product.name" class="size-full object-cover" />
+                        <img v-if="product.image" :src="imageSrc(product.image)" :alt="product.name" class="size-full object-cover" />
                         <Boxes v-else class="size-8 text-muted-foreground/50" />
+                    </div>
+
+                    <!-- Gallery -->
+                    <div v-if="product.gallery?.length" class="mb-4 grid grid-cols-4 gap-2">
+                        <a
+                            v-for="(src, i) in product.gallery"
+                            :key="i"
+                            :href="imageSrc(src)"
+                            target="_blank"
+                            class="lift aspect-square overflow-hidden rounded-lg border border-border"
+                        >
+                            <img :src="imageSrc(src)" :alt="`${product.name} photo ${i + 1}`" class="size-full object-cover" />
+                        </a>
                     </div>
 
                     <div class="flex items-center gap-2">

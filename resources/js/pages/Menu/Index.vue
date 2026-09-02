@@ -198,7 +198,7 @@ const isStaff = computed(() => !!page.props.auth?.user);
                         <div class="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-muted/40">
                             <img
                                 v-if="item.image"
-                                :src="`/storage/${item.image}`"
+                                :src="imageSrc(item.image)"
                                 :alt="item.name"
                                 loading="lazy"
                                 class="size-full object-cover"

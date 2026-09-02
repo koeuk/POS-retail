@@ -172,7 +172,7 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                         <div class="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-muted/40">
                             <img
                                 v-if="product.image"
-                                :src="`/storage/${product.image}`"
+                                :src="imageSrc(product.image)"
                                 :alt="product.name"
                                 loading="lazy"
                                 class="size-full object-cover"

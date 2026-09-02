@@ -575,6 +575,81 @@ function submit() {
                     <input type="file" accept="image/*" class="sr-only" @change="onFile" />
                 </label>
                 <InputError class="mt-2" :message="form.errors.image" />
+
+                <!-- Or reuse a supplier's shot: paste its address instead of uploading. -->
+                <div class="mt-3 grid gap-2">
+                    <Label for="image-url" class="text-xs text-muted-foreground">Or paste an image link</Label>
+                    <Input id="image-url" v-model="form.image_url" type="url" placeholder="https://…" autocomplete="off" />
+                    <InputError :message="form.errors.image_url" />
+                </div>
+            </section>
+
+            <section class="shadow-soft rounded-xl border border-border bg-card p-4 md:p-5">
+                <h2 class="mb-4 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Gallery</h2>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <!-- Saved photos being kept -->
+                    <div v-for="(src, i) in form.gallery_existing" :key="`e${i}`" class="group relative aspect-square overflow-hidden rounded-lg border border-border">
+                        <img :src="imageSrc(src)" alt="" class="size-full object-cover" />
+                        <button
+                            type="button"
+                            class="absolute right-1 top-1 rounded-full bg-background/80 p-1 text-muted-foreground hover:text-destructive"
+                            aria-label="Remove photo"
+                            @click="removeExisting(i)"
+                        >
+                            <X class="size-3.5" />
+                        </button>
+                    </div>
+
+                    <!-- Uploads picked this session -->
+                    <div v-for="(src, i) in galleryPending" :key="`p${i}`" class="group relative aspect-square overflow-hidden rounded-lg border border-border">
+                        <img :src="src" alt="" class="size-full object-cover" />
+                        <button
+                            type="button"
+                            class="absolute right-1 top-1 rounded-full bg-background/80 p-1 text-muted-foreground hover:text-destructive"
+                            aria-label="Remove photo"
+                            @click="removePendingFile(i)"
+                        >
+                            <X class="size-3.5" />
+                        </button>
+                    </div>
+
+                    <!-- Links pasted this session -->
+                    <div v-for="(url, i) in form.gallery_urls" :key="`u${i}`" class="group relative aspect-square overflow-hidden rounded-lg border border-border">
+                        <img :src="url" alt="" class="size-full object-cover" />
+                        <button
+                            type="button"
+                            class="absolute right-1 top-1 rounded-full bg-background/80 p-1 text-muted-foreground hover:text-destructive"
+                            aria-label="Remove photo"
+                            @click="removePendingUrl(i)"
+                        >
+                            <X class="size-3.5" />
+                        </button>
+                    </div>
+
+                    <!-- Add tile -->
+                    <label
+                        class="lift flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-muted/40 text-muted-foreground"
+                    >
+                        <ImageUp class="size-5" />
+                        <span class="text-[0.65rem]">Add photos</span>
+                        <input type="file" accept="image/*" multiple class="sr-only" @change="onGalleryFiles" />
+                    </label>
+                </div>
+                <InputError class="mt-2" :message="form.errors.gallery" />
+
+                <div class="mt-3 flex gap-2">
+                    <Input
+                        v-model="galleryUrlDraft"
+                        type="url"
+                        placeholder="https://… photo link"
+                        autocomplete="off"
+                        class="flex-1"
+                        @keydown.enter.prevent="addGalleryUrl"
+                    />
+                    <Button type="button" variant="outline" class="press shrink-0" @click="addGalleryUrl">Add</Button>
+                </div>
+                <InputError class="mt-2" :message="form.errors.gallery_urls" />
             </section>
 
             <section class="shadow-soft rounded-xl border border-border bg-card p-4 md:p-5">

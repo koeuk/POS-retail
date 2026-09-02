@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { usePermissions } from '@/composables/usePermissions';
-import { currentPerPage } from '@/lib/utils';
+import { currentPerPage, imageSrc } from '@/lib/utils';
 import type { Category, Paginated, Product } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Boxes, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
@@ -174,7 +174,7 @@ function stockTone(qty: number | null | undefined) {
                                         <div
                                             class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/50"
                                         >
-                                            <img v-if="p.image" :src="`/storage/${p.image}`" :alt="p.name" class="size-full object-cover" />
+                                            <img v-if="p.image" :src="imageSrc(p.image)" :alt="p.name" class="size-full object-cover" />
                                             <Boxes v-else class="size-4 text-muted-foreground" />
                                         </div>
                                         <div class="min-w-0">
@@ -247,7 +247,7 @@ function stockTone(qty: number | null | undefined) {
                             <div
                                 class="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/50"
                             >
-                                <img v-if="p.image" :src="`/storage/${p.image}`" :alt="p.name" class="size-full object-cover" />
+                                <img v-if="p.image" :src="imageSrc(p.image)" :alt="p.name" class="size-full object-cover" />
                                 <Boxes v-else class="size-5 text-muted-foreground" />
                             </div>
 
