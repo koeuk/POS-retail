@@ -30,7 +30,7 @@
              ទឹកសុទ្ធ render in a face that matches the Latin type instead of
              falling back to whatever the OS ships. --}}
         <link
-            href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+Khmer:wght@100..900&family=IBM+Plex+Mono:wght@400;500&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+Khmer:wght@100..900&display=swap"
             rel="stylesheet"
         />
 

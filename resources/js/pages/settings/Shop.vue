@@ -10,7 +10,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import type { BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/vue3';
-import { Check, ImageIcon } from 'lucide-vue-next';
+import { Check, ImageIcon, X } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref } from 'vue';
 
 const props = defineProps<{
@@ -194,31 +194,30 @@ function submit() {
                     <div class="grid gap-6 sm:grid-cols-2">
                         <div class="grid content-start gap-2">
                             <Label>Logo</Label>
-                            <div class="flex items-center gap-3">
+                            <!-- The card IS the picker — no separate button. Remove
+                                 floats over the preview so the card stays the one control. -->
+                            <div class="relative w-full max-w-[11rem]">
                                 <button
                                     type="button"
-                                    class="press flex size-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-input bg-muted/40 transition-colors hover:border-primary/60 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                    class="press flex aspect-square w-full cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-input bg-muted/40 transition-colors hover:border-primary/60 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                                     aria-label="Choose logo image"
                                     @click="logoInput?.click()"
                                 >
                                     <img v-if="logoPreview" :src="logoPreview" alt="Shop logo" class="size-full object-cover" />
-                                    <ImageIcon v-else class="size-6 text-muted-foreground" aria-hidden="true" />
+                                    <template v-else>
+                                        <ImageIcon class="size-8 text-muted-foreground" aria-hidden="true" />
+                                        <span class="text-xs text-muted-foreground">Click to upload</span>
+                                    </template>
                                 </button>
-                                <div class="flex flex-col items-start gap-1.5">
-                                    <Button type="button" variant="outline" size="sm" class="press" @click="logoInput?.click()">
-                                        Choose image
-                                    </Button>
-                                    <Button
-                                        v-if="logoPreview"
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        class="press text-destructive hover:text-destructive"
-                                        @click="removeImage('logo')"
-                                    >
-                                        Remove
-                                    </Button>
-                                </div>
+                                <button
+                                    v-if="logoPreview"
+                                    type="button"
+                                    class="press absolute right-2 top-2 grid size-7 place-items-center rounded-full bg-background/90 text-muted-foreground shadow-sm transition-colors hover:text-destructive"
+                                    aria-label="Remove logo"
+                                    @click="removeImage('logo')"
+                                >
+                                    <X class="size-4" />
+                                </button>
                                 <input ref="logoInput" type="file" accept="image/*" class="hidden" @change="pick('logo', $event)" />
                             </div>
                             <p class="text-xs text-muted-foreground">Up to 2 MB. Appears in the sidebar next to the shop name.</p>
@@ -227,31 +226,28 @@ function submit() {
 
                         <div class="grid content-start gap-2">
                             <Label>App icon · favicon</Label>
-                            <div class="flex items-center gap-3">
+                            <div class="relative w-full max-w-[11rem]">
                                 <button
                                     type="button"
-                                    class="press flex size-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-input bg-muted/40 transition-colors hover:border-primary/60 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                    class="press flex aspect-square w-full cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-input bg-muted/40 transition-colors hover:border-primary/60 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                                     aria-label="Choose app icon image"
                                     @click="faviconInput?.click()"
                                 >
                                     <img v-if="faviconPreview" :src="faviconPreview" alt="App icon" class="size-full object-cover" />
-                                    <ImageIcon v-else class="size-6 text-muted-foreground" aria-hidden="true" />
+                                    <template v-else>
+                                        <ImageIcon class="size-8 text-muted-foreground" aria-hidden="true" />
+                                        <span class="text-xs text-muted-foreground">Click to upload</span>
+                                    </template>
                                 </button>
-                                <div class="flex flex-col items-start gap-1.5">
-                                    <Button type="button" variant="outline" size="sm" class="press" @click="faviconInput?.click()">
-                                        Choose image
-                                    </Button>
-                                    <Button
-                                        v-if="faviconPreview"
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        class="press text-destructive hover:text-destructive"
-                                        @click="removeImage('favicon')"
-                                    >
-                                        Remove
-                                    </Button>
-                                </div>
+                                <button
+                                    v-if="faviconPreview"
+                                    type="button"
+                                    class="press absolute right-2 top-2 grid size-7 place-items-center rounded-full bg-background/90 text-muted-foreground shadow-sm transition-colors hover:text-destructive"
+                                    aria-label="Remove app icon"
+                                    @click="removeImage('favicon')"
+                                >
+                                    <X class="size-4" />
+                                </button>
                                 <input
                                     ref="faviconInput"
                                     type="file"

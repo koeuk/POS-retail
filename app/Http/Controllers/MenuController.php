@@ -99,4 +99,49 @@ class MenuController extends Controller
             ],
         ]);
     }
+
+    /**
+     * One item, still public: the same fields the card shows plus the photo
+     * gallery and full description — never stock counts or staff data.
+     */
+    public function show(Product $product): Response
+    {
+        // Inactive items and packs have no page of their own: a pack is a
+        // buying option on its parent's page, not a separate menu entry.
+        abort_unless($product->is_active && $product->parent_product_id === null, 404);
+
+        $product->load('category:id,name')
+            ->load(['packs' => fn ($q) => $q->active()->orderBy('units_per_pack')])
+            ->loadSum('stocks as stock_sum', 'qty');
+
+        $shelf = (int) ($product->stock_sum ?? 0);
+
+        return Inertia::render('Menu/Show', [
+            'product' => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'description' => $product->description,
+                'image' => $product->image,
+                'gallery' => $product->gallery ?? [],
+                'unit' => $product->unit,
+                'category_name' => $product->category?->name,
+                'price' => (float) $product->sell_price,
+                'sold_out' => $product->track_stock && $shelf <= 0,
+                'packs' => $product->packs
+                    ->map(fn (Product $pack) => [
+                        'id' => $pack->id,
+                        'name' => $pack->name,
+                        'units' => $pack->units_per_pack,
+                        'price' => (float) $pack->sell_price,
+                        'sold_out' => $pack->track_stock && intdiv($shelf, max(1, $pack->units_per_pack)) <= 0,
+                    ])
+                    ->values(),
+            ],
+            'shop' => [
+                'name' => Setting::get('receipt_header', config('app.name')),
+                'footer' => Setting::get('receipt_footer'),
+                'currency' => Currency::current()->toArray(),
+            ],
+        ]);
+    }
 }

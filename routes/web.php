@@ -34,6 +34,7 @@ Route::get('/', function () {
  * catalogue: names, photos and prices, nothing about stock or staff.
  */
 Route::get('menu', [MenuController::class, 'index'])->name('menu');
+Route::get('menu/{product}', [MenuController::class, 'show'])->name('menu.show');
 
 /*
 |--------------------------------------------------------------------------

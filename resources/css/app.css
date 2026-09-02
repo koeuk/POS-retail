@@ -16,7 +16,10 @@
     :root {
         --font-display: 'Noto Sans', 'Noto Sans Khmer', ui-sans-serif, system-ui, sans-serif;
         --font-sans: 'Noto Sans', 'Noto Sans Khmer', ui-sans-serif, system-ui, sans-serif;
-        --font-mono: 'IBM Plex Mono', 'Noto Sans Khmer', ui-monospace, SFMono-Regular, Menlo, monospace;
+        /* No separate mono face — SKUs, prices and quantities wear the same
+           Noto as everything else. Alignment comes from the .tabular class
+           (font-variant-numeric: tabular-nums), not from a monospace font. */
+        --font-mono: 'Noto Sans', 'Noto Sans Khmer', ui-sans-serif, system-ui, sans-serif;
 
         /* Soft silver — a barely-there cool gray, so the white cards float on it. */
         --background: 220 16% 98%;

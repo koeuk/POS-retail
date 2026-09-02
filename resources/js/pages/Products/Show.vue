@@ -3,12 +3,13 @@ import Money from '@/components/Money.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { imageSrc } from '@/lib/utils';
 import type { Product, Stock } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, Boxes, PackageSearch, Pencil } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { ArrowLeft, Boxes, ChevronLeft, ChevronRight, PackageSearch, Pencil } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
 interface Movement {
     id: number;
@@ -50,6 +51,30 @@ function tone(stock: Stock) {
 const when = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
 
 const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'restock' || type === 'return' ? 'secondary' : 'default');
+
+/*
+ * Photo viewer: a slide-over from the right. One flat list — the main image
+ * first, then the gallery — so next/previous walks everything the product has.
+ */
+const slides = computed(() => [props.product.image, ...(props.product.gallery ?? [])].filter((s): s is string => !!s));
+const viewer = ref<number | null>(null);
+const viewerOpen = computed({
+    get: () => viewer.value !== null,
+    set: (open: boolean) => {
+        if (!open) viewer.value = null;
+    },
+});
+
+/** Where a gallery thumbnail sits in the flat slide list. */
+const galleryOffset = computed(() => (props.product.image ? 1 : 0));
+
+function prevSlide() {
+    if (viewer.value !== null) viewer.value = (viewer.value + slides.value.length - 1) % slides.value.length;
+}
+
+function nextSlide() {
+    if (viewer.value !== null) viewer.value = (viewer.value + 1) % slides.value.length;
+}
 </script>
 
 <template>
@@ -82,24 +107,28 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
             <div class="grid items-start gap-4 lg:grid-cols-3">
                 <!-- Identity -->
                 <section class="animate-rise shadow-soft rounded-xl border border-border bg-card p-5">
-                    <div
+                    <component
+                        :is="product.image ? 'button' : 'div'"
+                        :type="product.image ? 'button' : undefined"
                         class="mb-4 flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40"
+                        :class="product.image && 'lift cursor-zoom-in'"
+                        @click="product.image && (viewer = 0)"
                     >
                         <img v-if="product.image" :src="imageSrc(product.image)" :alt="product.name" class="size-full object-cover" />
                         <Boxes v-else class="size-8 text-muted-foreground/50" />
-                    </div>
+                    </component>
 
                     <!-- Gallery -->
                     <div v-if="product.gallery?.length" class="mb-4 grid grid-cols-4 gap-2">
-                        <a
+                        <button
                             v-for="(src, i) in product.gallery"
                             :key="i"
-                            :href="imageSrc(src)"
-                            target="_blank"
-                            class="lift aspect-square overflow-hidden rounded-lg border border-border"
+                            type="button"
+                            class="lift aspect-square cursor-zoom-in overflow-hidden rounded-lg border border-border"
+                            @click="viewer = i + galleryOffset"
                         >
                             <img :src="imageSrc(src)" :alt="`${product.name} photo ${i + 1}`" class="size-full object-cover" />
-                        </a>
+                        </button>
                     </div>
 
                     <div class="flex items-center gap-2">
@@ -235,5 +264,54 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                 </div>
             </div>
         </div>
+
+        <!-- Photo viewer: slides in from the right; arrows loop through every photo. -->
+        <Sheet v-model:open="viewerOpen">
+            <SheetContent side="right" class="flex w-full flex-col gap-4 sm:max-w-lg" @keydown.left="prevSlide" @keydown.right="nextSlide">
+                <SheetHeader>
+                    <SheetTitle class="truncate pr-8">{{ product.name }}</SheetTitle>
+                    <SheetDescription v-if="slides.length > 1"> Photo {{ (viewer ?? 0) + 1 }} of {{ slides.length }} </SheetDescription>
+                </SheetHeader>
+
+                <div class="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40">
+                    <img v-if="viewer !== null" :src="imageSrc(slides[viewer])" :alt="product.name" class="max-h-full max-w-full object-contain" />
+
+                    <template v-if="slides.length > 1">
+                        <Button
+                            variant="secondary"
+                            size="icon"
+                            class="press absolute left-2 top-1/2 -translate-y-1/2 rounded-full shadow-md"
+                            aria-label="Previous photo"
+                            @click="prevSlide"
+                        >
+                            <ChevronLeft class="size-5" />
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            size="icon"
+                            class="press absolute right-2 top-1/2 -translate-y-1/2 rounded-full shadow-md"
+                            aria-label="Next photo"
+                            @click="nextSlide"
+                        >
+                            <ChevronRight class="size-5" />
+                        </Button>
+                    </template>
+                </div>
+
+                <!-- Filmstrip: jump straight to any photo. -->
+                <div v-if="slides.length > 1" class="scrollbar-none flex gap-2 overflow-x-auto pb-1">
+                    <button
+                        v-for="(src, i) in slides"
+                        :key="i"
+                        type="button"
+                        class="size-14 shrink-0 overflow-hidden rounded-md border-2"
+                        :class="viewer === i ? 'border-primary' : 'border-transparent opacity-70'"
+                        @click="viewer = i"
+                    >
+                        <img :src="imageSrc(src)" alt="" class="size-full object-cover" />
+                    </button>
+                </div>
+            </SheetContent>
+        </Sheet>
     </AppLayout>
 </template>

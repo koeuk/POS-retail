@@ -5,7 +5,7 @@ import { formatCurrency, type CurrencyDef } from '@/composables/useCurrency';
 import type { SharedData } from '@/types';
 import { imageSrc } from '@/lib/utils';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { ArrowLeft, Search, UtensilsCrossed } from 'lucide-vue-next';
+import { ArrowLeft, Eye, Search, UtensilsCrossed } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 interface MenuPack {
@@ -206,6 +206,15 @@ const isStaff = computed(() => !!page.props.auth?.user);
                                 :class="item.sold_out && 'grayscale'"
                             />
                             <UtensilsCrossed v-else class="size-7 text-muted-foreground/50" />
+
+                            <!-- Details: the whole card stays scannable; the eye is the door in. -->
+                            <Link
+                                :href="route('menu.show', { product: item.id })"
+                                class="press absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-background/85 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:text-foreground"
+                                :aria-label="`View ${item.name}`"
+                            >
+                                <Eye class="size-4" />
+                            </Link>
 
                             <span
                                 v-if="item.sold_out"
