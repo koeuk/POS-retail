@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DatePicker from '@/components/DatePicker.vue';
 import SalesBarChart from '@/components/charts/SalesBarChart.vue';
 import StatTile from '@/components/charts/StatTile.vue';
 import Money from '@/components/Money.vue';
@@ -129,13 +130,7 @@ const quickActions = computed(() =>
         <div class="px-2.5 py-6 md:px-8">
             <PageHeader :eyebrow="greeting" :title="user?.name ?? 'Dashboard'" description="Today across the shop floor.">
                 <template #actions>
-                    <input
-                        v-model="date"
-                        type="date"
-                        :max="maxDate"
-                        aria-label="Show figures for a day"
-                        class="tabular h-10 rounded-full border border-input bg-background px-4 font-mono text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                    />
+                    <DatePicker v-model="date" aria-label="Show figures for a day" class="h-10 rounded-full" />
                 </template>
             </PageHeader>
 

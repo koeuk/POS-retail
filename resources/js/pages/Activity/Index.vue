@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DateRangePicker from '@/components/DateRangePicker.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
@@ -241,8 +242,14 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
                             </SelectContent>
                         </Select>
 
-                        <Input v-model="from" type="date" class="h-10 w-auto shrink-0 rounded-full" aria-label="From date" />
-                        <Input v-model="to" type="date" class="h-10 w-auto shrink-0 rounded-full" aria-label="To date" />
+                        <DateRangePicker
+                            :from="from || undefined"
+                            :to="to || undefined"
+                            placeholder="Any date"
+                            class="h-10 shrink-0 rounded-full"
+                            @update:from="(v) => (from = v ?? '')"
+                            @update:to="(v) => (to = v ?? '')"
+                        />
 
                         <Button v-if="hasFilters" variant="ghost" class="press h-10 shrink-0 rounded-full" @click="clearFilters">
                             <X class="size-4" />
