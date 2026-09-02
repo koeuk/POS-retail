@@ -231,24 +231,22 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
 
             <div class="list-panel animate-rise" style="animation-delay: 60ms">
                 <!-- Same shape as Order History: full-width search, chips below. -->
-                <div class="space-y-2 border-b border-border p-3">
-                    <div class="relative">
+                <div class="flex items-center gap-2 border-b border-border p-3">
+                    <div class="relative min-w-0 flex-1">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input v-model="search" placeholder="Search name or email…" class="h-10 rounded-full pl-9" autocomplete="off" />
                     </div>
-                    <div class="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 py-2">
-                        <Select v-model="roleFilter">
-                            <SelectTrigger class="h-9 w-auto min-w-[7rem] shrink-0 rounded-full">
-                                <SelectValue placeholder="Role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem :value="ALL">All roles</SelectItem>
-                                <SelectItem v-for="r in roles" :key="r.value" :value="r.value">
-                                    {{ r.label }}
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    <Select v-model="roleFilter">
+                        <SelectTrigger class="h-10 w-auto min-w-[7rem] shrink-0 rounded-full">
+                            <SelectValue placeholder="Role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem :value="ALL">All roles</SelectItem>
+                            <SelectItem v-for="r in roles" :key="r.value" :value="r.value">
+                                {{ r.label }}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 <div v-if="users.data.length" class="hidden overflow-x-auto md:block">

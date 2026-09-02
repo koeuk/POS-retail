@@ -371,48 +371,48 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
             <div class="grid items-start gap-4 xl:grid-cols-[7fr_3fr]">
                 <div class="animate-rise shadow-soft min-w-0 rounded-xl border border-border bg-card" style="animation-delay: 60ms">
                     <!-- Same shape as Order History: full-width search, chips below. -->
-                    <div class="space-y-2 border-b border-border p-3">
-                        <div class="relative">
+                    <!-- One row: search flexes, the filters keep their width and
+                         wrap under it on screens too narrow to hold them all. -->
+                    <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
+                        <div class="relative min-w-[14rem] flex-1">
                             <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                             <Input v-model="search" placeholder="Search name, SKU or barcode…" class="h-10 rounded-full pl-9" autocomplete="off" />
                         </div>
 
-                        <div class="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 py-2">
-                            <Select v-if="stores.length > 1" v-model="storeId">
-                                <SelectTrigger class="h-9 w-auto min-w-[7rem] shrink-0 rounded-full"
-                                    ><SelectValue placeholder="Store"
-                                /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem :value="ALL">All stores</SelectItem>
-                                    <SelectItem v-for="s in stores" :key="s.id" :value="String(s.id)">{{ s.name }}</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <Select v-if="stores.length > 1" v-model="storeId">
+                            <SelectTrigger class="h-10 w-auto min-w-[7rem] shrink-0 rounded-full"
+                                ><SelectValue placeholder="Store"
+                            /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem :value="ALL">All stores</SelectItem>
+                                <SelectItem v-for="s in stores" :key="s.id" :value="String(s.id)">{{ s.name }}</SelectItem>
+                            </SelectContent>
+                        </Select>
 
-                            <Select v-model="state">
-                                <SelectTrigger class="h-9 w-auto min-w-[7rem] shrink-0 rounded-full"
-                                    ><SelectValue placeholder="Anything"
-                                /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem :value="ALL">Anything</SelectItem>
-                                    <SelectItem value="low">Low stock</SelectItem>
-                                    <SelectItem value="out">Out of stock</SelectItem>
-                                    <SelectItem value="oversold">Oversold</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <Select v-model="state">
+                            <SelectTrigger class="h-10 w-auto min-w-[7rem] shrink-0 rounded-full"
+                                ><SelectValue placeholder="Anything"
+                            /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem :value="ALL">Anything</SelectItem>
+                                <SelectItem value="low">Low stock</SelectItem>
+                                <SelectItem value="out">Out of stock</SelectItem>
+                                <SelectItem value="oversold">Oversold</SelectItem>
+                            </SelectContent>
+                        </Select>
 
-                            <!-- Order, separate from the state filter: "what is oversold"
-                             and "show me the emptiest first" are different questions. -->
-                            <Select v-model="sort">
-                                <SelectTrigger class="h-9 w-auto min-w-[10rem] shrink-0 rounded-full" aria-label="Sort by"
-                                    ><SelectValue
-                                /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="qty">Stock: low to high</SelectItem>
-                                    <SelectItem value="-qty">Stock: high to low</SelectItem>
-                                    <SelectItem value="name">Name A–Z</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        <!-- Order, separate from the state filter: "what is oversold"
+                         and "show me the emptiest first" are different questions. -->
+                        <Select v-model="sort">
+                            <SelectTrigger class="h-10 w-auto min-w-[10rem] shrink-0 rounded-full" aria-label="Sort by"
+                                ><SelectValue
+                            /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="qty">Stock: low to high</SelectItem>
+                                <SelectItem value="-qty">Stock: high to low</SelectItem>
+                                <SelectItem value="name">Name A–Z</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     <!-- Phone: one card per shelf row. -->

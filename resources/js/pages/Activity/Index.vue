@@ -168,10 +168,10 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
             />
 
             <div class="list-panel animate-rise" style="animation-delay: 60ms">
-                <div class="space-y-2 border-b border-border p-3">
+                <div class="border-b border-border p-3">
                     <!-- Arrived from a record's History button: say so plainly,
                          because otherwise a near-empty log looks like a bug. -->
-                    <div v-if="subjectScope" class="flex items-center gap-2">
+                    <div v-if="subjectScope" class="mb-2 flex items-center gap-2">
                         <Badge variant="secondary" class="gap-1.5 rounded-full py-1 pl-3 pr-1.5">
                             <span>History for {{ subjectScope }}</span>
                             <button
@@ -188,14 +188,21 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
                         </Badge>
                     </div>
 
-                    <div class="relative md:max-w-sm">
-                        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input v-model="search" placeholder="Search description, staff or IP…" class="h-10 rounded-full pl-9" autocomplete="off" />
-                    </div>
+                    <!-- One row: search flexes, the filters keep their width and
+                         wrap under it on screens too narrow to hold them all. -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="relative min-w-[14rem] flex-1">
+                            <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                                v-model="search"
+                                placeholder="Search description, staff or IP…"
+                                class="h-10 rounded-full pl-9"
+                                autocomplete="off"
+                            />
+                        </div>
 
-                    <div class="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 py-1">
                         <Select v-model="logName">
-                            <SelectTrigger class="h-9 w-auto min-w-[9rem] shrink-0 rounded-full" aria-label="Kind"
+                            <SelectTrigger class="h-10 w-auto min-w-[9rem] shrink-0 rounded-full" aria-label="Kind"
                                 ><SelectValue
                             /></SelectTrigger>
                             <SelectContent>
@@ -205,7 +212,7 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
                         </Select>
 
                         <Select v-model="causerId">
-                            <SelectTrigger class="h-9 w-auto min-w-[8rem] shrink-0 rounded-full" aria-label="Staff"
+                            <SelectTrigger class="h-10 w-auto min-w-[8rem] shrink-0 rounded-full" aria-label="Staff"
                                 ><SelectValue placeholder="Anyone"
                             /></SelectTrigger>
                             <SelectContent>
@@ -215,7 +222,7 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
                         </Select>
 
                         <Select v-if="options.events.length" v-model="event">
-                            <SelectTrigger class="h-9 w-auto min-w-[8rem] shrink-0 rounded-full" aria-label="Action"
+                            <SelectTrigger class="h-10 w-auto min-w-[8rem] shrink-0 rounded-full" aria-label="Action"
                                 ><SelectValue placeholder="Any action"
                             /></SelectTrigger>
                             <SelectContent>
@@ -225,7 +232,7 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
                         </Select>
 
                         <Select v-if="options.stores.length > 1" v-model="storeId">
-                            <SelectTrigger class="h-9 w-auto min-w-[8rem] shrink-0 rounded-full" aria-label="Store"
+                            <SelectTrigger class="h-10 w-auto min-w-[8rem] shrink-0 rounded-full" aria-label="Store"
                                 ><SelectValue placeholder="All stores"
                             /></SelectTrigger>
                             <SelectContent>
@@ -234,10 +241,10 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
                             </SelectContent>
                         </Select>
 
-                        <Input v-model="from" type="date" class="h-9 w-auto shrink-0 rounded-full" aria-label="From date" />
-                        <Input v-model="to" type="date" class="h-9 w-auto shrink-0 rounded-full" aria-label="To date" />
+                        <Input v-model="from" type="date" class="h-10 w-auto shrink-0 rounded-full" aria-label="From date" />
+                        <Input v-model="to" type="date" class="h-10 w-auto shrink-0 rounded-full" aria-label="To date" />
 
-                        <Button v-if="hasFilters" variant="ghost" class="press h-9 shrink-0 rounded-full" @click="clearFilters">
+                        <Button v-if="hasFilters" variant="ghost" class="press h-10 shrink-0 rounded-full" @click="clearFilters">
                             <X class="size-4" />
                             Clear
                         </Button>

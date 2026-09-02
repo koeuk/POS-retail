@@ -5,8 +5,8 @@ import { useCart } from '@/Pos/composables/useCart';
 import { formatMoney } from '@/Pos/lib/money';
 import { imageSrc } from '@/lib/utils';
 import type { PosCategory, PosProduct } from '@/Pos/types';
-import { ChevronRight, Layers, PackageOpen, Search } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { ChevronLeft, ChevronRight, Layers, PackageOpen, Search } from 'lucide-vue-next';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 
 const props = defineProps<{
     products: PosProduct[];
@@ -118,6 +118,34 @@ const outOfStock = (product: PosProduct) => product.track_stock && product.stock
 const fullySoldOut = (product: PosProduct) => sellableAs(product).every(outOfStock);
 
 defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus() });
+
+/*
+ * The category rail as a carousel: chevrons page it, each shown only while
+ * that direction has more chips. The scrollbar is hidden; touch swipe stays.
+ */
+const chipRail = ref<HTMLElement | null>(null);
+const canScrollLeft = ref(false);
+const canScrollRight = ref(false);
+
+function updateChipArrows() {
+    const el = chipRail.value;
+    if (!el) return;
+    canScrollLeft.value = el.scrollLeft > 4;
+    canScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+}
+
+function scrollChips(direction: 1 | -1) {
+    const el = chipRail.value;
+    if (!el) return;
+    el.scrollBy({ left: direction * Math.round(el.clientWidth * 0.7), behavior: 'smooth' });
+}
+
+onMounted(() => {
+    void nextTick(updateChipArrows);
+    window.addEventListener('resize', updateChipArrows);
+});
+
+onBeforeUnmount(() => window.removeEventListener('resize', updateChipArrows));
 </script>
 
 <template>
@@ -136,25 +164,51 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
                 />
             </div>
 
-            <div class="flex gap-1.5 overflow-x-auto pb-1">
+            <div class="relative">
+                <!-- Paging chevrons: only rendered while that direction has more chips. -->
                 <button
+                    v-if="canScrollLeft"
                     type="button"
-                    class="press h-9 shrink-0 rounded-full border px-4 text-sm font-medium"
-                    :class="activeCategory === null ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'"
-                    @click="activeCategory = null"
+                    class="press absolute -left-1 top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-colors hover:text-foreground"
+                    aria-label="Scroll categories left"
+                    @click="scrollChips(-1)"
                 >
-                    All
+                    <ChevronLeft class="size-4" />
                 </button>
                 <button
-                    v-for="c in usableCategories"
-                    :key="c.id"
+                    v-if="canScrollRight"
                     type="button"
-                    class="press h-9 shrink-0 rounded-full border px-4 text-sm font-medium"
-                    :class="activeCategory === c.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'"
-                    @click="activeCategory = c.id"
+                    class="press absolute -right-1 top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-colors hover:text-foreground"
+                    aria-label="Scroll categories right"
+                    @click="scrollChips(1)"
                 >
-                    {{ c.name }}
+                    <ChevronRight class="size-4" />
                 </button>
+
+                <!-- Soft edges hint that the rail continues past the fold. -->
+                <div v-if="canScrollLeft" class="pointer-events-none absolute inset-y-0 left-0 z-[5] w-10 bg-gradient-to-r from-background to-transparent" />
+                <div v-if="canScrollRight" class="pointer-events-none absolute inset-y-0 right-0 z-[5] w-10 bg-gradient-to-l from-background to-transparent" />
+
+                <div ref="chipRail" class="scrollbar-none flex gap-1.5 overflow-x-auto" @scroll.passive="updateChipArrows">
+                    <button
+                        type="button"
+                        class="press h-9 shrink-0 rounded-full border px-4 text-sm font-medium"
+                        :class="activeCategory === null ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'"
+                        @click="activeCategory = null"
+                    >
+                        All
+                    </button>
+                    <button
+                        v-for="c in usableCategories"
+                        :key="c.id"
+                        type="button"
+                        class="press h-9 shrink-0 rounded-full border px-4 text-sm font-medium"
+                        :class="activeCategory === c.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'"
+                        @click="activeCategory = c.id"
+                    >
+                        {{ c.name }}
+                    </button>
+                </div>
             </div>
         </div>
 
