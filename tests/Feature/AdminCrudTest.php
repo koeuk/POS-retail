@@ -69,6 +69,49 @@ class AdminCrudTest extends TestCase
         ]);
     }
 
+    /** Image and gallery arrive as pasted links — no file crosses the wire. */
+    public function test_a_product_can_take_its_image_and_gallery_by_link(): void
+    {
+        $category = Category::factory()->create();
+
+        $this->actingAs($this->admin)->post(route('products.store'), [
+            'category_id' => $category->id,
+            'name' => 'Linked Cola',
+            'sku' => 'SKU-LINK-1',
+            'cost_price' => '0.50',
+            'sell_price' => '1.20',
+            'unit' => 'can',
+            'track_stock' => true,
+            'is_active' => true,
+            'image_url' => 'https://example.com/photos/cola.jpg',
+            'gallery_urls' => [
+                'https://example.com/photos/cola-front.jpg',
+                'https://example.com/photos/cola-back.jpg',
+            ],
+        ])->assertRedirect(route('products.index'));
+
+        $product = Product::where('sku', 'SKU-LINK-1')->firstOrFail();
+
+        // Stored verbatim, never copied into /storage — the frontend renders
+        // http(s) sources directly (see imageSrc in resources/js/lib/utils.ts).
+        $this->assertSame('https://example.com/photos/cola.jpg', $product->image);
+        $this->assertSame([
+            'https://example.com/photos/cola-front.jpg',
+            'https://example.com/photos/cola-back.jpg',
+        ], $product->gallery);
+
+        // And a link that is not http(s) is refused, not stored.
+        $this->actingAs($this->admin)->post(route('products.store'), [
+            'category_id' => $category->id,
+            'name' => 'Bad Link',
+            'sku' => 'SKU-LINK-2',
+            'cost_price' => '0.50',
+            'sell_price' => '1.20',
+            'unit' => 'can',
+            'image_url' => 'javascript:alert(1)',
+        ])->assertSessionHasErrors('image_url');
+    }
+
     public function test_product_sku_must_be_unique(): void
     {
         $category = Category::factory()->create();

@@ -208,16 +208,28 @@ class DemoSeeder extends Seeder
         $all = [];
 
         foreach ($catalogue as [$name, $categoryName, $cost, $sell, $unit, $packs]) {
+            $sku = sprintf('SKU-%04d', ++$seq);
+
             $base = Product::create([
                 'category_id' => $categories[$categoryName]->id,
                 'name' => $name,
-                'sku' => sprintf('SKU-%04d', ++$seq),
+                'sku' => $sku,
                 'barcode' => sprintf('88510000%04d', $seq),
                 'cost_price' => $cost,
                 'sell_price' => $sell,
                 'unit' => $unit,
                 'units_per_pack' => 1,
                 'case_size' => $packs ? end($packs)[1] : null,
+                // By link, exactly as the product form's URL fields save them:
+                // an http(s) source is stored as-is and rendered directly,
+                // never copied into /storage. Seeded picsum URLs are stable
+                // per SKU, so the same product keeps the same face.
+                'image' => $this->imageLink($sku),
+                'gallery' => [
+                    $this->imageLink($sku, 'g1'),
+                    $this->imageLink($sku, 'g2'),
+                    $this->imageLink($sku, 'g3'),
+                ],
                 'track_stock' => true,
                 'is_active' => true,
             ]);
@@ -238,6 +250,10 @@ class DemoSeeder extends Seeder
                     'sell_price' => $packSell,
                     'unit' => $packUnit,
                     'units_per_pack' => $per,
+                    // The pack wears the base product's face — it is the same
+                    // goods in a bigger box, and the POS grid reads better
+                    // when the crate looks like what is inside it.
+                    'image' => $base->image,
                     'track_stock' => false,
                     'is_active' => true,
                 ]);
@@ -715,6 +731,12 @@ class DemoSeeder extends Seeder
             ->subDays($daysAgo)
             ->setTime($hour, $minute)
             ->setTimezone('UTC');
+    }
+
+    /** A stable per-product photo link — same SKU, same picture, every seed. */
+    private function imageLink(string $sku, string $variant = 'main'): string
+    {
+        return sprintf('https://picsum.photos/seed/%s-%s/600/600', strtolower($sku), $variant);
     }
 
     private function staffBy(Role $role): User
