@@ -18,11 +18,7 @@ defineProps<{ categories: Category[] }>();
         ]"
     >
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader
-                eyebrow="Catalogue"
-                title="New product"
-                description="Add an item to the catalogue. It appears on the POS grid as soon as it is active."
-            />
+            <PageHeader title="New product" description="Add an item to the catalogue. It appears on the POS grid as soon as it is active." />
 
             <ProductForm :categories="categories" />
         </div>

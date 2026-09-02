@@ -71,7 +71,9 @@ const year = new Date().getFullYear();
             <div class="grid gap-6 md:grid-cols-2 md:items-start">
                 <!-- Photos -->
                 <section class="animate-rise">
-                    <div class="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/40">
+                    <div
+                        class="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/40"
+                    >
                         <img
                             v-if="photos.length"
                             :src="imageSrc(photos[current])"

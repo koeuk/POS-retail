@@ -40,16 +40,17 @@ defineProps<{
 }>();
 
 /** Badge variant per event, mirroring the movement ledger's colour logic. */
-const eventTone = (event: string | null) =>
-    event === 'created' ? 'default' : event === 'deleted' ? 'destructive' : 'secondary';
+const eventTone = (event: string | null) => (event === 'created' ? 'default' : event === 'deleted' ? 'destructive' : 'secondary');
 
-const when = (iso: string | null) =>
-    iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : '—';
+const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : '—');
 
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—');
 
 const fieldLabel = (field: string) =>
-    field.replace(/_id$/, '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+    field
+        .replace(/_id$/, '')
+        .replace(/_/g, ' ')
+        .replace(/^./, (c) => c.toUpperCase());
 </script>
 
 <template>
@@ -62,7 +63,7 @@ const fieldLabel = (field: string) =>
         ]"
     >
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader eyebrow="Audit" :title="subject.label" :description="`Everything recorded for this ${subject.type.toLowerCase()}.`">
+            <PageHeader :title="subject.label" :description="`Everything recorded for this ${subject.type.toLowerCase()}.`">
                 <template #actions>
                     <Button as-child variant="ghost" class="press">
                         <Link :href="parent.href">
@@ -85,9 +86,7 @@ const fieldLabel = (field: string) =>
                         <Badge v-if="!subject.exists" variant="destructive">Deleted</Badge>
                     </div>
 
-                    <p v-if="!subject.exists" class="mt-3 text-sm text-muted-foreground">
-                        This record has since been deleted — its history remains.
-                    </p>
+                    <p v-if="!subject.exists" class="mt-3 text-sm text-muted-foreground">This record has since been deleted — its history remains.</p>
 
                     <dl class="mt-4 space-y-2.5 text-sm">
                         <div class="flex justify-between gap-3">
@@ -141,10 +140,10 @@ const fieldLabel = (field: string) =>
                                             <li v-for="c in a.changes" :key="c.field" class="text-xs leading-snug">
                                                 <span class="text-muted-foreground">{{ fieldLabel(c.field) }}:</span>
                                                 <span v-if="c.from" class="tabular font-mono text-muted-foreground line-through">{{ c.from }}</span>
-                                                <span v-else class="text-muted-foreground italic">empty</span>
+                                                <span v-else class="italic text-muted-foreground">empty</span>
                                                 <span class="text-muted-foreground"> → </span>
                                                 <span v-if="c.to" class="tabular font-mono">{{ c.to }}</span>
-                                                <span v-else class="text-muted-foreground italic">empty</span>
+                                                <span v-else class="italic text-muted-foreground">empty</span>
                                             </li>
                                         </ul>
                                         <p v-if="Object.keys(a.properties).length" class="mt-1.5 text-xs text-muted-foreground">
@@ -155,9 +154,11 @@ const fieldLabel = (field: string) =>
                                     </TableCell>
                                     <TableCell class="text-sm">
                                         <span v-if="a.causer" class="font-medium">{{ a.causer.name }}</span>
-                                        <span v-else class="text-muted-foreground italic">System</span>
+                                        <span v-else class="italic text-muted-foreground">System</span>
                                         <span v-if="a.store" class="block text-xs text-muted-foreground">{{ a.store.name }}</span>
-                                        <span v-if="a.ip_address" class="tabular block font-mono text-xs text-muted-foreground">{{ a.ip_address }}</span>
+                                        <span v-if="a.ip_address" class="tabular block font-mono text-xs text-muted-foreground">{{
+                                            a.ip_address
+                                        }}</span>
                                     </TableCell>
                                 </TableRow>
                             </tbody>
@@ -169,7 +170,7 @@ const fieldLabel = (field: string) =>
                         <li v-for="a in entries.data" :key="a.id" class="px-4 py-3">
                             <div class="flex items-start justify-between gap-3">
                                 <p class="min-w-0 flex-1 text-sm font-medium leading-tight">{{ a.description }}</p>
-                                <Badge :variant="eventTone(a.event)" class="shrink-0 capitalize text-[10px]">{{ a.event ?? 'note' }}</Badge>
+                                <Badge :variant="eventTone(a.event)" class="shrink-0 text-[10px] capitalize">{{ a.event ?? 'note' }}</Badge>
                             </div>
                             <p class="mt-0.5 text-xs text-muted-foreground">
                                 <span class="tabular font-mono">{{ when(a.created_at) }}</span>
@@ -180,10 +181,10 @@ const fieldLabel = (field: string) =>
                                 <li v-for="c in a.changes" :key="c.field" class="text-xs leading-snug">
                                     <span class="text-muted-foreground">{{ fieldLabel(c.field) }}:</span>
                                     <span v-if="c.from" class="tabular font-mono text-muted-foreground line-through">{{ c.from }}</span>
-                                    <span v-else class="text-muted-foreground italic">empty</span>
+                                    <span v-else class="italic text-muted-foreground">empty</span>
                                     <span class="text-muted-foreground"> → </span>
                                     <span v-if="c.to" class="tabular font-mono">{{ c.to }}</span>
-                                    <span v-else class="text-muted-foreground italic">empty</span>
+                                    <span v-else class="italic text-muted-foreground">empty</span>
                                 </li>
                             </ul>
                             <p v-if="Object.keys(a.properties).length" class="mt-1.5 text-xs text-muted-foreground">
@@ -201,13 +202,7 @@ const fieldLabel = (field: string) =>
                         description="This record has not been changed since the activity log was switched on."
                     />
 
-                    <Pagination
-                        :links="entries.links"
-                        :from="entries.from"
-                        :to="entries.to"
-                        :total="entries.total"
-                        :per-page="entries.per_page"
-                    />
+                    <Pagination :links="entries.links" :from="entries.from" :to="entries.to" :total="entries.total" :per-page="entries.per_page" />
                 </section>
             </div>
         </div>

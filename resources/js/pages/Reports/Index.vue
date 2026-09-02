@@ -77,11 +77,7 @@ const exportUrl = computed(() => route('reports.export', { from: from.value, to:
 
     <AppLayout :breadcrumbs="[{ title: 'Reports', href: '/reports' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader
-                eyebrow="Selling"
-                title="Reports"
-                description="Bucketed by the day the sale actually happened, not the day it reached the server."
-            >
+            <PageHeader title="Reports" description="Bucketed by the day the sale actually happened, not the day it reached the server.">
                 <template #actions>
                     <Button as-child variant="outline" class="press">
                         <a :href="exportUrl">

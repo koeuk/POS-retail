@@ -19,8 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import AppLayout from '@/layouts/AppLayout.vue';
 import { usePermissions } from '@/composables/usePermissions';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage, imageSrc } from '@/lib/utils';
 import type { Category, Paginated, Product } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
@@ -101,7 +101,7 @@ function stockTone(qty: number | null | undefined) {
 
     <AppLayout :breadcrumbs="[{ title: 'Products', href: '/products' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader eyebrow="Catalogue" title="Products" description="Everything you sell, with live stock across all stores.">
+            <PageHeader title="Products" description="Everything you sell, with live stock across all stores.">
                 <template #actions>
                     <Button v-if="may('products', 'create')" as-child class="press hidden md:inline-flex">
                         <Link :href="route('products.create')">

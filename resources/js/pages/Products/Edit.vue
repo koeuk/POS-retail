@@ -36,7 +36,7 @@ const tone = (s: Stock) => {
         ]"
     >
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader eyebrow="Catalogue" :title="product.name">
+            <PageHeader :title="product.name">
                 <template #actions>
                     <Badge :variant="product.is_active ? 'secondary' : 'outline'">
                         {{ product.is_active ? 'Active' : 'Inactive' }}

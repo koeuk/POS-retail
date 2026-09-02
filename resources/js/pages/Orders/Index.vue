@@ -96,7 +96,6 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
     <AppLayout :breadcrumbs="[{ title: 'Order History', href: '/orders' }]">
         <div class="px-2.5 py-6 md:px-8">
             <PageHeader
-                eyebrow="Selling"
                 title="Order History"
                 description="Every sale on the server, from every till. Sales still queued on a tablet appear once they sync."
             />
@@ -133,7 +132,11 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                      way to fit 390px — it only pretends to, behind a sideways
                      scroll nobody discovers. -->
                 <ul v-if="orders.data.length" class="space-y-2 p-2.5 md:hidden">
-                    <li v-for="order in orders.data" :key="order.id" class="shadow-soft relative overflow-hidden rounded-xl border border-border bg-card">
+                    <li
+                        v-for="order in orders.data"
+                        :key="order.id"
+                        class="shadow-soft relative overflow-hidden rounded-xl border border-border bg-card"
+                    >
                         <Link :href="route('orders.show', { order: order.uuid })" class="row-press block px-3.5 py-3">
                             <div class="flex items-baseline justify-between gap-3">
                                 <span class="tabular truncate font-mono text-xs font-semibold">{{ order.order_no }}</span>

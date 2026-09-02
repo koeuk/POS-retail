@@ -12,8 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import AppLayout from '@/layouts/AppLayout.vue';
 import { usePermissions } from '@/composables/usePermissions';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
 import type { Paginated } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
@@ -331,7 +331,6 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
     <AppLayout :breadcrumbs="[{ title: 'Inventory', href: '/inventory' }]">
         <div class="px-2.5 py-6 md:px-8">
             <PageHeader
-                eyebrow="Catalogue"
                 title="Inventory"
                 description="Stock is never typed in directly — record what happened and the quantity follows, so every change has a reason attached."
             >
@@ -380,9 +379,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                         </div>
 
                         <Select v-if="stores.length > 1" v-model="storeId">
-                            <SelectTrigger class="h-10 w-auto min-w-[7rem] shrink-0 rounded-full"
-                                ><SelectValue placeholder="Store"
-                            /></SelectTrigger>
+                            <SelectTrigger class="h-10 w-auto min-w-[7rem] shrink-0 rounded-full"><SelectValue placeholder="Store" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem :value="ALL">All stores</SelectItem>
                                 <SelectItem v-for="s in stores" :key="s.id" :value="String(s.id)">{{ s.name }}</SelectItem>
@@ -496,7 +493,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                                             type="button"
                                             class="press tabular rounded-md px-2 py-1 font-mono text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                                             :disabled="!may('inventory', 'update')"
-                                    @click="openThreshold(stock)"
+                                            @click="openThreshold(stock)"
                                         >
                                             {{ stock.low_stock_threshold ?? '—' }}
                                         </button>

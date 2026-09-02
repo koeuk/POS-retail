@@ -98,11 +98,7 @@ function submitRegister() {
 
     <AppLayout :breadcrumbs="[{ title: 'Stores', href: '/stores' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader
-                eyebrow="People"
-                title="Stores"
-                description="Each store holds its own stock. Registers identify which terminal rang up a sale."
-            >
+            <PageHeader title="Stores" description="Each store holds its own stock. Registers identify which terminal rang up a sale.">
                 <template #actions>
                     <Button v-if="canManage" class="press" @click="openStore(null)">
                         <Plus class="size-4" />

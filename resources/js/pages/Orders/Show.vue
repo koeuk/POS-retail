@@ -94,7 +94,7 @@ onMounted(() => {
         </template>
 
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader class="hidden md:flex" eyebrow="Selling" :title="order.order_no" :description="soldAt">
+            <PageHeader class="hidden md:flex" :title="order.order_no" :description="soldAt">
                 <template #actions>
                     <Button as-child variant="ghost" class="press">
                         <Link :href="route('orders.index')">

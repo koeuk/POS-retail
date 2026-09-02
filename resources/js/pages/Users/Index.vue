@@ -60,10 +60,7 @@ const permissionGroups = computed(() => {
 /** The role's baseline as a full matrix — every action follows the area. */
 const roleDefaults = (role: string): Record<string, ActionMap> =>
     Object.fromEntries(
-        props.permissionOptions.map((o) => [
-            o.value,
-            Object.fromEntries(props.actionOptions.map((a) => [a.value, o.defaults[role] ?? false])),
-        ]),
+        props.permissionOptions.map((o) => [o.value, Object.fromEntries(props.actionOptions.map((a) => [a.value, o.defaults[role] ?? false]))]),
     );
 
 /** Server shape → form shape: keep the actions, drop the area summary. */
@@ -216,11 +213,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
 
     <AppLayout :breadcrumbs="[{ title: 'Staff', href: '/users' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader
-                eyebrow="People"
-                title="Staff"
-                description="Accounts are created here — there is no public sign-up. Everyone signs in on the same login page."
-            >
+            <PageHeader title="Staff" description="Accounts are created here — there is no public sign-up. Everyone signs in on the same login page.">
                 <template #actions>
                     <Button class="press" @click="openCreate">
                         <Plus class="size-4" />
@@ -301,11 +294,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                             class="press size-8 disabled:opacity-40"
                                             :disabled="u.role === 'admin'"
                                             :aria-label="`Permissions for ${u.name}`"
-                                            :title="
-                                                u.role === 'admin'
-                                                    ? 'Administrators always have every permission'
-                                                    : `Permissions for ${u.name}`
-                                            "
+                                            :title="u.role === 'admin' ? 'Administrators always have every permission' : `Permissions for ${u.name}`"
                                             @click="openPermissions(u)"
                                         >
                                             <ShieldCheck class="size-4" />
@@ -559,11 +548,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                         {{ option.label }}
                                     </button>
 
-                                    <label
-                                        v-for="action in actionOptions"
-                                        :key="action.value"
-                                        class="flex w-12 shrink-0 items-center justify-center"
-                                    >
+                                    <label v-for="action in actionOptions" :key="action.value" class="flex w-12 shrink-0 items-center justify-center">
                                         <span class="sr-only">{{ action.label }} {{ option.label }}</span>
                                         <Checkbox
                                             :model-value="permissionsForm.permissions[option.value]?.[action.value] ?? false"

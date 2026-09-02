@@ -2,7 +2,6 @@
 defineProps<{
     title: string;
     description?: string;
-    eyebrow?: string;
 }>();
 </script>
 
@@ -16,9 +15,6 @@ defineProps<{
     -->
     <header class="animate-rise flex flex-wrap items-end justify-between gap-3 pb-4 md:gap-4 md:pb-6">
         <div class="hidden space-y-1.5 md:block">
-            <p v-if="eyebrow" class="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-primary">
-                {{ eyebrow }}
-            </p>
             <h1 class="font-display text-3xl font-semibold leading-none tracking-tight">
                 {{ title }}
             </h1>

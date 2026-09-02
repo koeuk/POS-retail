@@ -11,8 +11,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import AppLayout from '@/layouts/AppLayout.vue';
 import { usePermissions } from '@/composables/usePermissions';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
 import type { Customer, Paginated } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
@@ -88,7 +88,7 @@ function confirmDelete() {
 
     <AppLayout :breadcrumbs="[{ title: 'Customers', href: '/customers' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader eyebrow="People" title="Customers" description="Optional at the till — attach a customer to a sale to track loyalty points.">
+            <PageHeader title="Customers" description="Optional at the till — attach a customer to a sale to track loyalty points.">
                 <template #actions>
                     <Button v-if="may('customers', 'create')" class="press" @click="openCreate">
                         <Plus class="size-4" />

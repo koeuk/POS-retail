@@ -72,7 +72,6 @@ const summarise = (r: Row) => r.items.map((i) => (i.qty > 1 ? `${i.product_name}
     <AppLayout :breadcrumbs="[{ title: 'Myself', href: '/consumption' }]">
         <div class="px-2.5 py-6 md:px-8">
             <PageHeader
-                eyebrow="Selling"
                 title="Myself"
                 description="Things you took for yourself. Stock goes down but nothing counts as a sale — the value shown is what it would have sold for."
             />
@@ -125,9 +124,11 @@ const summarise = (r: Row) => r.items.map((i) => (i.qty > 1 ? `${i.product_name}
                         <tbody class="[&_tr:last-child]:border-0">
                             <TableRow v-for="r in rows.data" :key="r.id">
                                 <TableCell>
-                                    <Link :href="route('orders.show', { order: r.uuid })" class="block max-w-md truncate font-medium hover:underline">{{
-                                        summarise(r)
-                                    }}</Link>
+                                    <Link
+                                        :href="route('orders.show', { order: r.uuid })"
+                                        class="block max-w-md truncate font-medium hover:underline"
+                                        >{{ summarise(r) }}</Link
+                                    >
                                     <p class="tabular font-mono text-xs text-muted-foreground">{{ r.order_no }}</p>
                                 </TableCell>
                                 <TableCell class="whitespace-nowrap text-sm text-muted-foreground">{{ when(r) }}</TableCell>

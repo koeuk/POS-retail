@@ -246,11 +246,7 @@ function submitAdd() {
 
     <AppLayout :breadcrumbs="[{ title: 'In Debt', href: '/debts' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader
-                eyebrow="Selling"
-                title="In Debt"
-                description="Sales made on credit. Record money as it comes in; a debt is settled once it is paid in full."
-            >
+            <PageHeader title="In Debt" description="Sales made on credit. Record money as it comes in; a debt is settled once it is paid in full.">
                 <template #actions>
                     <Button class="press" @click="openAdd()">
                         <Plus class="size-4" />

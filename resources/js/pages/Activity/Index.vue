@@ -74,9 +74,7 @@ const to = ref(props.filters.to ?? '');
 const subjectType = ref(props.filters.subject_type ?? '');
 const subjectId = ref(props.filters.subject_id ?? '');
 
-const subjectScope = computed(() =>
-    subjectType.value && subjectId.value ? `${subjectType.value} #${subjectId.value}` : null,
-);
+const subjectScope = computed(() => (subjectType.value && subjectId.value ? `${subjectType.value} #${subjectId.value}` : null));
 
 let debounce: ReturnType<typeof setTimeout>;
 
@@ -152,7 +150,10 @@ const when = (iso: string | null) => (iso ? dateFormat.format(new Date(iso)) : '
 
 /** Field names read better as words than as columns: units_per_pack → Units per pack. */
 const fieldLabel = (field: string) =>
-    field.replace(/_id$/, '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+    field
+        .replace(/_id$/, '')
+        .replace(/_/g, ' ')
+        .replace(/^./, (c) => c.toUpperCase());
 
 const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_type} #${row.subject_id}` : null);
 </script>
@@ -162,11 +163,7 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
 
     <AppLayout :breadcrumbs="[{ title: 'Activity Log', href: '/activity' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader
-                eyebrow="Audit"
-                title="Activity Log"
-                description="Who did what, and when. Read-only — entries are never edited, only aged out."
-            />
+            <PageHeader title="Activity Log" description="Who did what, and when. Read-only — entries are never edited, only aged out." />
 
             <div class="list-panel animate-rise" style="animation-delay: 60ms">
                 <div class="border-b border-border p-3">
@@ -203,9 +200,7 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
                         </div>
 
                         <Select v-model="logName">
-                            <SelectTrigger class="h-10 w-auto min-w-[9rem] shrink-0 rounded-full" aria-label="Kind"
-                                ><SelectValue
-                            /></SelectTrigger>
+                            <SelectTrigger class="h-10 w-auto min-w-[9rem] shrink-0 rounded-full" aria-label="Kind"><SelectValue /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem :value="ALL">Everything</SelectItem>
                                 <SelectItem v-for="(label, key) in options.logNames" :key="key" :value="String(key)">{{ label }}</SelectItem>
@@ -287,10 +282,10 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
                                         <li v-for="c in a.changes" :key="c.field" class="text-xs leading-snug">
                                             <span class="text-muted-foreground">{{ fieldLabel(c.field) }}:</span>
                                             <span v-if="c.from" class="tabular font-mono text-muted-foreground line-through">{{ c.from }}</span>
-                                            <span v-else class="text-muted-foreground italic">empty</span>
+                                            <span v-else class="italic text-muted-foreground">empty</span>
                                             <span class="text-muted-foreground"> → </span>
                                             <span v-if="c.to" class="tabular font-mono">{{ c.to }}</span>
-                                            <span v-else class="text-muted-foreground italic">empty</span>
+                                            <span v-else class="italic text-muted-foreground">empty</span>
                                         </li>
                                     </ul>
 
@@ -304,7 +299,7 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
 
                                 <TableCell class="text-sm">
                                     <span v-if="a.causer" class="font-medium">{{ a.causer.name }}</span>
-                                    <span v-else class="text-muted-foreground italic">System</span>
+                                    <span v-else class="italic text-muted-foreground">System</span>
                                     <span v-if="a.store" class="block text-xs text-muted-foreground">{{ a.store.name }}</span>
                                     <span v-if="a.ip_address" class="tabular block font-mono text-xs text-muted-foreground">
                                         {{ a.ip_address }}
@@ -342,10 +337,10 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
                             <li v-for="c in a.changes" :key="c.field" class="text-xs leading-snug">
                                 <span class="text-muted-foreground">{{ fieldLabel(c.field) }}:</span>
                                 <span v-if="c.from" class="tabular font-mono text-muted-foreground line-through">{{ c.from }}</span>
-                                <span v-else class="text-muted-foreground italic">empty</span>
+                                <span v-else class="italic text-muted-foreground">empty</span>
                                 <span class="text-muted-foreground"> → </span>
                                 <span v-if="c.to" class="tabular font-mono">{{ c.to }}</span>
-                                <span v-else class="text-muted-foreground italic">empty</span>
+                                <span v-else class="italic text-muted-foreground">empty</span>
                             </li>
                         </ul>
 
@@ -360,7 +355,13 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
                 <EmptyState
                     v-else
                     :icon="History"
-                    :title="subjectScope ? `Nothing recorded for ${subjectScope} yet` : hasFilters ? 'Nothing matches those filters' : 'Nothing recorded yet'"
+                    :title="
+                        subjectScope
+                            ? `Nothing recorded for ${subjectScope} yet`
+                            : hasFilters
+                              ? 'Nothing matches those filters'
+                              : 'Nothing recorded yet'
+                    "
                     :description="
                         subjectScope
                             ? 'This record has not been changed since the activity log was switched on.'

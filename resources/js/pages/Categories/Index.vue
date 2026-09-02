@@ -82,7 +82,7 @@ function confirmDelete() {
 
     <AppLayout :breadcrumbs="[{ title: 'Categories', href: '/categories' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader eyebrow="Catalogue" title="Categories" description="Used to group products and filter the POS grid.">
+            <PageHeader title="Categories" description="Used to group products and filter the POS grid.">
                 <template #actions>
                     <Button v-if="may('categories', 'create')" class="press hidden md:inline-flex" @click="openCreate">
                         <Plus class="size-4" />

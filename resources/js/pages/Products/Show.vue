@@ -87,7 +87,7 @@ function nextSlide() {
         ]"
     >
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader eyebrow="Catalogue" :title="product.name" :description="product.category?.name">
+            <PageHeader :title="product.name" :description="product.category?.name">
                 <template #actions>
                     <Button as-child variant="ghost" class="press">
                         <Link :href="route('products.index')">

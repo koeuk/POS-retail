@@ -2,8 +2,8 @@
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import { Input } from '@/components/ui/input';
 import { formatCurrency, type CurrencyDef } from '@/composables/useCurrency';
-import type { SharedData } from '@/types';
 import { imageSrc } from '@/lib/utils';
+import type { SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, ChevronLeft, ChevronRight, Eye, Search, UtensilsCrossed } from 'lucide-vue-next';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
@@ -190,36 +190,42 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateChipArrows));
                     </button>
 
                     <!-- Soft edges hint that the rail continues past the fold. -->
-                    <div v-if="canScrollLeft" class="pointer-events-none absolute inset-y-0 left-0 z-[5] w-10 bg-gradient-to-r from-card to-transparent" />
-                    <div v-if="canScrollRight" class="pointer-events-none absolute inset-y-0 right-0 z-[5] w-10 bg-gradient-to-l from-card to-transparent" />
+                    <div
+                        v-if="canScrollLeft"
+                        class="pointer-events-none absolute inset-y-0 left-0 z-[5] w-10 bg-gradient-to-r from-card to-transparent"
+                    />
+                    <div
+                        v-if="canScrollRight"
+                        class="pointer-events-none absolute inset-y-0 right-0 z-[5] w-10 bg-gradient-to-l from-card to-transparent"
+                    />
 
                     <nav ref="chipRail" class="scrollbar-none flex gap-1.5 overflow-x-auto" @scroll.passive="updateChipArrows">
-                    <button
-                        type="button"
-                        class="press shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors"
-                        :class="
-                            activeCategory === null
-                                ? 'border-primary bg-primary text-primary-foreground'
-                                : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                        "
-                        @click="activeCategory = null"
-                    >
-                        All
-                    </button>
-                    <button
-                        v-for="c in categories"
-                        :key="c.id"
-                        type="button"
-                        class="press shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors"
-                        :class="
-                            activeCategory === c.id
-                                ? 'border-primary bg-primary text-primary-foreground'
-                                : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                        "
-                        @click="activeCategory = c.id"
-                    >
-                        {{ c.name }}
-                    </button>
+                        <button
+                            type="button"
+                            class="press shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors"
+                            :class="
+                                activeCategory === null
+                                    ? 'border-primary bg-primary text-primary-foreground'
+                                    : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                            "
+                            @click="activeCategory = null"
+                        >
+                            All
+                        </button>
+                        <button
+                            v-for="c in categories"
+                            :key="c.id"
+                            type="button"
+                            class="press shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors"
+                            :class="
+                                activeCategory === c.id
+                                    ? 'border-primary bg-primary text-primary-foreground'
+                                    : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                            "
+                            @click="activeCategory = c.id"
+                        >
+                            {{ c.name }}
+                        </button>
                     </nav>
                 </div>
             </div>

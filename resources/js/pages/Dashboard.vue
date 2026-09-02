@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import DatePicker from '@/components/DatePicker.vue';
 import SalesBarChart from '@/components/charts/SalesBarChart.vue';
 import StatTile from '@/components/charts/StatTile.vue';
+import DatePicker from '@/components/DatePicker.vue';
 import Money from '@/components/Money.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Badge } from '@/components/ui/badge';
@@ -87,13 +87,6 @@ const times = (n: number) => `${n} time${n === 1 ? '' : 's'}, at shelf price`;
 const page = usePage<SharedData>();
 const user = computed(() => page.props.auth.user);
 
-const greeting = computed(() => {
-    const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
-});
-
 const { money } = useCurrency();
 
 const time = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '—');
@@ -128,7 +121,7 @@ const quickActions = computed(() =>
 
     <AppLayout :breadcrumbs="[{ title: 'Dashboard', href: '/dashboard' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader :eyebrow="greeting" :title="user?.name ?? 'Dashboard'" description="Today across the shop floor.">
+            <PageHeader :title="user?.name ?? 'Dashboard'" description="Today across the shop floor.">
                 <template #actions>
                     <DatePicker v-model="date" aria-label="Show figures for a day" class="h-10 rounded-full" />
                 </template>
