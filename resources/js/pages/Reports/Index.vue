@@ -89,7 +89,7 @@ const exportUrl = computed(() => route('reports.export', { from: from.value, to:
             </PageHeader>
 
             <!-- Filters: one row, above the charts. -->
-            <div class="animate-rise shadow-soft mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3">
+            <div class="animate-rise mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3">
                 <DateRangePicker v-model:from="from" v-model:to="to" placeholder="Pick a period" class="w-full sm:w-[16rem]" />
 
                 <div class="ml-auto flex gap-1">
@@ -117,19 +117,19 @@ const exportUrl = computed(() => route('reports.export', { from: from.value, to:
                 <StatTile label="Items sold" :value="String(totals.items)" :icon="Boxes" />
             </div>
 
-            <section class="animate-rise shadow-soft mt-4 rounded-xl border border-border bg-card p-4" style="animation-delay: 120ms">
+            <section class="animate-rise mt-4 rounded-xl border border-border bg-card p-4" style="animation-delay: 120ms">
                 <h2 class="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Sales by day</h2>
                 <SalesBarChart :rows="byDay" :height="240" />
             </section>
 
             <div class="mt-4 grid gap-4 lg:grid-cols-2">
-                <section class="animate-rise shadow-soft rounded-xl border border-border bg-card p-4" style="animation-delay: 160ms">
+                <section class="animate-rise rounded-xl border border-border bg-card p-4" style="animation-delay: 160ms">
                     <h2 class="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Payment methods</h2>
                     <!-- Categorical: each row is a different tender type. -->
                     <BreakdownBars :rows="paymentRows" categorical />
                 </section>
 
-                <section class="animate-rise shadow-soft rounded-xl border border-border bg-card p-4" style="animation-delay: 200ms">
+                <section class="animate-rise rounded-xl border border-border bg-card p-4" style="animation-delay: 200ms">
                     <h2 class="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Top products by revenue</h2>
                     <!-- One measure across many products: a single hue, ranked. -->
                     <BreakdownBars :rows="productRows" />
@@ -138,7 +138,7 @@ const exportUrl = computed(() => route('reports.export', { from: from.value, to:
 
             <!-- The table view the contrast warning obliges, and the thing an
                  accountant actually wants to copy out. -->
-            <section class="animate-rise shadow-soft mt-4 overflow-hidden rounded-xl border border-border bg-card" style="animation-delay: 240ms">
+            <section class="animate-rise mt-4 overflow-hidden rounded-xl border border-border bg-card" style="animation-delay: 240ms">
                 <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                     Sales by product
                 </h2>

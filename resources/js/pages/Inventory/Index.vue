@@ -368,7 +368,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                 keeps a long product name from widening the grid.
             -->
             <div class="grid items-start gap-4 xl:grid-cols-[7fr_3fr]">
-                <div class="animate-rise shadow-soft min-w-0 rounded-xl border border-border bg-card" style="animation-delay: 60ms">
+                <div class="animate-rise min-w-0 rounded-xl border border-border bg-card" style="animation-delay: 60ms">
                     <!-- Same shape as Order History: full-width search, chips below. -->
                     <!-- One row: search flexes, the filters keep their width and
                          wrap under it on screens too narrow to hold them all. -->
@@ -414,7 +414,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
 
                     <!-- Phone: one card per shelf row. -->
                     <ul v-if="stocks.data.length" class="space-y-2 p-2.5 md:hidden">
-                        <li v-for="stock in stocks.data" :key="stock.id" class="shadow-soft rounded-xl border border-border bg-card px-3.5 py-3">
+                        <li v-for="stock in stocks.data" :key="stock.id" class="rounded-xl border border-border bg-card px-3.5 py-3">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <p class="truncate font-medium leading-tight">{{ stock.product?.name }}</p>
@@ -527,7 +527,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                 </div>
 
                 <!-- The ledger. Every row on the left got here through one of these. -->
-                <section class="animate-rise shadow-soft min-w-0 rounded-xl border border-border bg-card" style="animation-delay: 120ms">
+                <section class="animate-rise min-w-0 rounded-xl border border-border bg-card" style="animation-delay: 120ms">
                     <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                         Recent movements
                     </h2>

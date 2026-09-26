@@ -21,8 +21,8 @@
            (font-variant-numeric: tabular-nums), not from a monospace font. */
         --font-mono: 'Noto Sans', 'Noto Sans Khmer', ui-sans-serif, system-ui, sans-serif;
 
-        /* Soft silver — a barely-there cool gray, so the white cards float on it. */
-        --background: 220 16% 98%;
+        /* Soft silver — a cool gray deep enough that flat white cards read without a shadow. */
+        --background: 220 14% 95%;
         --foreground: 220 18% 14%;
         --card: 0 0% 100%;
         --card-foreground: 220 18% 14%;

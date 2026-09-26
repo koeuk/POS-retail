@@ -86,7 +86,7 @@ const summarise = (r: Row) => r.items.map((i) => (i.qty > 1 ? `${i.product_name}
                 <StatTile label="This year" :value="money(summary.year.value)" :icon="Utensils" :hint="times(summary.year.count)" />
             </div>
 
-            <div class="animate-rise shadow-soft rounded-xl border border-border bg-card" style="animation-delay: 60ms">
+            <div class="animate-rise rounded-xl border border-border bg-card" style="animation-delay: 60ms">
                 <div class="space-y-2 border-b border-border p-3 md:flex md:items-center md:gap-2 md:space-y-0">
                     <div class="relative md:flex-1">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -99,7 +99,7 @@ const summarise = (r: Row) => r.items.map((i) => (i.qty > 1 ? `${i.product_name}
 
                 <!-- Phone: one card per take. -->
                 <ul v-if="rows.data.length" class="space-y-2 p-2.5 md:hidden">
-                    <li v-for="r in rows.data" :key="r.id" class="shadow-soft overflow-hidden rounded-xl border border-border bg-card">
+                    <li v-for="r in rows.data" :key="r.id" class="overflow-hidden rounded-xl border border-border bg-card">
                         <Link :href="route('orders.show', { order: r.uuid })" class="row-press block px-3.5 py-3">
                             <div class="flex items-baseline justify-between gap-3">
                                 <p class="min-w-0 flex-1 truncate font-medium leading-snug">{{ summarise(r) }}</p>

@@ -266,7 +266,7 @@ function submitAdd() {
                 <StatTile label="Open debts" :value="String(summary.open_count)" :icon="HandCoins" hint="Customers who still owe something" />
             </div>
 
-            <div class="animate-rise shadow-soft rounded-xl border border-border bg-card" style="animation-delay: 60ms">
+            <div class="animate-rise rounded-xl border border-border bg-card" style="animation-delay: 60ms">
                 <!-- Same shape as Order History: full-width search, chips below. -->
                 <div class="flex items-center gap-2 border-b border-border p-3">
                     <div class="relative min-w-0 flex-1">
@@ -285,7 +285,7 @@ function submitAdd() {
                 <!-- Phone: one card per debt — who, how much still owed, and the
                      two actions the conversation ends with. -->
                 <ul v-if="debts.data.length" class="space-y-2 p-2.5 md:hidden">
-                    <li v-for="d in debts.data" :key="d.id" class="shadow-soft overflow-hidden rounded-xl border border-border bg-card">
+                    <li v-for="d in debts.data" :key="d.id" class="overflow-hidden rounded-xl border border-border bg-card">
                         <button type="button" class="row-press block w-full px-3.5 py-3 text-left" @click="viewing = d">
                             <div class="flex items-baseline justify-between gap-3">
                                 <p class="truncate font-medium leading-tight">{{ d.customer?.name ?? '—' }}</p>

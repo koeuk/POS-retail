@@ -100,7 +100,7 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                 description="Every sale on the server, from every till. Sales still queued on a tablet appear once they sync."
             />
 
-            <div class="animate-rise shadow-soft rounded-xl border border-border bg-card" style="animation-delay: 60ms">
+            <div class="animate-rise rounded-xl border border-border bg-card" style="animation-delay: 60ms">
                 <!-- One row: search flexes, the filters keep their width and
                      wrap under it on screens too narrow to hold all four. -->
                 <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
@@ -135,7 +135,7 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                     <li
                         v-for="order in orders.data"
                         :key="order.id"
-                        class="shadow-soft relative overflow-hidden rounded-xl border border-border bg-card"
+                        class="relative overflow-hidden rounded-xl border border-border bg-card"
                     >
                         <Link :href="route('orders.show', { order: order.uuid })" class="row-press block px-3.5 py-3">
                             <div class="flex items-baseline justify-between gap-3">

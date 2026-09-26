@@ -146,7 +146,7 @@ const quickActions = computed(() =>
                 paint catching light, not flat ink.
             -->
             <section
-                class="surface-brand animate-rise shadow-soft mb-4 rounded-3xl p-5 text-brand-foreground md:mb-6 md:flex md:items-center md:justify-between md:gap-8 md:p-7"
+                class="surface-brand animate-rise mb-4 rounded-3xl p-5 text-brand-foreground md:mb-6 md:flex md:items-center md:justify-between md:gap-8 md:p-7"
             >
                 <div>
                     <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] opacity-85">{{ heroLabel }}</p>
@@ -194,7 +194,7 @@ const quickActions = computed(() =>
                     v-for="action in quickActions"
                     :key="action.href"
                     :href="action.href"
-                    class="press shadow-soft flex flex-1 flex-col items-center gap-1.5 rounded-2xl border border-border bg-card px-2 py-3"
+                    class="press flex flex-1 flex-col items-center gap-1.5 rounded-2xl border border-border bg-card px-2 py-3"
                 >
                     <span class="flex size-11 items-center justify-center rounded-full" :class="action.chip">
                         <component :is="action.icon" class="size-5" />
@@ -266,7 +266,7 @@ const quickActions = computed(() =>
             <div class="mt-4 grid items-start gap-4 lg:grid-cols-3">
                 <!-- One series, so no legend: the panel title names it. -->
                 <section
-                    class="animate-rise shadow-soft min-w-0 rounded-2xl border border-border bg-card p-4 lg:col-span-2"
+                    class="animate-rise min-w-0 rounded-2xl border border-border bg-card p-4 lg:col-span-2"
                     style="animation-delay: 120ms"
                 >
                     <div class="mb-3 flex items-baseline justify-between">
@@ -277,7 +277,7 @@ const quickActions = computed(() =>
                     <SalesBarChart :rows="trend" :height="200" />
                 </section>
 
-                <section class="animate-rise shadow-soft rounded-2xl border border-border bg-card" style="animation-delay: 160ms">
+                <section class="animate-rise rounded-2xl border border-border bg-card" style="animation-delay: 160ms">
                     <div class="flex items-center justify-between border-b border-border px-4 py-3">
                         <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Latest sales</h2>
                         <Link
@@ -313,7 +313,7 @@ const quickActions = computed(() =>
                 -->
                 <section
                     v-if="oversold.length"
-                    class="animate-rise shadow-soft rounded-2xl border border-destructive/40 bg-card"
+                    class="animate-rise rounded-2xl border border-destructive/40 bg-card"
                     style="animation-delay: 200ms"
                 >
                     <h2
@@ -333,7 +333,7 @@ const quickActions = computed(() =>
                     </ul>
                 </section>
 
-                <section class="animate-rise shadow-soft rounded-2xl border border-border bg-card" style="animation-delay: 240ms">
+                <section class="animate-rise rounded-2xl border border-border bg-card" style="animation-delay: 240ms">
                     <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                         Low stock
                     </h2>

@@ -28,7 +28,7 @@ const logoUrl = computed(() => {
                     <span class="sr-only">{{ title }}</span>
                 </Link>
 
-                <div class="animate-rise shadow-soft rounded-3xl border border-border/70 bg-card p-6 sm:p-8">
+                <div class="animate-rise rounded-3xl border border-border/70 bg-card p-6 sm:p-8">
                     <div class="mb-6 space-y-1.5 text-center">
                         <h1 class="font-display text-2xl font-semibold tracking-tight">{{ title }}</h1>
                         <p class="text-sm text-muted-foreground">{{ description }}</p>

@@ -318,7 +318,7 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
 
                 <!-- Phone: one card per entry. -->
                 <ul v-if="activities.data.length" class="space-y-2 p-2.5 md:hidden">
-                    <li v-for="a in activities.data" :key="a.id" class="shadow-soft rounded-xl border border-border bg-card px-3.5 py-3">
+                    <li v-for="a in activities.data" :key="a.id" class="rounded-xl border border-border bg-card px-3.5 py-3">
                         <div class="flex items-start justify-between gap-3">
                             <p class="min-w-0 flex-1 font-medium leading-tight">{{ a.description }}</p>
                             <Badge variant="secondary" class="shrink-0 whitespace-nowrap text-[10px]" :class="toneFor[a.log_name ?? 'model']">

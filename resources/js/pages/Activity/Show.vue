@@ -76,7 +76,7 @@ const fieldLabel = (field: string) =>
 
             <div class="grid items-start gap-4 lg:grid-cols-3">
                 <!-- Identity -->
-                <section class="animate-rise shadow-soft rounded-xl border border-border bg-card p-5">
+                <section class="animate-rise rounded-xl border border-border bg-card p-5">
                     <div class="mb-4 flex items-center justify-center rounded-lg border border-border bg-muted/40 py-10">
                         <History class="size-8 text-muted-foreground/50" />
                     </div>
@@ -110,7 +110,7 @@ const fieldLabel = (field: string) =>
 
                 <!-- Ledger. min-w-0: a grid item defaults to min-width:auto and
                      will not shrink below its widest row. -->
-                <section class="animate-rise shadow-soft min-w-0 rounded-xl border border-border bg-card lg:col-span-2" style="animation-delay: 60ms">
+                <section class="animate-rise min-w-0 rounded-xl border border-border bg-card lg:col-span-2" style="animation-delay: 60ms">
                     <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                         Change history
                     </h2>
