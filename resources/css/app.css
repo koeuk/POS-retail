@@ -218,7 +218,7 @@
      * padding either side is 11% of a 360px screen that the content wants.
      */
     .list-panel {
-        @apply shadow-soft -mx-2.5 border-y border-border bg-card md:mx-0 md:rounded-2xl md:border;
+        @apply -mx-2.5 border-y border-border bg-card md:mx-0 md:rounded-2xl md:border;
     }
 
     /*
@@ -229,7 +229,7 @@
      */
     .list-row {
         @apply flex items-stretch transition-colors;
-        @apply max-md:shadow-soft max-md:mx-4 max-md:my-2.5 max-md:overflow-hidden max-md:rounded-xl max-md:border max-md:border-border max-md:bg-card;
+        @apply max-md:mx-4 max-md:my-2.5 max-md:overflow-hidden max-md:rounded-xl max-md:border max-md:border-border max-md:bg-card;
         @apply md:border-b md:border-border md:last:border-b-0;
     }
 

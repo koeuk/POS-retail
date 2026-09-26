@@ -115,9 +115,6 @@ onBeforeUnmount(() => cancelAnimationFrame(frame));
         class="lift relative overflow-hidden rounded-2xl border bg-card p-4"
         :class="tone === 'warning' ? 'border-destructive/40' : 'border-border'"
     >
-        <!-- A quiet wash of the tile's own colour behind the icon — depth, not decoration. -->
-        <div aria-hidden="true" class="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full opacity-60 blur-2xl" :class="chip" />
-
         <div class="relative flex items-start justify-between gap-2">
             <p class="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
                 {{ label }}

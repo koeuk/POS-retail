@@ -72,8 +72,8 @@ const currentPath = computed(() => new URL(page.url, 'http://x').pathname);
                 </nav>
             </aside>
 
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
+            <div class="min-w-0 flex-1">
+                <section class="space-y-12 rounded-xl border border-border bg-card p-4 md:p-6">
                     <slot />
                 </section>
             </div>
