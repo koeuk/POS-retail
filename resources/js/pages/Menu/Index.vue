@@ -33,6 +33,8 @@ const props = defineProps<{
     products: MenuProduct[];
     categories: { id: number; name: string }[];
     filters: { search: string; category: number | null };
+    /** Which vendor's menu this is (its uuid), or null for the shop's own. */
+    vendor: string | null;
     shop: { name: string; footer: string | null; currency: CurrencyDef };
 }>();
 
@@ -270,7 +272,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateChipArrows));
 
                             <!-- Details: the whole card stays scannable; the eye is the door in. -->
                             <Link
-                                :href="route('menu.show', { product: item.id })"
+                                :href="route('menu.show', { product: item.id, vendor: vendor ?? undefined })"
                                 class="press absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-background/85 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:text-foreground"
                                 :aria-label="`View ${item.name}`"
                             >

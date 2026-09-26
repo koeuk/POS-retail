@@ -3,9 +3,12 @@
 namespace App\Http\Middleware;
 
 use App\Enums\Role;
+use App\Http\Controllers\ViewingController;
 use App\Models\Setting;
+use App\Models\Vendor;
 use App\Support\Currency;
 use App\Support\PerPage;
+use App\Support\Tenant;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -59,11 +62,10 @@ class HandleInertiaRequests extends Middleware
                 'vendor_name' => $request->user()?->vendor?->name,
                 'can' => [
                     'accessAdmin' => (bool) $request->user()?->role?->canAccessAdmin(),
-                    'manage' => (bool) $request->user()?->hasRole(
-                        Role::Admin,
-                        Role::Manager,
-                    ),
+                    'manage' => (bool) $request->user()?->isAdmin(),
                     'isAdmin' => (bool) $request->user()?->isAdmin(),
+                    // Admin accounts, permissions and shop settings.
+                    'isSuperadmin' => (bool) $request->user()?->isSuperadmin(),
                     // One flag per feature area, already resolved through the
                     // user's role defaults and per-user overrides. The nav
                     // renders from these; the permission middleware enforces.
@@ -77,6 +79,15 @@ class HandleInertiaRequests extends Middleware
                  */
                 'actions' => $request->user()?->actionMatrix() ?? (object) [],
             ],
+            /*
+             * The admin's "Viewing" switcher: what it is set to and what it
+             * can be set to. Null for everyone else — they are always pinned
+             * to their own vendor, with nothing to switch.
+             */
+            'viewing' => fn () => $request->user()?->isAdmin() ? [
+                'current' => (string) ($request->session()->get(Tenant::SESSION_KEY) ?? ViewingController::ALL),
+                'vendors' => Vendor::orderBy('name')->get(['id', 'name']),
+            ] : null,
             // Every price on every page formats through this. Changing the
             // setting therefore changes the whole app on the next request.
             'currency' => fn () => Currency::current()->toArray(),

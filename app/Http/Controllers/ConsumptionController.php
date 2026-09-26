@@ -63,6 +63,6 @@ class ConsumptionController extends Controller
         return Order::query()
             ->where('sale_type', SaleType::Myself->value)
             ->where('status', OrderStatus::Completed)
-            ->when(! $user->isAdmin(), fn ($q) => $q->where('store_id', $user->store_id));
+            ->when(! $user->isAdmin() && $user->store_id, fn ($q) => $q->where('store_id', $user->store_id));
     }
 }

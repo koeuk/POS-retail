@@ -112,6 +112,6 @@ class OrderController extends Controller
     private function scoped(User $user): Builder
     {
         return Order::query()
-            ->when(! $user->isAdmin(), fn ($q) => $q->where('store_id', $user->store_id));
+            ->when(! $user->isAdmin() && $user->store_id, fn ($q) => $q->where('store_id', $user->store_id));
     }
 }

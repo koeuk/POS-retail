@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToVendor;
 use App\Models\Concerns\HasUuid;
 use App\Models\Concerns\RecordsActivity;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
-    use HasFactory, HasUuid, RecordsActivity;
+    use BelongsToVendor, HasFactory, HasUuid, RecordsActivity;
 
     protected $fillable = [
         'category_id',
@@ -65,11 +66,6 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
-    }
-
-    public function vendor(): BelongsTo
-    {
-        return $this->belongsTo(Vendor::class);
     }
 
     public function stocks(): HasMany

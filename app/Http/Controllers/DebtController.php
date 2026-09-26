@@ -15,6 +15,7 @@ use App\Services\OrderSyncService;
 use App\Support\AuditLog;
 use App\Support\Currency;
 use App\Support\PerPage;
+use App\Support\Tenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -150,14 +151,14 @@ class DebtController extends Controller
         abort_unless($request->user()->mayDo(Permission::Debts, Action::Create), 403);
 
         $data = $request->validate([
-            'customer_id' => ['required', 'integer', Rule::exists('customers', 'id')],
+            'customer_id' => ['required', 'integer', Tenant::exists('customers')],
 
             /*
              * Two ways onto the book: a real product (they took beer — the
              * shelf must move), or a typed amount (a scribbled total — no
              * shelf involved). Exactly one of the two.
              */
-            'product_id' => ['nullable', 'integer', Rule::exists('products', 'id')],
+            'product_id' => ['nullable', 'integer', Tenant::exists('products')],
             'qty' => ['required_with:product_id', 'integer', 'min:1', 'max:100000'],
             'amount' => ['required_without:product_id', 'nullable', 'numeric', 'min:0.01', 'max:99999999'],
             'note' => ['nullable', 'string', 'max:255'],
@@ -289,6 +290,6 @@ class DebtController extends Controller
         return Order::query()
             ->where('sale_type', SaleType::Debt->value)
             ->where('status', OrderStatus::Completed)
-            ->when(! $user->isAdmin(), fn ($q) => $q->where('store_id', $user->store_id));
+            ->when(! $user->isAdmin() && $user->store_id, fn ($q) => $q->where('store_id', $user->store_id));
     }
 }

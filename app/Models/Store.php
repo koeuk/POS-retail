@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToVendor;
 use App\Models\Concerns\HasUuid;
 use App\Models\Concerns\RecordsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,9 +11,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Store extends Model
 {
-    use HasFactory, HasUuid, RecordsActivity;
+    use BelongsToVendor, HasFactory, HasUuid, RecordsActivity;
 
-    protected $fillable = ['name', 'address', 'phone'];
+    protected $fillable = ['vendor_id', 'name', 'address', 'phone'];
 
     /** Columns the audit trail records changes to — see RecordsActivity. */
     protected array $auditable = [

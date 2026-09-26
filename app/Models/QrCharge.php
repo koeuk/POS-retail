@@ -4,13 +4,14 @@ namespace App\Models;
 
 use App\Enums\QrChargeStatus;
 use App\Models\Concerns\HasUuid;
+use App\Models\Concerns\ScopedByStore;
 use App\Payments\StatusResult;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class QrCharge extends Model
 {
-    use HasUuid;
+    use HasUuid, ScopedByStore;
 
     protected $fillable = [
         'provider', 'reference', 'qr', 'amount', 'currency', 'status',

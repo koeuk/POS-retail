@@ -48,12 +48,10 @@ class UserFactory extends Factory
         return $this->state(fn () => ['role' => Role::Admin, 'store_id' => null]);
     }
 
-    public function manager(Store|int|null $store = null): static
+    /** Owns the platform: admins, permissions and settings are its alone. */
+    public function superadmin(): static
     {
-        return $this->state(fn () => [
-            'role' => Role::Manager,
-            'store_id' => $store instanceof Store ? $store->id : $store,
-        ]);
+        return $this->state(fn () => ['role' => Role::Superadmin, 'store_id' => null]);
     }
 
     /** Cashiers must be store-bound — /pos cannot resolve stock without one. */

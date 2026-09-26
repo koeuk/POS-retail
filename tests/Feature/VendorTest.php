@@ -29,6 +29,9 @@ class VendorTest extends TestCase
 
     private User $vendorUser;
 
+    /** The vendor's own shop, as the Vendors screen would create it. */
+    private Store $vendorStore;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -42,6 +45,7 @@ class VendorTest extends TestCase
             'store_id' => null,
             'is_active' => true,
         ]);
+        $this->vendorStore = Store::factory()->create(['vendor_id' => $this->vendor->id]);
     }
 
     private function cashierPayload(array $overrides = []): array
@@ -52,7 +56,7 @@ class VendorTest extends TestCase
             'password' => 'Str0ng!Passw0rd#2026',
             'password_confirmation' => 'Str0ng!Passw0rd#2026',
             'role' => 'cashier',
-            'store_id' => $this->store->id,
+            'store_id' => $this->vendorStore->id,
             'is_active' => true,
         ], $overrides);
     }
@@ -74,26 +78,23 @@ class VendorTest extends TestCase
         $this->actingAs($this->vendorUser)->get('/activity')->assertForbidden();
     }
 
-    public function test_a_vendor_may_add_and_edit_but_not_delete_by_default(): void
+    public function test_a_vendor_has_every_action_on_its_own_data_only(): void
     {
-        $this->assertTrue($this->vendorUser->mayDo(Permission::Products, Action::Create));
-        $this->assertTrue($this->vendorUser->mayDo(Permission::Products, Action::Update));
-        $this->assertFalse($this->vendorUser->mayDo(Permission::Products, Action::Delete));
+        $this->assertTrue($this->vendorUser->mayDo(Permission::Products, Action::Delete));
 
-        $product = Product::factory()->create();
+        $own = Product::factory()->create(['vendor_id' => $this->vendor->id]);
+        $shops = Product::factory()->create();
+
+        // Another side's row does not exist as far as a vendor can tell.
+        $this->actingAs($this->vendorUser)
+            ->delete(route('products.destroy', ['product' => $shops->uuid]))
+            ->assertNotFound();
 
         $this->actingAs($this->vendorUser)
-            ->delete(route('products.destroy', ['product' => $product->uuid]))
-            ->assertForbidden();
-    }
+            ->delete(route('products.destroy', ['product' => $own->uuid]))
+            ->assertRedirect();
 
-    public function test_an_admin_can_grant_one_vendor_account_delete(): void
-    {
-        $this->vendorUser->update(['permissions' => [
-            'products' => array_fill_keys(Action::values(), true),
-        ]]);
-
-        $this->assertTrue($this->vendorUser->fresh()->mayDo(Permission::Products, Action::Delete));
+        $this->assertModelExists($shops);
     }
 
     public function test_a_vendor_account_must_name_its_vendor(): void
@@ -140,7 +141,7 @@ class VendorTest extends TestCase
 
     public function test_a_vendor_sees_and_edits_only_its_own_cashiers(): void
     {
-        $own = User::factory()->cashier($this->store)->create(['vendor_id' => $this->vendor->id]);
+        $own = User::factory()->cashier($this->vendorStore)->create(['vendor_id' => $this->vendor->id]);
         $shopCashier = User::factory()->cashier($this->store)->create();
         $manager = User::factory()->manager()->create();
 
@@ -156,7 +157,7 @@ class VendorTest extends TestCase
                 'name' => 'Renamed',
                 'email' => $u->email,
                 'role' => 'cashier',
-                'store_id' => $this->store->id,
+                'store_id' => $this->vendorStore->id,
                 'is_active' => true,
             ]);
 
@@ -182,33 +183,113 @@ class VendorTest extends TestCase
     /* The vendor screen */
     /* ------------------------------------------------------------------ */
 
-    public function test_an_admin_manages_vendors(): void
+    private const PASSWORD = 'Str0ng!Passw0rd#2026';
+
+    public function test_creating_a_vendor_creates_its_login(): void
     {
         $this->actingAs($this->admin)
-            ->post(route('vendors.store'), ['name' => 'Mekong Snacks', 'phone' => '012 345 678'])
+            ->post(route('vendors.store'), [
+                'name' => 'Mekong Snacks',
+                'email' => 'owner@mekong.test',
+                'password' => self::PASSWORD,
+                'password_confirmation' => self::PASSWORD,
+            ])
             ->assertSessionHasNoErrors();
 
         $vendor = Vendor::where('name', 'Mekong Snacks')->firstOrFail();
-        $this->assertTrue($vendor->is_active);
+        $owner = $vendor->owner;
 
-        $this->actingAs($this->admin)
-            ->put(route('vendors.update', ['vendor' => $vendor->uuid]), ['name' => 'Mekong Snacks Co', 'is_active' => false])
-            ->assertSessionHasNoErrors();
+        // Somewhere to sell from, with a till.
+        $store = Store::ofVendor($vendor->id)->sole();
+        $this->assertSame(1, $store->registers()->count());
 
-        $this->assertFalse($vendor->fresh()->is_active);
+        $this->assertNotNull($owner);
+        $this->assertSame(Role::Vendor, $owner->role);
+        $this->assertSame('owner@mekong.test', $owner->email);
+        $this->assertTrue($owner->is_active);
 
-        $product = Product::factory()->create(['vendor_id' => $vendor->id]);
-
-        $this->actingAs($this->admin)
-            ->delete(route('vendors.destroy', ['vendor' => $vendor->uuid]))
-            ->assertRedirect(route('vendors.index'));
-
-        $this->assertModelMissing($vendor);
-        $this->assertNull($product->fresh()->vendor_id, 'products stay, just unassigned');
+        auth()->logout();
+        $this->post(route('login'), ['email' => 'owner@mekong.test', 'password' => self::PASSWORD]);
+        $this->assertAuthenticatedAs($owner);
     }
 
-    public function test_a_vendor_with_accounts_cannot_be_deleted(): void
+    public function test_a_vendor_needs_a_password_and_a_free_email(): void
     {
+        $this->actingAs($this->admin)
+            ->post(route('vendors.store'), ['name' => 'No Login', 'email' => $this->admin->email])
+            ->assertSessionHasErrors(['email', 'password']);
+
+        $this->assertDatabaseMissing('vendors', ['name' => 'No Login']);
+    }
+
+    public function test_editing_keeps_the_password_unless_a_new_one_is_typed(): void
+    {
+        $vendor = Vendor::factory()->create();
+        $owner = User::factory()->create(['role' => Role::Vendor, 'vendor_id' => $vendor->id, 'password' => self::PASSWORD]);
+        $hash = $owner->password;
+
+        $this->actingAs($this->admin)
+            ->put(route('vendors.update', ['vendor' => $vendor->uuid]), ['name' => 'Renamed', 'email' => 'new@login.test'])
+            ->assertSessionHasNoErrors();
+
+        $owner->refresh();
+        $this->assertSame('new@login.test', $owner->email);
+        $this->assertSame($hash, $owner->password);
+
+        $this->actingAs($this->admin)
+            ->put(route('vendors.update', ['vendor' => $vendor->uuid]), [
+                'name' => 'Renamed',
+                'email' => 'new@login.test',
+                'password' => 'An0ther!Passw0rd#99',
+                'password_confirmation' => 'An0ther!Passw0rd#99',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertNotSame($hash, $owner->fresh()->password);
+    }
+
+    public function test_switching_a_vendor_off_locks_out_its_whole_team(): void
+    {
+        $cashier = User::factory()->cashier($this->store)->create(['vendor_id' => $this->vendor->id]);
+
+        $this->actingAs($this->admin)
+            ->put(route('vendors.update', ['vendor' => $this->vendor->uuid]), [
+                'name' => $this->vendor->name,
+                'email' => $this->vendorUser->email,
+                'is_active' => false,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertFalse($this->vendorUser->fresh()->is_active);
+        $this->assertFalse($cashier->fresh()->is_active);
+    }
+
+    public function test_deleting_an_empty_vendor_takes_its_login_and_store(): void
+    {
+        $this->actingAs($this->admin)
+            ->delete(route('vendors.destroy', ['vendor' => $this->vendor->uuid]))
+            ->assertRedirect(route('vendors.index'));
+
+        $this->assertModelMissing($this->vendor);
+        $this->assertModelMissing($this->vendorUser);
+        $this->assertModelMissing($this->vendorStore);
+    }
+
+    public function test_a_vendor_with_products_cannot_be_deleted(): void
+    {
+        Product::factory()->create(['vendor_id' => $this->vendor->id]);
+
+        $this->actingAs($this->admin)
+            ->delete(route('vendors.destroy', ['vendor' => $this->vendor->uuid]))
+            ->assertSessionHasErrors('vendor');
+
+        $this->assertModelExists($this->vendor);
+    }
+
+    public function test_a_vendor_with_cashiers_cannot_be_deleted(): void
+    {
+        User::factory()->cashier($this->vendorStore)->create(['vendor_id' => $this->vendor->id]);
+
         $this->actingAs($this->admin)
             ->delete(route('vendors.destroy', ['vendor' => $this->vendor->uuid]))
             ->assertSessionHasErrors('vendor');

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ThemeToggle from '@/components/ThemeToggle.vue';
+import ViewingSelect from '@/components/ViewingSelect.vue';
 import { isTelegram } from '@/composables/useTelegram';
 import type { BreadcrumbItemType } from '@/types';
 import { Link } from '@inertiajs/vue3';
@@ -44,6 +45,7 @@ const showBack = computed(() => !!parent.value && !isTelegram());
 
             <div class="ml-auto flex items-center gap-1 pr-1">
                 <slot name="actions" />
+                <ViewingSelect />
                 <ThemeToggle class="text-muted-foreground active:bg-accent" />
             </div>
         </div>

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\OrderStatus;
 use App\Enums\SaleType;
 use App\Models\Concerns\HasUuid;
+use App\Models\Concerns\ScopedByStore;
 use App\Services\SalesReporter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
-    use HasFactory, HasUuid;
+    use HasFactory, HasUuid, ScopedByStore;
 
     protected $fillable = [
         'client_uuid',

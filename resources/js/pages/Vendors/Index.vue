@@ -55,7 +55,18 @@ watch(search, () => {
 
 const editing = ref<Vendor | null>(null);
 const dialogOpen = ref(false);
-const form = useForm({ name: '', contact_name: '', phone: '', email: '', address: '', notes: '', is_active: true as boolean });
+const form = useForm({
+    name: '',
+    contact_name: '',
+    phone: '',
+    // The vendor's sign-in: creating a vendor creates its login.
+    email: '',
+    password: '',
+    password_confirmation: '',
+    address: '',
+    notes: '',
+    is_active: true as boolean,
+});
 
 function openCreate() {
     editing.value = null;
@@ -70,7 +81,9 @@ function openEdit(vendor: Vendor) {
     form.name = vendor.name;
     form.contact_name = vendor.contact_name ?? '';
     form.phone = vendor.phone ?? '';
-    form.email = vendor.email ?? '';
+    form.email = vendor.owner?.email ?? vendor.email ?? '';
+    form.password = '';
+    form.password_confirmation = '';
     form.address = vendor.address ?? '';
     form.notes = vendor.notes ?? '';
     form.is_active = vendor.is_active;
@@ -164,6 +177,8 @@ function confirmDelete() {
                                     <span v-if="v.contact_name && v.phone"> · </span>
                                     <span v-if="v.phone" class="tabular font-mono">{{ v.phone }}</span>
                                     <span v-if="!v.contact_name && !v.phone">—</span>
+                                    <span v-if="v.owner" class="block text-xs">Login: {{ v.owner.email }}</span>
+                                    <span v-else class="block text-xs text-destructive">No login yet — edit to set a password</span>
                                 </TableCell>
                                 <TableCell data-numeric class="tabular text-right font-mono">{{ v.products_count ?? 0 }}</TableCell>
                                 <TableCell data-numeric class="tabular text-right font-mono">{{ v.users_count ?? 0 }}</TableCell>
@@ -235,7 +250,13 @@ function confirmDelete() {
                 <form @submit.prevent="submit">
                     <DialogHeader>
                         <DialogTitle>{{ editing ? 'Edit vendor' : 'New vendor' }}</DialogTitle>
-                        <DialogDescription>Only a name is required.</DialogDescription>
+                        <DialogDescription>
+                            {{
+                                editing
+                                    ? 'Leave the password blank to keep the current one.'
+                                    : 'The vendor signs in with this email and password, as a Vendor account.'
+                            }}
+                        </DialogDescription>
                     </DialogHeader>
 
                     <div class="grid gap-4 py-5">
@@ -257,9 +278,26 @@ function confirmDelete() {
                             </div>
                         </div>
                         <div class="grid gap-2">
-                            <Label for="v-email">Email</Label>
-                            <Input id="v-email" v-model="form.email" type="email" />
+                            <Label for="v-email">Login email</Label>
+                            <Input id="v-email" v-model="form.email" type="email" required autocomplete="off" />
                             <InputError :message="form.errors.email" />
+                        </div>
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="grid gap-2">
+                                <Label for="v-pass">{{ editing?.owner ? 'New password' : 'Password' }}</Label>
+                                <Input id="v-pass" v-model="form.password" type="password" :required="!editing?.owner" autocomplete="new-password" />
+                                <InputError :message="form.errors.password" />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="v-pass2">Confirm password</Label>
+                                <Input
+                                    id="v-pass2"
+                                    v-model="form.password_confirmation"
+                                    type="password"
+                                    :required="!editing?.owner || !!form.password"
+                                    autocomplete="new-password"
+                                />
+                            </div>
                         </div>
                         <div class="grid gap-2">
                             <Label for="v-address">Address</Label>
@@ -272,7 +310,10 @@ function confirmDelete() {
                             <InputError :message="form.errors.notes" />
                         </div>
                         <label class="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
-                            <span class="text-sm font-medium">Active</span>
+                            <span>
+                                <span class="block text-sm font-medium">Active</span>
+                                <span class="block text-xs text-muted-foreground">Off locks the vendor and its cashiers out.</span>
+                            </span>
                             <Switch v-model="form.is_active" />
                         </label>
                     </div>
@@ -292,8 +333,8 @@ function confirmDelete() {
                 <DialogHeader>
                     <DialogTitle>Delete “{{ pendingDelete?.name }}”?</DialogTitle>
                     <DialogDescription>
-                        Its products stay in the catalogue without a vendor. A vendor that still has staff accounts cannot be deleted — mark it
-                        inactive instead.
+                        Its login is deleted with it; its products stay in the catalogue without a vendor. A vendor with cashiers or sales history
+                        cannot be deleted — mark it inactive instead.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>

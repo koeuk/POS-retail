@@ -62,14 +62,14 @@ Every user has exactly one **role** — `admin`, `manager`, `cashier`, or `vendo
 
 ## Roles
 
-| Role      | Store binding                             | Default access                                                                                                                                                |
-| --------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `admin`   | none (sees all stores)                    | Everything, always. Overrides are ignored.                                                                                                                    |
-| `manager` | optional                                  | Everything except **Staff**                                                                                                                                   |
-| `cashier` | **required** — `/pos` reads stock from it | **Point of Sale** only                                                                                                                                        |
-| `vendor`  | optional; **`vendor_id` required**        | Everything except **Activity** and **Vendors**; **no Delete** in any area. On **Staff** it may only create cashiers, and only sees/edits its own (see below). |
+| Role      | Store binding                             | Default access                                                                                                                                                                                          |
+| --------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `admin`   | none (sees all stores)                    | Everything, always. Overrides are ignored.                                                                                                                                                              |
+| `manager` | optional                                  | Everything except **Staff**                                                                                                                                                                             |
+| `cashier` | **required** — `/pos` reads stock from it | **Point of Sale** only                                                                                                                                                                                  |
+| `vendor`  | optional; **`vendor_id` required**        | Everything except **Activity** and **Vendors**, every action — on **its own vendor's data only** (see Multi-vendor). On **Staff** it may only create cashiers, and only sees/edits its own (see below). |
 
-A `vendor` account belongs to one supplier (`users.vendor_id` → `vendors`). A cashier may optionally carry a `vendor_id` too — that puts it on the vendor's team.
+A `vendor` account belongs to one vendor (`users.vendor_id` → `vendors`). Vendors are created by an admin on the **Vendors** screen, and that one form creates the vendor **and its login** (`Vendor::owner`, role `vendor`, email + password). Editing the vendor edits the login (blank password keeps the current one); switching the vendor inactive deactivates its whole team. A cashier may optionally carry a `vendor_id` too — that puts it on the vendor's team. The `vendors` row is the anchor for future multi-vendor scoping: products already carry `vendor_id`.
 
 ## Permissions
 
@@ -78,7 +78,7 @@ Defined in `App\Enums\Permission`, one case per feature area:
 | Key | Screen | Admin | Manager | Cashier |
 | --- | ------ | :---: | :-----: | :-----: |
 
-The `vendor` role matches Manager's column, except it **has** `users` (for hiring cashiers) and **lacks** `vendors`.
+The `vendor` role matches Manager's column, except it **has** `users` (for hiring cashiers). Neither has `vendors`.
 
 | `pos` | Point of Sale | ✓ | ✓ | ✓ |
 | `orders` | Order History | ✓ | ✓ | — |
@@ -104,7 +104,7 @@ Dashboard and the public `/menu` need no permission. Shop settings (`/settings/s
 2. **Override present** in the `users.permissions` JSON column? → use it.
 3. Otherwise → the role's default from `Permission::defaultFor(Role $r)`.
 
-`User::mayDo(Permission $p, Action $a)` answers the **action** question: the area gate first (someone who cannot open Products cannot delete one), then the stored override for that key — or, with no override, `Permission::defaultActionFor(Role, Action)`. That is where a role-level verb rule lives: it follows `defaultFor()` except that `vendor` gets `delete = false` everywhere. The Staff dialog seeds its switches from the same function (`actionDefaults`), so an admin can grant Delete to one vendor account.
+`User::mayDo(Permission $p, Action $a)` answers the **action** question: the area gate first (someone who cannot open Products cannot delete one), then the stored override for that key.
 
 An override is stored in one of two shapes, and both are valid:
 
@@ -272,21 +272,21 @@ Checked against `php artisan route:list` and [routes/web.php](../routes/web.php)
 
 Each row is one `Route::middleware('permission:<key>')` group — the middleware 403s before any controller code runs. Policies then refine _which_ action inside the area.
 
-| Permission    | Routes                                                                                                                                                                                                                                                                              |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pos`         | `GET /pos` — and the whole POS data API below                                                                                                                                                                                                                                       |
-| `orders`      | `GET /orders`, `GET /orders/{order}`                                                                                                                                                                                                                                                |
-| `debts`       | `GET /debts` · `POST /debts` (put a sale straight on the book) · `GET /debts/product-lookup` (JSON) · `POST /debts/{order}/settle`                                                                                                                                                  |
-| `consumption` | `GET /consumption`                                                                                                                                                                                                                                                                  |
-| `reports`     | `GET /reports`, `GET /reports/export` (CSV download)                                                                                                                                                                                                                                |
-| `products`    | Full resource: index/create/store/show/edit/update/destroy                                                                                                                                                                                                                          |
-| `categories`  | index/store/update/destroy                                                                                                                                                                                                                                                          |
-| `inventory`   | `GET /inventory` · `GET /inventory/lookup` (JSON) · `POST /inventory/movements` · `PUT /inventory/threshold`                                                                                                                                                                        |
-| `customers`   | index/store/update/destroy                                                                                                                                                                                                                                                          |
-| `users`       | index/store/update/destroy (admin-only by default; see invariants)                                                                                                                                                                                                                  |
-| `stores`      | `GET/POST /stores`, `PUT/DELETE /stores/{store}`, `POST/PUT .../registers`                                                                                                                                                                                                          |
-| `vendors`     | index/show/store/update/destroy — show is the per-vendor summary (products, stock on hand, sales over 7/30/90 days); destroy refuses while the vendor has staff accounts                                                                                                            |
-| `activity`    | `GET /activity` (whole log) · `GET /<resource>/{id}/history` (a record's own history page, beside its show/edit endpoints: products, categories, customers, stores, inventory, users) — read-only by design: no write route exists, rows age out via the weekly `activitylog:clean` |
+| Permission    | Routes                                                                                                                                                                                                                                                                                                                                    |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pos`         | `GET /pos` — and the whole POS data API below                                                                                                                                                                                                                                                                                             |
+| `orders`      | `GET /orders`, `GET /orders/{order}`                                                                                                                                                                                                                                                                                                      |
+| `debts`       | `GET /debts` · `POST /debts` (put a sale straight on the book) · `GET /debts/product-lookup` (JSON) · `POST /debts/{order}/settle`                                                                                                                                                                                                        |
+| `consumption` | `GET /consumption`                                                                                                                                                                                                                                                                                                                        |
+| `reports`     | `GET /reports`, `GET /reports/export` (CSV download)                                                                                                                                                                                                                                                                                      |
+| `products`    | Full resource: index/create/store/show/edit/update/destroy                                                                                                                                                                                                                                                                                |
+| `categories`  | index/store/update/destroy                                                                                                                                                                                                                                                                                                                |
+| `inventory`   | `GET /inventory` · `GET /inventory/lookup` (JSON) · `POST /inventory/movements` · `PUT /inventory/threshold`                                                                                                                                                                                                                              |
+| `customers`   | index/store/update/destroy                                                                                                                                                                                                                                                                                                                |
+| `users`       | index/store/update/destroy (admin-only by default; see invariants)                                                                                                                                                                                                                                                                        |
+| `stores`      | `GET/POST /stores`, `PUT/DELETE /stores/{store}`, `POST/PUT .../registers`                                                                                                                                                                                                                                                                |
+| `vendors`     | index/show/store/update/destroy — show is the per-vendor summary (products, stock on hand, sales over 7/30/90 days); store also creates the vendor's login, first store and register; update edits the login; destroy deletes login and empty stores, and refuses while the vendor has cashiers, products, categories, customers or sales |
+| `activity`    | `GET /activity` (whole log) · `GET /<resource>/{id}/history` (a record's own history page, beside its show/edit endpoints: products, categories, customers, stores, inventory, users) — read-only by design: no write route exists, rows age out via the weekly `activitylog:clean`                                                       |
 
 ## The POS data API
 
@@ -358,11 +358,34 @@ Rules that keep the two doors honest:
 - **Store pinning survives the door.** A cashier's token is bound to their store for orders, debts, inventory and sync, exactly as their session is.
 - Lists paginate through the same `PerPage` whitelist (`?per_page=`), and filters use the same Spatie grammar — one query language across web and API.
 
+## Multi-vendor: whose data a request sees
+
+Every vendor's data is its own; `vendor_id IS NULL` is the admin's own shop. [App\Support\Tenant](../app/Support/Tenant.php) decides the fence for each request:
+
+| Who                    | Sees                                                                                                                                                  |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Admin                  | Everything — or one side, via the **Viewing** switcher in the header (`PUT /viewing`, role-gated: it is the admin's cross-vendor view, not a feature) |
+| Anyone else            | Only their own `vendor_id` — a vendor's team its vendor, the shop's staff the shop                                                                    |
+| Guests, console, queue | Unfenced (the public menu filters explicitly)                                                                                                         |
+
+How it is enforced — use these, never hand-rolled `where vendor_id` checks:
+
+- **Global scopes.** `BelongsToVendor` (stores, products, categories, customers — own `vendor_id`, stamped on create) and `ScopedByStore` (orders, registers, stock, movements, QR charges — owned through their store). Eloquent queries, route model binding and relations are fenced automatically; another side's row is a **404**, not a 403.
+- **Raw reads** skip global scopes: `SalesReporter` starts every query from `table()`, which applies `Tenant::constrainStore`.
+- **`exists` rules** skip them too: use `Tenant::exists('<table>')` / `Tenant::existsInStore('<table>')`, never bare `Rule::exists`, for any id a client sends.
+- **Cross-vendor code** (the Vendors screen, the public menu) runs inside `Tenant::unscoped()` and picks a side explicitly with `Model::ofVendor($id)`.
+- **Store pinning** is unchanged for store-bound accounts (cashiers); an account with no store (a vendor, a storeless manager) sees every store on its side.
+- **Staff** is fenced by `users.vendor_id` in `UserController` / `UserPolicy::inReach`; non-admins always hire onto their own side, and only an admin mints a `vendor` account.
+
+Each vendor gets its own public menu at `/menu?vendor=<uuid>`; plain `/menu` is the shop's (or, for a signed-in vendor's staff, their own). Creating a vendor also creates its first store and register.
+
+Not yet per vendor: shop settings (receipt header, currency) and payment accounts (KHQR) — they are the admin's and shared.
+
 ## Vendor accounts and the Staff screen
 
 A vendor holds `users`, so it can open Staff — but `UserPolicy::inReach()` and `UserRequest` keep it to its own team:
 
-- It lists only itself and cashiers with its `vendor_id` (`UserController::index`).
+- It lists only itself and cashiers on its own side (`UserController::index`).
 - It may create **cashiers only** (`role` rule in `UserRequest`); the controller pins the hire's `vendor_id` to the vendor's own, whatever was sent.
 - It may update/delete only cashiers on its team (`UserPolicy::inReach`), never other staff.
 - Like every non-admin, it cannot edit `permissions`.

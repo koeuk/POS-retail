@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Setting;
+use App\Models\Vendor;
 use App\Support\Currency;
+use App\Support\Tenant;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,10 +23,32 @@ class MenuController extends Controller
 {
     public function index(Request $request): Response
     {
+        $vendor = $this->vendor($request);
+
+        // A public page answers for whichever menu the link names, whoever
+        // happens to be signed in on this browser — so no tenant fence here.
+        return Tenant::unscoped(fn () => $this->renderIndex($request, $vendor));
+    }
+
+    /**
+     * Whose menu: `?vendor=<uuid>` for a vendor's own link, otherwise the
+     * admin's shop — or, for a signed-in vendor's staff, their own vendor.
+     */
+    private function vendor(Request $request): ?Vendor
+    {
+        if ($request->filled('vendor')) {
+            return Vendor::where('uuid', $request->input('vendor'))->where('is_active', true)->firstOrFail();
+        }
+
+        return $request->user()?->vendor;
+    }
+
+    private function renderIndex(Request $request, ?Vendor $vendor): Response
+    {
         $search = trim((string) $request->input('search'));
         $categoryId = $request->input('category');
 
-        $products = Product::query()
+        $products = Product::ofVendor($vendor?->id)
             ->active()
             // Base products only. A case and a can are one item on a menu with
             // two prices, not two entries a customer has to reconcile.
@@ -92,8 +116,9 @@ class MenuController extends Controller
                 'search' => $search,
                 'category' => $categoryId ? (int) $categoryId : null,
             ],
+            'vendor' => $vendor?->uuid,
             'shop' => [
-                'name' => Setting::get('receipt_header', config('app.name')),
+                'name' => $vendor?->name ?? Setting::get('receipt_header', config('app.name')),
                 'footer' => Setting::get('receipt_footer'),
                 'currency' => Currency::current()->toArray(),
             ],
@@ -104,7 +129,21 @@ class MenuController extends Controller
      * One item, still public: the same fields the card shows plus the photo
      * gallery and full description — never stock counts or staff data.
      */
-    public function show(Product $product): Response
+    public function show(Request $request, string $product): Response
+    {
+        $vendor = $this->vendor($request);
+
+        return Tenant::unscoped(function () use ($product, $vendor) {
+            // By id (what the menu cards link with) or by public uuid.
+            $found = Product::ofVendor($vendor?->id)
+                ->where(fn ($q) => $q->where('uuid', $product)->orWhere('id', ctype_digit($product) ? (int) $product : 0))
+                ->firstOrFail();
+
+            return $this->renderShow($found, $vendor);
+        });
+    }
+
+    private function renderShow(Product $product, ?Vendor $vendor): Response
     {
         // Inactive items and packs have no page of their own: a pack is a
         // buying option on its parent's page, not a separate menu entry.
@@ -137,8 +176,9 @@ class MenuController extends Controller
                     ])
                     ->values(),
             ],
+            'vendor' => $vendor?->uuid,
             'shop' => [
-                'name' => Setting::get('receipt_header', config('app.name')),
+                'name' => $vendor?->name ?? Setting::get('receipt_header', config('app.name')),
                 'footer' => Setting::get('receipt_footer'),
                 'currency' => Currency::current()->toArray(),
             ],

@@ -25,8 +25,6 @@ type PermissionOption = {
     label: string;
     group: string;
     defaults: Record<string, boolean>;
-    /** Per role, per action — a role may reach an area yet not every verb in it. */
-    actionDefaults: Record<string, Record<string, boolean>>;
 };
 
 type ActionOption = { value: string; label: string };
@@ -55,7 +53,7 @@ const props = defineProps<{
 
 const page = usePage<SharedData>();
 const currentUserId = computed(() => page.props.auth.user?.id);
-const canEditPermissions = computed(() => page.props.auth.can.isAdmin);
+const canEditPermissions = computed(() => page.props.auth.can.isSuperadmin);
 /** A vendor's hires join its own team, so it is never asked which vendor. */
 const actorIsVendor = computed(() => page.props.auth.user?.role === 'vendor');
 
@@ -71,10 +69,7 @@ const permissionGroups = computed(() => {
 /** The role's baseline as a full matrix, action by action. */
 const roleDefaults = (role: string): Record<string, ActionMap> =>
     Object.fromEntries(
-        props.permissionOptions.map((o) => [
-            o.value,
-            Object.fromEntries(props.actionOptions.map((a) => [a.value, o.actionDefaults?.[role]?.[a.value] ?? o.defaults[role] ?? false])),
-        ]),
+        props.permissionOptions.map((o) => [o.value, Object.fromEntries(props.actionOptions.map((a) => [a.value, o.defaults[role] ?? false]))]),
     );
 
 /** Server shape → form shape: keep the actions, drop the area summary. */
@@ -230,7 +225,10 @@ function confirmDelete() {
     });
 }
 
-const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'manager' || role === 'vendor' ? 'secondary' : 'outline');
+/** Admins and the superadmin hold every permission — there is nothing to switch. */
+const isAdminRole = (role: string) => role === 'admin' || role === 'superadmin';
+
+const roleTone = (role: string) => (role === 'superadmin' || role === 'admin' ? 'default' : role === 'vendor' ? 'secondary' : 'outline');
 </script>
 
 <template>
@@ -318,9 +316,9 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                             variant="ghost"
                                             size="icon"
                                             class="press size-8 disabled:opacity-40"
-                                            :disabled="u.role === 'admin'"
+                                            :disabled="isAdminRole(u.role)"
                                             :aria-label="`Permissions for ${u.name}`"
-                                            :title="u.role === 'admin' ? 'Administrators always have every permission' : `Permissions for ${u.name}`"
+                                            :title="isAdminRole(u.role) ? 'Administrators always have every permission' : `Permissions for ${u.name}`"
                                             @click="openPermissions(u)"
                                         >
                                             <ShieldCheck class="size-4" />
@@ -368,7 +366,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                         </button>
 
                         <button
-                            v-if="canEditPermissions && u.role !== 'admin'"
+                            v-if="canEditPermissions && !isAdminRole(u.role)"
                             type="button"
                             class="list-row-action"
                             :aria-label="`Permissions for ${u.name}`"
@@ -501,7 +499,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                             for admin accounts (they always hold everything) and
                             from non-admin editors (only admins hand out access).
                         -->
-                        <div v-if="canEditPermissions && form.role !== 'admin'" class="rounded-lg border border-border">
+                        <div v-if="canEditPermissions && !isAdminRole(form.role)" class="rounded-lg border border-border">
                             <div class="border-b border-border px-3 py-2.5">
                                 <p class="text-sm font-medium">Permissions</p>
                                 <p class="text-xs text-muted-foreground">Pre-set by the role — switch anything on or off for this person alone.</p>

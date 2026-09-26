@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\Tenant;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,7 +19,7 @@ class ProductRequest extends FormRequest
         $productId = $this->route('product')?->id;
 
         return [
-            'category_id' => ['required', 'integer', Rule::exists('categories', 'id')],
+            'category_id' => ['required', 'integer', Tenant::exists('categories')],
             'vendor_id' => ['nullable', 'integer', Rule::exists('vendors', 'id')],
 
             /*
@@ -31,7 +32,7 @@ class ProductRequest extends FormRequest
              */
             'parent_product_id' => [
                 'nullable', 'integer',
-                Rule::exists('products', 'id')->whereNull('parent_product_id'),
+                Tenant::exists('products')->whereNull('parent_product_id'),
                 Rule::notIn(array_filter([$productId])),
             ],
             'units_per_pack' => ['required_with:parent_product_id', 'integer', 'min:1', 'max:100000'],
@@ -44,7 +45,7 @@ class ProductRequest extends FormRequest
              * the stock figures end up disagreeing.
              */
             'packs' => ['array', 'max:20'],
-            'packs.*.id' => ['nullable', 'integer', Rule::exists('products', 'id')],
+            'packs.*.id' => ['nullable', 'integer', Tenant::exists('products')],
             'packs.*.name' => ['required', 'string', 'max:255'],
             'packs.*.units_per_pack' => ['required', 'integer', 'min:1', 'max:100000'],
             'packs.*.sell_price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
@@ -97,7 +98,7 @@ class ProductRequest extends FormRequest
              * quantity above is counted in; `add_stock_loose` carries the
              * remainder in single units so both go in on one save.
              */
-            'add_stock_pack_id' => ['nullable', 'integer', Rule::exists('products', 'id')],
+            'add_stock_pack_id' => ['nullable', 'integer', Tenant::exists('products')],
 
             /*
              * How many units are in each of the things being received, when
@@ -117,7 +118,7 @@ class ProductRequest extends FormRequest
 
             'add_stock_loose' => ['nullable', 'integer', 'min:0', 'max:1000000'],
 
-            'add_stock_store_id' => ['nullable', 'integer', Rule::exists('stores', 'id')],
+            'add_stock_store_id' => ['nullable', 'integer', Tenant::exists('stores')],
             'add_stock_note' => ['nullable', 'string', 'max:255'],
         ];
     }
@@ -148,8 +149,12 @@ class ProductRequest extends FormRequest
             'case_size' => $this->input('case_size') ?: null,
         ]);
 
-        // '' from an emptied select means "no vendor"; an absent key leaves it be.
-        if ($this->has('vendor_id')) {
+        // Only an admin places a product with a vendor; anyone else's product
+        // is stamped with their own vendor by the model. '' means "no vendor"
+        // (the admin's shop); an absent key leaves it be.
+        if (! $this->user()->isAdmin()) {
+            $this->request->remove('vendor_id');
+        } elseif ($this->has('vendor_id')) {
             $this->merge(['vendor_id' => $this->input('vendor_id') ?: null]);
         }
 

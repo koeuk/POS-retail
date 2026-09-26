@@ -54,7 +54,9 @@ class StoreController extends Controller
                  * the low-stock report. Quantities start at 0; goods are received
                  * through an inventory movement, not by creating a store.
                  */
-                $rows = Product::query()
+                // The store's own vendor's catalogue — another vendor's products
+                // never get a shelf here.
+                $rows = Product::ofVendor($store->vendor_id)
                     // Packs draw stock from their parent, so they get no row here
                     // either — see the products table's parent_product_id.
                     ->base()
@@ -121,9 +123,9 @@ class StoreController extends Controller
         try {
             $this->authorize('delete', $store);
 
-            if (Store::count() <= 1) {
+            if (Store::ofVendor($store->vendor_id)->count() <= 1) {
                 return back()->withErrors([
-                    'store' => 'This is the only store. The app needs at least one to sell anything.',
+                    'store' => 'This is the only store here. It needs at least one to sell anything.',
                 ]);
             }
 

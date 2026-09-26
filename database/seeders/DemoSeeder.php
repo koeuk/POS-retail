@@ -298,7 +298,7 @@ class DemoSeeder extends Seeder
             [
                 'name' => 'ដារ៉ា (Dara) — Stock manager',
                 'email' => 'dara@gmail.com',
-                'role' => Role::Manager,
+                'role' => Role::Cashier,
                 'store_id' => $this->store->id,
                 // Runs the shelf: may add and correct, but may not delete —
                 // the case the per-action matrix exists for.
@@ -344,7 +344,7 @@ class DemoSeeder extends Seeder
         // on purpose — its history stays, but it rings nothing new up.
         $this->cashiers = User::query()
             ->where('is_active', true)
-            ->whereIn('role', [Role::Admin->value, Role::Manager->value, Role::Cashier->value])
+            ->whereIn('role', [Role::Superadmin->value, Role::Admin->value, Role::Cashier->value])
             ->get()
             ->all();
     }
@@ -671,7 +671,7 @@ class DemoSeeder extends Seeder
     private function restockLowShelves(int $daysAgo): void
     {
         $at = $this->at($daysAgo, 8, random_int(0, 45));
-        $manager = $this->staffBy(Role::Manager);
+        $manager = $this->staffBy(Role::Admin);
 
         $low = Stock::with('product')
             ->where('store_id', $this->store->id)

@@ -43,7 +43,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'koeukkos@gmail.com',
             'password' => Hash::make('12345678'),
             'email_verified_at' => now(),
-            'role' => Role::Admin,
+            'role' => Role::Superadmin,
             'store_id' => null,
             'is_active' => true,
         ]);
@@ -55,16 +55,6 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
             'role' => Role::Admin,
             'store_id' => null,
-            'is_active' => true,
-        ]);
-
-        User::create([
-            'name' => 'Manager',
-            'email' => 'manager@gmail.com',
-            'password' => Hash::make('12345678'),
-            'email_verified_at' => now(),
-            'role' => Role::Manager,
-            'store_id' => $store->id,
             'is_active' => true,
         ]);
 

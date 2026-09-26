@@ -15,6 +15,8 @@ interface MenuPack {
 }
 
 const props = defineProps<{
+    /** Which vendor's menu this belongs to, so Back returns to it. */
+    vendor: string | null;
     product: {
         id: number;
         name: string;
@@ -46,7 +48,7 @@ const year = new Date().getFullYear();
         <!-- Same painted name board as the menu, kept short: this page is about one item. -->
         <header class="surface-brand relative text-brand-foreground">
             <Link
-                :href="route('menu')"
+                :href="route('menu', { vendor: vendor ?? undefined })"
                 class="press absolute left-4 top-4 flex h-10 items-center gap-2 rounded-full border border-brand-foreground/25 bg-brand-foreground/10 px-3 text-sm font-medium text-brand-foreground/90 transition-colors hover:bg-brand-foreground/20 hover:text-brand-foreground md:left-6 md:top-6"
             >
                 <ArrowLeft class="size-4" />

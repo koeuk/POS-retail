@@ -85,7 +85,9 @@ class ProductController extends Controller
 
         return Inertia::render('Products/Create', [
             'categories' => Category::orderBy('name')->get(['id', 'name']),
-            'vendors' => Vendor::orderBy('name')->get(['id', 'name', 'is_active']),
+            // Only an admin assigns products across vendors; everyone else's
+            // products belong to their own vendor automatically.
+            'vendors' => request()->user()->isAdmin() ? Vendor::orderBy('name')->get(['id', 'name', 'is_active']) : [],
         ]);
     }
 
@@ -129,7 +131,8 @@ class ProductController extends Controller
 
                 // Seed a stock row per store so the POS product feed always has
                 // one to read, even when opening quantity is zero.
-                foreach (Store::pluck('id') as $storeId) {
+                // The product's own vendor's stores — never another vendor's shelf.
+                foreach (Store::ofVendor($product->vendor_id)->pluck('id') as $storeId) {
                     Stock::create([
                         'product_id' => $product->id,
                         'store_id' => $storeId,
@@ -203,7 +206,9 @@ class ProductController extends Controller
         return Inertia::render('Products/Edit', [
             'product' => $product->load('category:id,name', 'parent:id,name'),
             'categories' => Category::orderBy('name')->get(['id', 'name']),
-            'vendors' => Vendor::orderBy('name')->get(['id', 'name', 'is_active']),
+            // Only an admin assigns products across vendors; everyone else's
+            // products belong to their own vendor automatically.
+            'vendors' => request()->user()->isAdmin() ? Vendor::orderBy('name')->get(['id', 'name', 'is_active']) : [],
             'packs' => $product->packs()->orderBy('units_per_pack')->get(['id', 'name', 'units_per_pack', 'sell_price', 'is_active']),
             // Only worth offering a choice when there is one to make.
             'stores' => Store::orderBy('name')->get(['id', 'name']),
@@ -331,7 +336,7 @@ class ProductController extends Controller
             return;
         }
 
-        $storeId = $receipt['store_id'] ?? Store::query()->orderBy('id')->value('id');
+        $storeId = $receipt['store_id'] ?? Store::ofVendor($product->vendor_id)->orderBy('id')->value('id');
 
         if (! $storeId) {
             return;

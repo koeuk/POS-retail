@@ -10,6 +10,7 @@ use App\Models\Store;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Support\PerPage;
+use App\Support\Tenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -33,12 +34,13 @@ class UserController extends Controller
         return Inertia::render('Users/Index', [
             'users' => QueryBuilder::for(User::class)
                 ->with('store:id,name', 'vendor:id,name')
-                // A vendor sees its own team: itself and the cashiers it hired.
+                // Each side of a multi-vendor shop manages only its own
+                // accounts; an admin viewing everything sees them all.
+                ->where(fn (Builder $q) => Tenant::constrain($q, 'users.vendor_id'))
+                // Within its side, a vendor sees itself and its cashiers.
                 ->when($isVendor, fn ($q) => $q->where(fn (Builder $q) => $q
                     ->where('users.id', $actor->id)
-                    ->orWhere(fn (Builder $q) => $q
-                        ->where('role', Role::Cashier->value)
-                        ->where('vendor_id', $actor->vendor_id))))
+                    ->orWhere('role', Role::Cashier->value)))
                 ->allowedFilters(...[
                     AllowedFilter::callback('search', function (Builder $query, string $search) {
                         $query->where(function (Builder $q) use ($search) {
@@ -55,9 +57,14 @@ class UserController extends Controller
                     'effective_permissions' => $u->effectivePermissions(),
                 ])),
             'stores' => Store::orderBy('name')->get(['id', 'name']),
-            'vendors' => Vendor::orderBy('name')->get(['id', 'name']),
-            // A vendor may only hire cashiers, so that is all it is offered.
-            'roles' => collect($isVendor ? [Role::Cashier] : Role::cases())->map(fn (Role $r) => [
+            'vendors' => $actor->isAdmin() ? Vendor::orderBy('name')->get(['id', 'name']) : [],
+            // Offer only what this person may grant: a vendor hires cashiers,
+            // an admin anything but admin roles, the superadmin everything.
+            'roles' => collect(match (true) {
+                $isVendor => [Role::Cashier],
+                $actor->isSuperadmin() => Role::cases(),
+                default => [Role::Cashier, Role::Vendor],
+            })->map(fn (Role $r) => [
                 'value' => $r->value,
                 'label' => $r->label(),
             ]),
@@ -67,11 +74,6 @@ class UserController extends Controller
                 'group' => $p->group(),
                 'defaults' => collect(Role::cases())
                     ->mapWithKeys(fn (Role $r) => [$r->value => $p->defaultFor($r)]),
-                // Per action as well: a role may reach an area yet not every
-                // verb in it (a vendor cannot delete by default).
-                'actionDefaults' => collect(Role::cases())
-                    ->mapWithKeys(fn (Role $r) => [$r->value => collect(Action::cases())
-                        ->mapWithKeys(fn (Action $a) => [$a->value => $p->defaultActionFor($r, $a)])]),
             ]),
             // The columns of the permissions grid — view / add / edit / delete.
             'actionOptions' => collect(Action::cases())->map(fn (Action $a) => [
@@ -91,14 +93,14 @@ class UserController extends Controller
             $data['password'] = Hash::make($data['password']);
             $data['email_verified_at'] = now(); // staff accounts are created by an admin
 
-            // Only an admin hands out permission overrides — a delegated
-            // staff manager creates accounts with role defaults only.
-            if (! $request->user()->isAdmin()) {
+            // Only the superadmin hands out permission overrides — anyone
+            // else creates accounts with role defaults only.
+            if (! $request->user()->isSuperadmin()) {
                 unset($data['permissions']);
             }
 
-            // A vendor's hires join the vendor's own team, whatever was sent.
-            if ($request->user()->hasRole(Role::Vendor)) {
+            // Anyone but an admin hires onto their own side, whatever was sent.
+            if (! $request->user()->isAdmin()) {
                 $data['vendor_id'] = $request->user()->vendor_id;
             }
 
@@ -123,10 +125,10 @@ class UserController extends Controller
                 unset($data['password']);
             }
 
-            // Only an admin may change what a user is allowed to do — anyone
-            // else editing an account (or themselves) leaves overrides as
-            // they are. Closes the self-escalation door.
-            if (! $request->user()->isAdmin()) {
+            // Only the superadmin may change what a user is allowed to do —
+            // anyone else editing an account (or themselves) leaves overrides
+            // as they are. Closes the self-escalation door.
+            if (! $request->user()->isSuperadmin()) {
                 unset($data['permissions']);
             }
 
@@ -136,7 +138,7 @@ class UserController extends Controller
                 $data['role'] = $user->role->value;
                 $data['vendor_id'] = $user->vendor_id;
                 $data['is_active'] = true;
-            } elseif ($request->user()->hasRole(Role::Vendor)) {
+            } elseif (! $request->user()->isAdmin()) {
                 $data['vendor_id'] = $request->user()->vendor_id;
             }
 
@@ -162,9 +164,9 @@ class UserController extends Controller
         try {
             $this->authorize('update', $user);
 
-            abort_unless($request->user()->isAdmin(), 403);
+            abort_unless($request->user()->isSuperadmin(), 403);
 
-            if ($user->role === Role::Admin) {
+            if ($user->isAdmin()) {
                 return back()->withErrors([
                     'permissions' => 'Administrators always hold every permission.',
                 ]);

@@ -116,6 +116,6 @@ class DebtController extends Controller
         return Order::query()
             ->where('sale_type', SaleType::Debt->value)
             ->where('status', OrderStatus::Completed)
-            ->when(! $user->isAdmin(), fn (Builder $q) => $q->where('store_id', $user->store_id));
+            ->when(! $user->isAdmin() && $user->store_id, fn (Builder $q) => $q->where('store_id', $user->store_id));
     }
 }

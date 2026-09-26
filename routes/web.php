@@ -17,6 +17,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\ViewingController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -102,7 +103,7 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
 
     Route::get('admin/ping', function () {
         return response()->json(['ok' => true, 'area' => 'admin']);
-    })->name('admin.ping')->middleware('role:admin,manager');
+    })->name('admin.ping')->middleware('role:superadmin,admin');
 
     /*
     | Inventory. Movements, not raw edits — see InventoryController.
@@ -121,6 +122,13 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
 
     Route::resource('customers', CustomerController::class)
         ->only(['index', 'store', 'update', 'destroy'])->middleware('permission:customers');
+
+    /*
+    | The admin's "Viewing" switcher (all / own shop / one vendor). Role-gated
+    | on purpose: it is the admin's cross-vendor view, not a feature area —
+    | everyone else is always pinned to their own vendor. See Tenant.
+    */
+    Route::put('viewing', [ViewingController::class, 'update'])->name('viewing.update')->middleware('role:superadmin,admin');
 
     Route::resource('vendors', VendorController::class)
         ->only(['index', 'show', 'store', 'update', 'destroy'])->middleware('permission:vendors');

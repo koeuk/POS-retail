@@ -127,7 +127,7 @@ function pick(days: number) {
                             </Badge>
                         </li>
                     </ul>
-                    <p v-else class="text-sm text-muted-foreground">None. Create one on the Staff screen with the Vendor role.</p>
+                    <p v-else class="text-sm text-muted-foreground">No login yet — edit the vendor to set a password.</p>
                 </section>
 
                 <section

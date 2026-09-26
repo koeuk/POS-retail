@@ -11,6 +11,7 @@ use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\PerPage;
+use App\Support\Tenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -97,7 +98,9 @@ class InventoryController extends Controller
         return Inertia::render('Inventory/Index', [
             'stocks' => $stocks,
             'filters' => $filters,
-            'stores' => $user->isAdmin()
+            // A store-bound account works its own store; anyone else every
+            // store on their side (the Store scope fences which those are).
+            'stores' => $user->isAdmin() || ! $user->store_id
                 ? Store::orderBy('name')->get(['id', 'name'])
                 : Store::whereKey($user->store_id)->get(['id', 'name']),
             'movements' => $this->recentMovements($user),
@@ -182,7 +185,7 @@ class InventoryController extends Controller
             abort_unless($user->mayDo(Permission::Inventory, Action::Update), 403);
 
             $data = $request->validate([
-                'stock_id' => ['required', 'integer', Rule::exists('stocks', 'id')],
+                'stock_id' => ['required', 'integer', Tenant::existsInStore('stocks')],
                 'mode' => ['required', Rule::in(['restock', 'remove', 'count', 'return'])],
                 // For restock/remove/return this is a delta; for count it is the
                 // shelf figure the counter actually saw.
@@ -266,7 +269,7 @@ class InventoryController extends Controller
             abort_unless($user->mayDo(Permission::Inventory, Action::Update), 403);
 
             $data = $request->validate([
-                'stock_id' => ['required', 'integer', Rule::exists('stocks', 'id')],
+                'stock_id' => ['required', 'integer', Tenant::existsInStore('stocks')],
                 'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
             ]);
 
@@ -283,7 +286,7 @@ class InventoryController extends Controller
     {
         return InventoryLog::query()
             ->with(['product:id,name,unit', 'store:id,name', 'creator:id,name'])
-            ->when(! $user->isAdmin(), fn ($q) => $q->where('store_id', $user->store_id))
+            ->when(! $user->isAdmin() && $user->store_id, fn ($q) => $q->where('store_id', $user->store_id))
             ->latest('id')
             ->limit(15)
             ->get();
@@ -314,6 +317,6 @@ class InventoryController extends Controller
     private function scoped(User $user): Builder
     {
         return Stock::query()
-            ->when(! $user->isAdmin(), fn ($q) => $q->where('store_id', $user->store_id));
+            ->when(! $user->isAdmin() && $user->store_id, fn ($q) => $q->where('store_id', $user->store_id));
     }
 }

@@ -87,7 +87,7 @@ class User extends Authenticatable
      */
     public function hasPermission(Permission $permission): bool
     {
-        if ($this->role === Role::Admin) {
+        if ($this->isAdmin()) {
             return true;
         }
 
@@ -125,7 +125,7 @@ class User extends Authenticatable
      */
     public function mayDo(Permission $permission, Action $action): bool
     {
-        if ($this->role === Role::Admin) {
+        if ($this->isAdmin()) {
             return true;
         }
 
@@ -134,10 +134,6 @@ class User extends Authenticatable
         }
 
         $override = $this->permissions[$permission->value] ?? null;
-
-        if ($override === null) {
-            return $permission->defaultActionFor($this->role, $action);
-        }
 
         if (! is_array($override)) {
             return true; // plain grant: the whole area
@@ -202,14 +198,19 @@ class User extends Authenticatable
         return $this->hasMany(Order::class, 'cashier_id');
     }
 
+    /**
+     * Platform staff — superadmin or admin. They hold every permission and
+     * see every vendor's data. Only the superadmin also manages admin
+     * accounts, permissions and settings; see isSuperadmin().
+     */
     public function isAdmin(): bool
     {
-        return $this->role === Role::Admin;
+        return $this->hasRole(Role::Superadmin, Role::Admin);
     }
 
-    public function isManager(): bool
+    public function isSuperadmin(): bool
     {
-        return $this->role === Role::Manager;
+        return $this->role === Role::Superadmin;
     }
 
     public function hasRole(Role ...$roles): bool

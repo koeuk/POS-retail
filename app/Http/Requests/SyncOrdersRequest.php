@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\PaymentMethod;
 use App\Enums\SaleType;
+use App\Support\Tenant;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -31,15 +32,15 @@ class SyncOrdersRequest extends FormRequest
             'orders' => ['required', 'array', 'min:1', 'max:200'],
 
             'orders.*.client_uuid' => ['required', 'string', 'max:36', 'distinct'],
-            'orders.*.store_id' => ['nullable', 'integer', Rule::exists('stores', 'id')],
-            'orders.*.register_id' => ['nullable', 'integer', Rule::exists('registers', 'id')],
-            'orders.*.customer_id' => ['nullable', 'integer', Rule::exists('customers', 'id')],
+            'orders.*.store_id' => ['nullable', 'integer', Tenant::exists('stores')],
+            'orders.*.register_id' => ['nullable', 'integer', Tenant::existsInStore('registers')],
+            'orders.*.customer_id' => ['nullable', 'integer', Tenant::exists('customers')],
             'orders.*.sale_type' => ['nullable', Rule::enum(SaleType::class)],
             'orders.*.created_offline_at' => ['nullable', 'date'],
             'orders.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
 
             'orders.*.items' => ['required', 'array', 'min:1'],
-            'orders.*.items.*.product_id' => ['required', 'integer', Rule::exists('products', 'id')],
+            'orders.*.items.*.product_id' => ['required', 'integer', Tenant::exists('products')],
             'orders.*.items.*.product_name' => ['nullable', 'string', 'max:255'],
             'orders.*.items.*.qty' => ['required', 'integer', 'min:1'],
             'orders.*.items.*.unit_price' => ['required', 'numeric', 'min:0'],

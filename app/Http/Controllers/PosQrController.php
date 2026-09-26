@@ -8,6 +8,7 @@ use App\Payments\PaymentSettings;
 use App\Payments\QrImage;
 use App\Payments\QrPayments;
 use App\Support\Currency;
+use App\Support\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,8 +33,9 @@ class PosQrController extends Controller
 
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01', 'max:9999999999', "decimal:0,{$decimals}"],
-            'register_id' => ['nullable', 'integer'],
-            'store_id' => ['nullable', 'integer'],
+            'register_id' => ['nullable', 'integer', Tenant::existsInStore('registers')],
+            // Only a store on the caller's own side — never another vendor's.
+            'store_id' => ['nullable', 'integer', Tenant::exists('stores')],
         ]);
 
         $user = $request->user();

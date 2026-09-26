@@ -4,13 +4,14 @@ namespace App\Models;
 
 use App\Models\Concerns\HasUuid;
 use App\Models\Concerns\RecordsActivity;
+use App\Models\Concerns\ScopedByStore;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Stock extends Model
 {
-    use HasFactory, HasUuid, RecordsActivity;
+    use HasFactory, HasUuid, RecordsActivity, ScopedByStore;
 
     protected $fillable = ['product_id', 'store_id', 'qty', 'low_stock_threshold'];
 

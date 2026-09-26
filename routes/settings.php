@@ -22,7 +22,7 @@ Route::middleware('auth')->group(function () {
     })->name('appearance');
 
     // Shop-wide, so admin only — this changes what every cashier sees.
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware('role:superadmin')->group(function () {
         Route::get('settings/shop', [ShopController::class, 'edit'])->name('shop.edit');
         Route::put('settings/shop', [ShopController::class, 'update'])->name('shop.update');
 

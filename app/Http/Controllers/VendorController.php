@@ -2,17 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Role;
 use App\Http\Requests\VendorRequest;
+use App\Models\Category;
+use App\Models\Customer;
+use App\Models\Order;
 use App\Models\Product;
+use App\Models\Store;
 use App\Models\Vendor;
 use App\Services\SalesReporter;
 use App\Support\PerPage;
+use App\Support\Tenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -27,11 +34,19 @@ class VendorController extends Controller
     {
         $this->authorize('viewAny', Vendor::class);
 
+        // The admin's cross-vendor view: whatever the "Viewing" switcher is
+        // set to, this screen compares every vendor.
+        return Tenant::unscoped(fn () => $this->renderIndex($request));
+    }
+
+    private function renderIndex(Request $request): Response
+    {
         [$days, $from, $to] = $this->window($request);
         $sales = SalesReporter::for($request->user())->salesByVendor($from, $to);
 
         $vendors = QueryBuilder::for(Vendor::class)
             // Base products only: a pack is a way of selling one, not another.
+            ->with(['owner' => self::ownerColumns(...)])
             ->withCount(['products' => fn (Builder $q) => $q->whereNull('parent_product_id'), 'users'])
             ->allowedFilters(...[
                 AllowedFilter::callback('search', function (Builder $query, string $search) {
@@ -68,6 +83,11 @@ class VendorController extends Controller
     {
         $this->authorize('view', $vendor);
 
+        return Tenant::unscoped(fn () => $this->renderShow($request, $vendor));
+    }
+
+    private function renderShow(Request $request, Vendor $vendor): Response
+    {
         [$days, $from, $to] = $this->window($request);
         $sales = SalesReporter::for($request->user())->vendorProductSales($vendor->id, $from, $to);
 
@@ -91,7 +111,7 @@ class VendorController extends Controller
             ]);
 
         return Inertia::render('Vendors/Show', [
-            'vendor' => $vendor,
+            'vendor' => $vendor->load(['owner' => self::ownerColumns(...)]),
             'products' => $products,
             'users' => $vendor->users()->orderBy('name')->get(['id', 'uuid', 'name', 'email', 'role', 'is_active']),
             'totals' => [
@@ -114,9 +134,20 @@ class VendorController extends Controller
         try {
             $this->authorize('create', Vendor::class);
 
-            DB::transaction(fn () => Vendor::create($request->validated()));
+            DB::transaction(function () use ($request) {
+                $vendor = Vendor::create($request->safe()->except('password'));
+                $vendor->users()->create($this->ownerAttributes($request, $vendor) + [
+                    'role' => Role::Vendor,
+                    'email_verified_at' => now(), // created by an admin, like staff
+                ]);
 
-            return back()->with('success', 'Vendor added.');
+                // Somewhere to sell from on day one: its own store and till.
+                // It can add more, or rename these, on the Stores screen.
+                Store::create(['vendor_id' => $vendor->id, 'name' => $vendor->name])
+                    ->registers()->create(['name' => 'Register 1']);
+            });
+
+            return back()->with('success', 'Vendor added. It can sign in with that email and password.');
         } catch (QueryException $e) {
             return $this->failed($e, 'The vendor could not be saved. Nothing was changed — try again.');
         }
@@ -127,7 +158,23 @@ class VendorController extends Controller
         try {
             $this->authorize('update', $vendor);
 
-            DB::transaction(fn () => $vendor->update($request->validated()));
+            DB::transaction(function () use ($request, $vendor) {
+                $vendor->update($request->safe()->except('password'));
+
+                $attributes = $this->ownerAttributes($request, $vendor);
+
+                // A vendor from before logins existed gets one on its first edit.
+                if ($owner = $vendor->owner) {
+                    $owner->update($attributes);
+                } else {
+                    $vendor->users()->create($attributes + ['role' => Role::Vendor, 'email_verified_at' => now()]);
+                }
+
+                // Switching a vendor off locks out its whole team, cashiers too.
+                if (! $vendor->is_active) {
+                    $vendor->users()->update(['is_active' => false]);
+                }
+            });
 
             return back()->with('success', 'Vendor updated.');
         } catch (QueryException $e) {
@@ -140,21 +187,69 @@ class VendorController extends Controller
         try {
             $this->authorize('delete', $vendor);
 
-            // Accounts sign in as this vendor — removing it would strand them.
-            if ($vendor->users()->exists()) {
+            $owner = $vendor->owner;
+
+            // The vendor's own login goes with it; anyone else on its team, or
+            // a login with sales against it, would be stranded or orphaned.
+            $others = $vendor->users()->when($owner, fn ($q) => $q->whereKeyNot($owner->id));
+
+            if ($others->exists() || $owner?->orders()->exists() || $this->hasData($vendor)) {
                 return back()->withErrors([
-                    'vendor' => 'This vendor still has staff accounts. Remove or reassign them first, or mark the vendor inactive.',
+                    'vendor' => 'This vendor has cashiers, sales or catalogue data. Mark it inactive instead — that locks its accounts out.',
                 ]);
             }
 
             $name = $vendor->name;
-            // Its products stay on the shelf, just without a vendor.
-            DB::transaction(fn () => $vendor->delete());
+            DB::transaction(function () use ($vendor, $owner) {
+                $owner?->delete();
+                // Empty stores (the one made with the vendor) go with it.
+                Store::ofVendor($vendor->id)->each(fn (Store $store) => $store->delete());
+                $vendor->delete();
+            });
 
             return redirect()->route('vendors.index')->with('success', "{$name} was deleted.");
         } catch (QueryException $e) {
             return $this->failed($e, 'The vendor could not be deleted. Nothing was changed — try again.');
         }
+    }
+
+    /**
+     * The login's side of the form: sign-in email, display name, the
+     * vendor's on/off switch, and a new password only when one was typed.
+     *
+     * @return array<string, mixed>
+     */
+    private function ownerAttributes(VendorRequest $request, Vendor $vendor): array
+    {
+        $attributes = [
+            'name' => $vendor->contact_name ?: $vendor->name,
+            'email' => $request->validated('email'),
+            'is_active' => $vendor->is_active,
+        ];
+
+        if ($password = $request->validated('password')) {
+            $attributes['password'] = Hash::make($password);
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Anything the vendor built that deleting would orphan or destroy: its
+     * catalogue, customers, or a sale in any of its stores.
+     */
+    private function hasData(Vendor $vendor): bool
+    {
+        return Tenant::unscoped(fn () => Product::ofVendor($vendor->id)->exists()
+            || Category::ofVendor($vendor->id)->exists()
+            || Customer::ofVendor($vendor->id)->exists()
+            || Order::whereIn('store_id', Store::ofVendor($vendor->id)->select('id'))->exists());
+    }
+
+    /** Table-qualified: the one-of-many join brings a second `users` in. */
+    private static function ownerColumns($query): void
+    {
+        $query->select('users.id', 'users.vendor_id', 'users.email', 'users.is_active');
     }
 
     /** @return array{int, Carbon, Carbon} */

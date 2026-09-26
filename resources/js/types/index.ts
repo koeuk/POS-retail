@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-vue-next';
 
-export type Role = 'admin' | 'manager' | 'cashier' | 'vendor';
+export type Role = 'superadmin' | 'admin' | 'cashier' | 'vendor';
 
 export interface Auth {
     user: User | null;
@@ -12,6 +12,8 @@ export interface Auth {
         accessAdmin: boolean;
         manage: boolean;
         isAdmin: boolean;
+        /** Manages admin accounts, permissions and shop settings. */
+        isSuperadmin: boolean;
         /** One resolved flag per feature permission (pos, orders, reports…). */
         [permission: string]: boolean;
     };
@@ -51,6 +53,8 @@ export interface SharedData {
     flash: { success: string | null; error: string | null };
     /** The shop's display currency; stored prices are always USD. */
     currency: { code: string; symbol: string; decimals: number; riel_per_usd: number };
+    /** The admin's "Viewing" switcher; null for everyone else. */
+    viewing: { current: string; vendors: { id: number; name: string }[] } | null;
     /** Uploaded shop branding — paths on the public disk, or null for the built-in look. */
     branding: { logo: string | null; favicon: string | null };
     ziggy: {
@@ -163,6 +167,8 @@ export interface Vendor {
     is_active: boolean;
     products_count?: number;
     users_count?: number;
+    /** The vendor's own login. */
+    owner?: Pick<User, 'id' | 'email' | 'is_active'> | null;
 }
 
 export interface Customer {

@@ -7,6 +7,7 @@ use App\Enums\SaleType;
 use App\Models\Order;
 use App\Models\Stock;
 use App\Models\User;
+use App\Support\Tenant;
 use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder as Query;
@@ -110,10 +111,20 @@ class SalesReporter
      */
     private function orders(): Query
     {
-        return DB::table('orders')
+        return $this->table()
             ->where('orders.status', OrderStatus::Completed->value)
             ->where('orders.sale_type', '!=', SaleType::Myself->value)
             ->when($this->storeId, fn (Query $q, int $id) => $q->where('orders.store_id', $id));
+    }
+
+    /**
+     * The orders table, fenced to the current vendor's stores. Raw builder
+     * reads skip the Order model's global scope, so the fence is applied by
+     * hand here — every read below starts from this.
+     */
+    private function table(): Query
+    {
+        return tap(DB::table('orders'), fn (Query $q) => Tenant::constrainStore($q, 'orders.store_id'));
     }
 
     /** The lines of those orders. */
@@ -386,7 +397,7 @@ class SalesReporter
      */
     public function outstandingDebts(): array
     {
-        $debts = DB::table('orders')
+        $debts = $this->table()
             ->where('orders.status', OrderStatus::Completed->value)
             ->where('orders.sale_type', SaleType::Debt->value)
             ->whereColumn('paid_amount', '<', 'total')
@@ -407,7 +418,7 @@ class SalesReporter
     public function myselfSpent(): array
     {
         $taken = function (Carbon $since): array {
-            $q = DB::table('orders')
+            $q = $this->table()
                 ->where('orders.status', OrderStatus::Completed->value)
                 ->where('orders.sale_type', SaleType::Myself->value)
                 ->when($this->storeId, fn (Query $query, int $id) => $query->where('orders.store_id', $id))

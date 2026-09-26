@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import DevicePreviewSelect from '@/components/DevicePreviewSelect.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
+import ViewingSelect from '@/components/ViewingSelect.vue';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { isPreviewFrame } from '@/composables/useDevicePreview';
@@ -54,6 +55,8 @@ const props = withDefaults(
              while the content below it scrolls. -->
         <div class="ml-auto flex items-center gap-2">
             <slot name="actions" />
+
+            <ViewingSelect />
 
             <!--
                 Device preview. Hidden inside the preview frame itself — the

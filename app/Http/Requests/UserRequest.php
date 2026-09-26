@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\Action;
 use App\Enums\Permission;
 use App\Enums\Role;
+use App\Support\Tenant;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -41,13 +42,24 @@ class UserRequest extends FormRequest
                 'required',
                 Rule::enum(Role::class),
                 function (string $attribute, mixed $value, \Closure $fail) {
-                    if ($value === Role::Admin->value && ! $this->user()->isAdmin()) {
-                        $fail('Only an administrator can grant the admin role.');
+                    $isSelf = $this->route('user')?->id === $this->user()->id;
+
+                    // Admin accounts are the superadmin's to mint. A self-edit
+                    // is exempt: the controller pins one's own role anyway.
+                    if (in_array($value, [Role::Superadmin->value, Role::Admin->value], true)
+                        && ! $this->user()->isSuperadmin() && ! $isSelf) {
+                        $fail('Only a super administrator can grant an admin role.');
+                    }
+
+                    // A vendor account opens a whole vendor's data — minted by
+                    // an admin (on the Vendors screen), never by staff.
+                    if ($value === Role::Vendor->value && ! $this->user()->isAdmin()
+                        && $this->route('user')?->role !== Role::Vendor) {
+                        $fail('Only an administrator can create a vendor account.');
                     }
 
                     // A vendor hires cashiers only. Its own account keeps its
                     // role — the controller pins that on a self-edit.
-                    $isSelf = $this->route('user')?->id === $this->user()->id;
                     if ($this->user()->hasRole(Role::Vendor) && ! $isSelf && $value !== Role::Cashier->value) {
                         $fail('A vendor account can only create cashiers.');
                     }
@@ -76,7 +88,7 @@ class UserRequest extends FormRequest
                 Rule::requiredIf(fn () => $this->input('role') === Role::Cashier->value),
                 'nullable',
                 'integer',
-                Rule::exists('stores', 'id'),
+                Tenant::exists('stores'),
             ],
             // Required for a vendor account; optional for a cashier (the
             // vendor team they work for); meaningless for anyone else.
@@ -139,7 +151,7 @@ class UserRequest extends FormRequest
                 ? ($this->input('vendor_id') ?: null)
                 : null,
             // Admins hold everything regardless, so store no overrides.
-            'permissions' => $this->input('role') === Role::Admin->value ? null : $permissions,
+            'permissions' => in_array($this->input('role'), [Role::Superadmin->value, Role::Admin->value], true) ? null : $permissions,
         ]);
     }
 }

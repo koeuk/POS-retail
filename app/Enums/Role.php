@@ -4,16 +4,17 @@ namespace App\Enums;
 
 enum Role: string
 {
+    /** Owns the platform: the only role that manages admins, permissions and settings. */
+    case Superadmin = 'superadmin';
     case Admin = 'admin';
-    case Manager = 'manager';
     case Cashier = 'cashier';
     case Vendor = 'vendor';
 
     public function label(): string
     {
         return match ($this) {
+            self::Superadmin => 'Super administrator',
             self::Admin => 'Administrator',
-            self::Manager => 'Manager',
             self::Cashier => 'Cashier',
             self::Vendor => 'Vendor',
         };
@@ -21,7 +22,7 @@ enum Role: string
 
     /**
      * A cashier is bound to exactly one store — /pos cannot resolve which
-     * stock rows to read without it. Admins and managers are store-agnostic.
+     * stock rows to read without it. Admins and vendors are store-agnostic.
      */
     public function requiresStore(): bool
     {

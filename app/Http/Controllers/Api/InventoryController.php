@@ -62,6 +62,6 @@ class InventoryController extends Controller
     private function scoped(User $user): Builder
     {
         return Stock::query()
-            ->when(! $user->isAdmin(), fn (Builder $q) => $q->where('store_id', $user->store_id));
+            ->when(! $user->isAdmin() && $user->store_id, fn (Builder $q) => $q->where('store_id', $user->store_id));
     }
 }
