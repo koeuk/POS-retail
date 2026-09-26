@@ -106,7 +106,7 @@ An override is stored in one of two shapes, and both are valid:
 {"products": {"view": true, "update": true, "delete": false}}  // per action
 ```
 
-A plain `true`/`false` means every action follows it — which is why **the action matrix needed no data migration**, and why old overrides keep working untouched. In a per-action map, an action that is *omitted* falls back to the area's answer, so a partial map is safe. An area whose actions are *all* false is the same as no access at all, and `hasPermission()` reports it as such.
+A plain `true`/`false` means every action follows it — which is why **the action matrix needed no data migration**, and why old overrides keep working untouched. In a per-action map, an action that is _omitted_ falls back to the area's answer, so a partial map is safe. An area whose actions are _all_ false is the same as no access at all, and `hasPermission()` reports it as such.
 
 `NULL` in the column means "no overrides" — the account behaves exactly as its role.
 
@@ -242,6 +242,7 @@ class ExpensePolicy
     // ✅ right — one case per area, the verb is an Action
     $user->mayDo(Permission::Products, Action::Delete);
     ```
+
 - **Don't remove enum cases casually.** Stored overrides referencing a removed key are ignored harmlessly, but renaming a key orphans existing grants — if you must rename, migrate the JSON column.
 
 ## The HTTP surface — every route and its gate
@@ -250,46 +251,48 @@ Checked against `php artisan route:list` and [routes/web.php](../routes/web.php)
 
 ### No permission required
 
-| Route                                                             | Gate                 | Notes                                                                                                   |
-| ----------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------- |
-| `GET /menu`                                                       | _none — public_      | Read-only customer menu: names, photos, prices. Never stock or staff.                                   |
-| `GET /`                                                           | auth redirect        | Guests → login, staff → dashboard.                                                                      |
-| `GET /dashboard`                                                  | signed in            | Figures inside are still scoped (cashiers see their store; the owner row needs `auth.can.accessAdmin`). |
-| `/settings/profile`, `/settings/password`, `/settings/appearance` | signed in            | About the signed-in person only.                                                                        |
-| `GET/PUT /settings/shop`                                          | **role: admin**      | Deliberately role-gated, not permission-gated — see above.                                              |
-| `GET /admin/ping`                                                 | role: admin, manager | Health check for the admin area.                                                                        |
+| Route                                                             | Gate                 | Notes                                                                                                              |
+| ----------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `GET /menu`                                                       | _none — public_      | Read-only customer menu: names, photos, prices. Never stock or staff.                                              |
+| `GET /`                                                           | auth redirect        | Guests → login, staff → dashboard.                                                                                 |
+| `GET /dashboard`                                                  | signed in            | Figures inside are still scoped (cashiers see their store; the owner row needs `auth.can.accessAdmin`).            |
+| `/settings/profile`, `/settings/password`, `/settings/appearance` | signed in            | About the signed-in person only.                                                                                   |
+| `GET/PUT /settings/shop`                                          | **role: admin**      | Deliberately role-gated, not permission-gated — see above.                                                         |
+| `GET/PUT /settings/payments`, `POST /settings/payments/test`      | **role: admin**      | Same reasoning as shop settings — and the account ID decides where QR money lands. See [payments.md](payments.md). |
+| `GET /admin/ping`                                                 | role: admin, manager | Health check for the admin area.                                                                                   |
 
 ### Feature areas (Inertia pages + their writes)
 
 Each row is one `Route::middleware('permission:<key>')` group — the middleware 403s before any controller code runs. Policies then refine _which_ action inside the area.
 
-| Permission    | Routes                                                                                                                             |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `pos`         | `GET /pos` — and the whole POS data API below                                                                                      |
-| `orders`      | `GET /orders`, `GET /orders/{order}`                                                                                               |
-| `debts`       | `GET /debts` · `POST /debts` (put a sale straight on the book) · `GET /debts/product-lookup` (JSON) · `POST /debts/{order}/settle` |
-| `consumption` | `GET /consumption`                                                                                                                 |
-| `reports`     | `GET /reports`, `GET /reports/export` (CSV download)                                                                               |
-| `products`    | Full resource: index/create/store/show/edit/update/destroy                                                                         |
-| `categories`  | index/store/update/destroy                                                                                                         |
-| `inventory`   | `GET /inventory` · `GET /inventory/lookup` (JSON) · `POST /inventory/movements` · `PUT /inventory/threshold`                       |
-| `customers`   | index/store/update/destroy                                                                                                         |
-| `users`       | index/store/update/destroy (admin-only by default; see invariants)                                                                 |
-| `stores`      | `GET/POST /stores`, `PUT/DELETE /stores/{store}`, `POST/PUT .../registers`                                                         |
+| Permission    | Routes                                                                                                                                                                                                                                                                              |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pos`         | `GET /pos` — and the whole POS data API below                                                                                                                                                                                                                                       |
+| `orders`      | `GET /orders`, `GET /orders/{order}`                                                                                                                                                                                                                                                |
+| `debts`       | `GET /debts` · `POST /debts` (put a sale straight on the book) · `GET /debts/product-lookup` (JSON) · `POST /debts/{order}/settle`                                                                                                                                                  |
+| `consumption` | `GET /consumption`                                                                                                                                                                                                                                                                  |
+| `reports`     | `GET /reports`, `GET /reports/export` (CSV download)                                                                                                                                                                                                                                |
+| `products`    | Full resource: index/create/store/show/edit/update/destroy                                                                                                                                                                                                                          |
+| `categories`  | index/store/update/destroy                                                                                                                                                                                                                                                          |
+| `inventory`   | `GET /inventory` · `GET /inventory/lookup` (JSON) · `POST /inventory/movements` · `PUT /inventory/threshold`                                                                                                                                                                        |
+| `customers`   | index/store/update/destroy                                                                                                                                                                                                                                                          |
+| `users`       | index/store/update/destroy (admin-only by default; see invariants)                                                                                                                                                                                                                  |
+| `stores`      | `GET/POST /stores`, `PUT/DELETE /stores/{store}`, `POST/PUT .../registers`                                                                                                                                                                                                          |
 | `activity`    | `GET /activity` (whole log) · `GET /<resource>/{id}/history` (a record's own history page, beside its show/edit endpoints: products, categories, customers, stores, inventory, users) — read-only by design: no write route exists, rows age out via the weekly `activitylog:clean` |
 
 ## The POS data API
 
 JSON endpoints under `/pos/data/*`, all behind `permission:pos`. This is a **session API**: the till is the same browser session as the app (cookie + CSRF token), there are no tokens to issue or revoke — deactivating the user (bare `role` middleware) cuts the till off on its next request. The heartbeat re-supplies the CSRF token so a tablet that slept through a session rotation can keep posting.
 
-| Endpoint                                   | Purpose                                                                                                                                                                                                                                                                                                                     |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /pos/data/heartbeat`                  | Liveness + identity: `{ ok, server_time, user_id, store_id, csrf_token }`.                                                                                                                                                                                                                                                  |
-| `GET /pos/data/products`                   | The whole offline bundle in one payload, cached into Dexie: `{ store_id, synced_at, products[], categories[], registers[], settings{ receipt_header, receipt_footer, currency } }`. Product `stock_qty` is a **hint for the cashier, never the source of truth** — for a pack it is whole packs coverable, not loose units. |
-| `GET /pos/data/customers?q=`               | Name/phone search, tiny rows (`id, name, phone`) — for attaching a debt at the till.                                                                                                                                                                                                                                        |
-| `POST /pos/data/customers`                 | Create in one tap from the picker: `{ name, phone? }` → `201 { id, name, phone }`. A database failure answers `503 { message }` in the shape the checkout can show.                                                                                                                                                         |
-| `POST /pos/data/orders/sync`               | Flush the offline queue — the contract below.                                                                                                                                                                                                                                                                               |
-| `GET /pos/data/orders/{clientUuid}/status` | `404 { status: 'pending' }` until the order lands, then `{ status: 'synced', order_id, order_no, total, synced_at }`.                                                                                                                                                                                                       |
+| Endpoint                                                                                           | Purpose                                                                                                                                                                                                                                                                                                                     |
+| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /pos/data/heartbeat`                                                                          | Liveness + identity: `{ ok, server_time, user_id, store_id, csrf_token }`.                                                                                                                                                                                                                                                  |
+| `GET /pos/data/products`                                                                           | The whole offline bundle in one payload, cached into Dexie: `{ store_id, synced_at, products[], categories[], registers[], settings{ receipt_header, receipt_footer, currency } }`. Product `stock_qty` is a **hint for the cashier, never the source of truth** — for a pack it is whole packs coverable, not loose units. |
+| `GET /pos/data/customers?q=`                                                                       | Name/phone search, tiny rows (`id, name, phone`) — for attaching a debt at the till.                                                                                                                                                                                                                                        |
+| `POST /pos/data/customers`                                                                         | Create in one tap from the picker: `{ name, phone? }` → `201 { id, name, phone }`. A database failure answers `503 { message }` in the shape the checkout can show.                                                                                                                                                         |
+| `POST /pos/data/orders/sync`                                                                       | Flush the offline queue — the contract below.                                                                                                                                                                                                                                                                               |
+| `GET /pos/data/orders/{clientUuid}/status`                                                         | `404 { status: 'pending' }` until the order lands, then `{ status: 'synced', order_id, order_no, total, synced_at }`.                                                                                                                                                                                                       |
+| `POST /pos/data/qr/charges`, `GET …/{charge}`, `POST …/{charge}/confirm`, `POST …/{charge}/cancel` | Per-sale KHQR: mint, poll, confirm by hand, cancel. A store-bound cashier only sees its own store's charges (404 otherwise). See [payments.md](payments.md).                                                                                                                                                                |
 
 ### The sync contract
 

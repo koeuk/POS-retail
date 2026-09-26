@@ -11,6 +11,7 @@ use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\PosDataController;
+use App\Http\Controllers\PosQrController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StoreController;
@@ -62,6 +63,12 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
         Route::post('orders/sync', [PosDataController::class, 'sync'])->name('orders.sync');
         Route::get('orders/{clientUuid}/status', [PosDataController::class, 'status'])
             ->name('orders.status');
+
+        // Per-sale QR payments (Bakong etc.) — see app/Payments.
+        Route::post('qr/charges', [PosQrController::class, 'store'])->name('qr.store');
+        Route::get('qr/charges/{charge}', [PosQrController::class, 'show'])->name('qr.show');
+        Route::post('qr/charges/{charge}/confirm', [PosQrController::class, 'confirm'])->name('qr.confirm');
+        Route::post('qr/charges/{charge}/cancel', [PosQrController::class, 'cancel'])->name('qr.cancel');
     });
 
     /*

@@ -14,7 +14,12 @@ const sidebarNavItems = computed<NavItem[]>(() => [
     { title: 'Profile', href: '/settings/profile' },
     { title: 'Password', href: '/settings/password' },
     { title: 'Appearance', href: '/settings/appearance' },
-    ...(page.props.auth.can.isAdmin ? [{ title: 'Shop', href: '/settings/shop' }] : []),
+    ...(page.props.auth.can.isAdmin
+        ? [
+              { title: 'Shop', href: '/settings/shop' },
+              { title: 'Payments', href: '/settings/payments' },
+          ]
+        : []),
 ]);
 
 /* Follows Inertia navigation; window.location would go stale after a visit. */

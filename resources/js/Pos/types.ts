@@ -37,10 +37,39 @@ export type PaymentMethod = 'cash' | 'card' | 'qr' | 'credit';
 /** Mirror of App\Enums\SaleType. */
 export type SaleType = 'customer' | 'debt' | 'myself';
 
+/** How the till takes QR — see PosDataController::qrSettings(). */
+export interface PosQrSettings {
+    provider: string;
+    label: string;
+    /** A configured provider that mints a QR per sale and confirms it itself. */
+    dynamic: boolean;
+    /** Whether a cashier may confirm a per-sale QR the bank has not. */
+    manual_confirm: boolean;
+    merchant_name: string;
+    /** The shop's fixed KHQR, pre-rendered — what is shown offline. */
+    static_svg: string | null;
+}
+
+/** A per-sale QR from POST /pos/data/qr/charges. */
+export interface QrCharge {
+    id: string;
+    provider: string;
+    reference: string;
+    amount: string;
+    currency: string;
+    status: 'pending' | 'paid' | 'manual' | 'expired' | 'failed' | 'cancelled';
+    settled: boolean;
+    expires_at?: string;
+    svg?: string;
+    notice?: string | null;
+}
+
 export interface PosSettings {
     receipt_header: string;
     receipt_footer: string | null;
     currency: { code: string; symbol: string; decimals: number; riel_per_usd: number };
+    /** Absent in a feed cached before QR payments existed. */
+    qr?: PosQrSettings;
 }
 
 export interface PosRegister {

@@ -10,6 +10,9 @@ use App\Models\Product;
 use App\Models\Register;
 use App\Models\Setting;
 use App\Models\Store;
+use App\Payments\PaymentSettings;
+use App\Payments\QrGateways;
+use App\Payments\QrImage;
 use App\Services\OrderSyncService;
 use App\Support\Currency;
 use Illuminate\Database\QueryException;
@@ -106,8 +109,30 @@ class PosDataController extends Controller
                 'receipt_header' => Setting::get('receipt_header', config('app.name')),
                 'receipt_footer' => Setting::get('receipt_footer'),
                 'currency' => Currency::current()->toArray(),
+                'qr' => $this->qrSettings(),
             ],
         ]);
+    }
+
+    /**
+     * How the till takes QR. The static code is pre-rendered here so it
+     * lands in Dexie with the catalogue — it is what the customer scans when
+     * the till is offline, and it cannot be fetched then.
+     */
+    private function qrSettings(): array
+    {
+        $gateway = app(QrGateways::class)->current();
+        $static = $gateway->staticQr();
+
+        return [
+            'provider' => $gateway->key(),
+            'label' => $gateway->label(),
+            // Only a configured verifying provider mints per-sale QRs.
+            'dynamic' => $gateway->verifies() && $gateway->isConfigured(),
+            'manual_confirm' => PaymentSettings::allowsManualConfirm(),
+            'merchant_name' => PaymentSettings::merchantName(),
+            'static_svg' => $static ? QrImage::svg($static) : null,
+        ];
     }
 
     /**

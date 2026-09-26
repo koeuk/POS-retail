@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Settings\PasswordController;
+use App\Http\Controllers\Settings\PaymentController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\ShopController;
 use Illuminate\Support\Facades\Route;
@@ -24,5 +25,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::get('settings/shop', [ShopController::class, 'edit'])->name('shop.edit');
         Route::put('settings/shop', [ShopController::class, 'update'])->name('shop.update');
+
+        // Where QR money lands — the most sensitive setting in the app.
+        Route::get('settings/payments', [PaymentController::class, 'edit'])->name('payments.edit');
+        Route::put('settings/payments', [PaymentController::class, 'update'])->name('payments.update');
+        Route::post('settings/payments/test', [PaymentController::class, 'test'])->name('payments.test');
     });
 });

@@ -380,6 +380,7 @@ onMounted(loadFeed);
             @close="pickerOpen = false" @pick="attachCustomer" @confirm="recordDebt" />
 
         <PaymentModal :open="paymentOpen" :total="cart.totals.total" :currency="currency" :busy="paying"
+            :qr="feed?.settings.qr" :online="sync.online.value" :store-id="boot.store_id" :register-id="registerId"
             @close="paymentOpen = false" @confirm="completeSale" />
 
         <Transition enter-from-class="opacity-0 translate-y-2"

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\InventoryLogType;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\SaleType;
 use App\Models\Order;
 use App\Models\Product;
@@ -12,6 +13,7 @@ use App\Models\Setting;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
+use App\Payments\QrPayments;
 use App\Support\AuditLog;
 use App\Support\Currency;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -40,6 +42,8 @@ class OrderSyncService
 {
     /** Guards against an order_no collision looping forever. */
     private const MAX_ATTEMPTS = 5;
+
+    public function __construct(private readonly QrPayments $qrPayments) {}
 
     /**
      * @param  array<int, array<string, mixed>>  $orders
@@ -188,6 +192,12 @@ class OrderSyncService
                 'amount' => OrderTotals::toDecimal(OrderTotals::toMinor($payment['amount'])),
                 'reference_no' => $payment['reference_no'] ?? null,
             ]);
+
+            // A QR payment carries its charge's reference, which is how the
+            // bank's confirmation finds the sale it paid for.
+            if ($payment['method'] === PaymentMethod::Qr->value) {
+                $this->qrPayments->attachToOrder($order, $payment['reference_no'] ?? null);
+            }
         }
 
         /*

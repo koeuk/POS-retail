@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import type { CurrencyDef } from '@/composables/useCurrency';
 import { formatMoney } from '@/Pos/lib/money';
-import type { PaymentMethod } from '@/Pos/types';
+import type { PaymentMethod, PosQrSettings } from '@/Pos/types';
 import { Banknote, Check, CreditCard, Delete, QrCode, Wallet, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
+import QrPayPanel from './QrPayPanel.vue';
 
 const props = defineProps<{
     open: boolean;
     total: number;
     currency: CurrencyDef;
     busy?: boolean;
+    qr?: PosQrSettings;
+    online: boolean;
+    storeId: number;
+    registerId: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -31,6 +36,8 @@ const reference = ref('');
 /* Card, QR and credit are always exact — only cash is keyed in and only cash
    gives change, which is why the numpad appears for cash alone. */
 const isCash = computed(() => method.value === 'cash');
+/* QR confirms itself — from the bank, or the cashier's tap inside the panel. */
+const isQr = computed(() => method.value === 'qr');
 
 const amount = computed(() => (isCash.value ? Number(tendered.value) || 0 : props.total));
 const change = computed(() => (isCash.value ? Math.max(0, amount.value - props.total) : 0));
@@ -73,6 +80,10 @@ function press(key: string) {
     if (/\.\d{3,}$/.test(next)) return;
 
     tendered.value = next;
+}
+
+function qrPaid(reference: string | null) {
+    emit('confirm', { method: 'qr', amount: props.total, reference });
 }
 
 function confirm() {
@@ -197,7 +208,19 @@ function confirm() {
                                 </div>
                             </template>
 
-                            <!-- Non-cash: a reference to reconcile against -->
+                            <QrPayPanel
+                                v-else-if="isQr"
+                                :total="total"
+                                :currency="currency"
+                                :qr="qr"
+                                :online="online"
+                                :store-id="storeId"
+                                :register-id="registerId"
+                                :busy="busy"
+                                @paid="qrPaid"
+                            />
+
+                            <!-- Card, credit: a reference to reconcile against -->
                             <div v-else class="mt-4">
                                 <label for="pay-ref" class="text-xs font-medium text-muted-foreground"> Reference (optional) </label>
                                 <input
@@ -211,7 +234,7 @@ function confirm() {
                             </div>
                         </div>
 
-                        <div class="shrink-0 border-t border-border p-4">
+                        <div v-if="!isQr" class="shrink-0 border-t border-border p-4">
                             <button
                                 type="button"
                                 :disabled="!canConfirm"

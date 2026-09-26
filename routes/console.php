@@ -15,3 +15,10 @@ Artisan::command('inspire', function () {
  * ever leave — without it the table grows for the life of the shop.
  */
 Schedule::command('activitylog:clean')->weekly();
+
+/*
+ * Late QR payments: each unpaid QR is asked about once, a minute after it
+ * expires. Bakong's free tier allows 100 checks a day, so this never
+ * re-asks about the same charge.
+ */
+Schedule::command('payments:reconcile-qr')->everyTenMinutes()->withoutOverlapping();
