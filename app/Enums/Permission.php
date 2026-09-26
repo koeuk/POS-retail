@@ -24,6 +24,7 @@ enum Permission: string
     case Users = 'users';
     case Stores = 'stores';
     case Activity = 'activity';
+    case Vendors = 'vendors';
 
     public function label(): string
     {
@@ -40,6 +41,7 @@ enum Permission: string
             self::Users => 'Staff',
             self::Stores => 'Stores & registers',
             self::Activity => 'Activity log',
+            self::Vendors => 'Vendors',
         };
     }
 
@@ -49,7 +51,7 @@ enum Permission: string
         return match ($this) {
             self::Pos, self::Orders, self::Debts, self::Consumption, self::Reports => 'Selling',
             self::Products, self::Categories, self::Inventory => 'Catalogue',
-            self::Customers, self::Users, self::Stores => 'People & stores',
+            self::Customers, self::Users, self::Stores, self::Vendors => 'People & stores',
             self::Activity => 'Audit',
         };
     }
@@ -61,9 +63,29 @@ enum Permission: string
             Role::Admin => true,
             // The audit trail records what managers themselves do, so it is
             // admin-only by default — grant it per user on the Staff screen.
-            Role::Manager => ! in_array($this, [self::Users, self::Activity], true),
+            Role::Manager => ! in_array($this, [self::Users, self::Activity, self::Vendors], true),
             Role::Cashier => $this === self::Pos,
+            // A supplier's own login runs the shop like a manager and may hire
+            // its own cashiers (UserPolicy keeps it to those), but never sees
+            // the audit trail or the other suppliers' figures.
+            Role::Vendor => ! in_array($this, [self::Activity, self::Vendors], true),
         };
+    }
+
+    /**
+     * One action's baseline for a role, before any per-user override.
+     *
+     * Follows the area default, with one role-level exception: a vendor
+     * account may add and edit but not delete. Grant delete per user on the
+     * Staff screen when a particular vendor needs it.
+     */
+    public function defaultActionFor(Role $role, Action $action): bool
+    {
+        if ($role === Role::Vendor && $action === Action::Delete) {
+            return false;
+        }
+
+        return $this->defaultFor($role);
     }
 
     /** @return string[] */

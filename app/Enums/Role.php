@@ -7,6 +7,7 @@ enum Role: string
     case Admin = 'admin';
     case Manager = 'manager';
     case Cashier = 'cashier';
+    case Vendor = 'vendor';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum Role: string
             self::Admin => 'Administrator',
             self::Manager => 'Manager',
             self::Cashier => 'Cashier',
+            self::Vendor => 'Vendor',
         };
     }
 
@@ -24,6 +26,15 @@ enum Role: string
     public function requiresStore(): bool
     {
         return $this === self::Cashier;
+    }
+
+    /**
+     * A vendor account speaks for one supplier — the account is meaningless
+     * without knowing which, so the vendor is required on save.
+     */
+    public function requiresVendor(): bool
+    {
+        return $this === self::Vendor;
     }
 
     public function canAccessAdmin(): bool

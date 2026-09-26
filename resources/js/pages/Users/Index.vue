@@ -15,7 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
-import type { Paginated, SharedData, Store, User } from '@/types';
+import type { Paginated, SharedData, Store, User, Vendor } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { Pencil, Plus, Search, ShieldCheck, Trash2, Users } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
@@ -25,6 +25,8 @@ type PermissionOption = {
     label: string;
     group: string;
     defaults: Record<string, boolean>;
+    /** Per role, per action — a role may reach an area yet not every verb in it. */
+    actionDefaults: Record<string, Record<string, boolean>>;
 };
 
 type ActionOption = { value: string; label: string };
@@ -36,8 +38,15 @@ type ActionMap = Record<string, boolean>;
 type EffectivePermission = { allowed: boolean; actions: ActionMap };
 
 const props = defineProps<{
-    users: Paginated<User & { store?: Pick<Store, 'id' | 'name'> | null; effective_permissions: Record<string, EffectivePermission> }>;
+    users: Paginated<
+        User & {
+            store?: Pick<Store, 'id' | 'name'> | null;
+            vendor?: Pick<Vendor, 'id' | 'name'> | null;
+            effective_permissions: Record<string, EffectivePermission>;
+        }
+    >;
     stores: Store[];
+    vendors: Pick<Vendor, 'id' | 'name'>[];
     roles: { value: string; label: string }[];
     permissionOptions: PermissionOption[];
     actionOptions: ActionOption[];
@@ -47,6 +56,8 @@ const props = defineProps<{
 const page = usePage<SharedData>();
 const currentUserId = computed(() => page.props.auth.user?.id);
 const canEditPermissions = computed(() => page.props.auth.can.isAdmin);
+/** A vendor's hires join its own team, so it is never asked which vendor. */
+const actorIsVendor = computed(() => page.props.auth.user?.role === 'vendor');
 
 /** Options grouped for display: [group label, options[]]. */
 const permissionGroups = computed(() => {
@@ -57,10 +68,13 @@ const permissionGroups = computed(() => {
     return [...groups.entries()];
 });
 
-/** The role's baseline as a full matrix — every action follows the area. */
+/** The role's baseline as a full matrix, action by action. */
 const roleDefaults = (role: string): Record<string, ActionMap> =>
     Object.fromEntries(
-        props.permissionOptions.map((o) => [o.value, Object.fromEntries(props.actionOptions.map((a) => [a.value, o.defaults[role] ?? false]))]),
+        props.permissionOptions.map((o) => [
+            o.value,
+            Object.fromEntries(props.actionOptions.map((a) => [a.value, o.actionDefaults?.[role]?.[a.value] ?? o.defaults[role] ?? false])),
+        ]),
     );
 
 /** Server shape → form shape: keep the actions, drop the area summary. */
@@ -104,12 +118,17 @@ const form = useForm({
     password_confirmation: '',
     role: 'cashier',
     store_id: NONE,
+    vendor_id: NONE,
     is_active: true as boolean,
     permissions: {} as Record<string, ActionMap>,
 });
 
 /** A cashier cannot open /pos without a store, so the field becomes required. */
 const storeRequired = computed(() => form.role === 'cashier');
+
+/** A vendor account must name its vendor; a cashier may join a vendor's team. */
+const vendorRequired = computed(() => form.role === 'vendor');
+const showVendor = computed(() => !actorIsVendor.value && (form.role === 'vendor' || form.role === 'cashier'));
 
 /*
  * Picking a role re-seeds the switches to that role's defaults — the role is
@@ -126,6 +145,7 @@ function openCreate() {
     form.reset();
     form.clearErrors();
     form.store_id = NONE;
+    form.vendor_id = NONE;
     form.permissions = roleDefaults(form.role);
     dialogOpen.value = true;
 }
@@ -139,6 +159,7 @@ function openEdit(user: User & { effective_permissions: Record<string, Effective
     form.password_confirmation = '';
     form.role = user.role;
     form.store_id = user.store_id ? String(user.store_id) : NONE;
+    form.vendor_id = user.vendor_id ? String(user.vendor_id) : NONE;
     form.is_active = user.is_active;
     form.permissions = toActionMatrix(user.effective_permissions);
     dialogOpen.value = true;
@@ -147,7 +168,11 @@ function openEdit(user: User & { effective_permissions: Record<string, Effective
 function submit() {
     const opts = { onSuccess: () => (dialogOpen.value = false), preserveScroll: true };
 
-    form.transform((d) => ({ ...d, store_id: d.store_id === NONE ? null : d.store_id }));
+    form.transform((d) => ({
+        ...d,
+        store_id: d.store_id === NONE ? null : d.store_id,
+        vendor_id: d.vendor_id === NONE ? null : d.vendor_id,
+    }));
 
     if (editing.value) {
         form.put(route('users.update', { user: editing.value.uuid }), opts);
@@ -205,7 +230,7 @@ function confirmDelete() {
     });
 }
 
-const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'manager' ? 'secondary' : 'outline');
+const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'manager' || role === 'vendor' ? 'secondary' : 'outline');
 </script>
 
 <template>
@@ -274,6 +299,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                 </TableCell>
                                 <TableCell class="text-sm text-muted-foreground">
                                     {{ u.store?.name ?? 'All stores' }}
+                                    <span v-if="u.vendor" class="block text-xs">{{ u.vendor.name }}</span>
                                 </TableCell>
                                 <TableCell>
                                     <span class="inline-flex items-center gap-1.5 text-sm" :class="u.is_active ? '' : 'text-muted-foreground'">
@@ -333,7 +359,9 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                     {{ u.name }}
                                     <span v-if="u.id === currentUserId" class="text-xs font-normal text-muted-foreground">(you)</span>
                                 </p>
-                                <p class="truncate text-xs text-muted-foreground">{{ u.email }} · {{ u.store?.name ?? 'All stores' }}</p>
+                                <p class="truncate text-xs text-muted-foreground">
+                                    {{ u.email }} · {{ u.store?.name ?? 'All stores' }}<template v-if="u.vendor"> · {{ u.vendor.name }}</template>
+                                </p>
                             </div>
 
                             <Badge :variant="roleTone(u.role)" class="shrink-0 capitalize">{{ u.role }}</Badge>
@@ -431,6 +459,28 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                 </p>
                                 <InputError :message="form.errors.store_id" />
                             </div>
+                        </div>
+
+                        <div v-if="showVendor" class="grid gap-2">
+                            <Label for="u-vendor">
+                                Vendor
+                                <span v-if="vendorRequired" class="text-destructive">*</span>
+                            </Label>
+                            <Select v-model="form.vendor_id">
+                                <SelectTrigger id="u-vendor">
+                                    <SelectValue placeholder="No vendor" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem :value="NONE" :disabled="vendorRequired">No vendor</SelectItem>
+                                    <SelectItem v-for="v in vendors" :key="v.id" :value="String(v.id)">
+                                        {{ v.name }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p class="text-xs text-muted-foreground">
+                                {{ vendorRequired ? 'The supplier this account speaks for.' : "Optional — puts this cashier on a vendor's team." }}
+                            </p>
+                            <InputError :message="form.errors.vendor_id" />
                         </div>
 
                         <div class="grid gap-4 sm:grid-cols-2">

@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
+use App\Models\Vendor;
 use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
@@ -84,6 +85,7 @@ class ProductController extends Controller
 
         return Inertia::render('Products/Create', [
             'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'vendors' => Vendor::orderBy('name')->get(['id', 'name', 'is_active']),
         ]);
     }
 
@@ -201,6 +203,7 @@ class ProductController extends Controller
         return Inertia::render('Products/Edit', [
             'product' => $product->load('category:id,name', 'parent:id,name'),
             'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'vendors' => Vendor::orderBy('name')->get(['id', 'name', 'is_active']),
             'packs' => $product->packs()->orderBy('units_per_pack')->get(['id', 'name', 'units_per_pack', 'sell_price', 'is_active']),
             // Only worth offering a choice when there is one to make.
             'stores' => Store::orderBy('name')->get(['id', 'name']),
@@ -424,6 +427,7 @@ class ProductController extends Controller
         foreach ($packs as $pack) {
             $attributes = [
                 'category_id' => $product->category_id,
+                'vendor_id' => $product->vendor_id,
                 'parent_product_id' => $product->id,
                 'name' => $pack['name'],
                 'units_per_pack' => (int) $pack['units_per_pack'],

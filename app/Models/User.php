@@ -27,6 +27,7 @@ class User extends Authenticatable
         'role',
         'permissions',
         'store_id',
+        'vendor_id',
         'is_active',
     ];
 
@@ -44,6 +45,7 @@ class User extends Authenticatable
         'role',
         'permissions',
         'store_id',
+        'vendor_id',
         'is_active',
     ];
 
@@ -133,6 +135,10 @@ class User extends Authenticatable
 
         $override = $this->permissions[$permission->value] ?? null;
 
+        if ($override === null) {
+            return $permission->defaultActionFor($this->role, $action);
+        }
+
         if (! is_array($override)) {
             return true; // plain grant: the whole area
         }
@@ -183,6 +189,12 @@ class User extends Authenticatable
     public function store(): BelongsTo
     {
         return $this->belongsTo(Store::class);
+    }
+
+    /** The supplier a `vendor`-role account belongs to. */
+    public function vendor(): BelongsTo
+    {
+        return $this->belongsTo(Vendor::class);
     }
 
     public function orders(): HasMany

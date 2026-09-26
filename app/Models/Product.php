@@ -16,6 +16,7 @@ class Product extends Model
 
     protected $fillable = [
         'category_id',
+        'vendor_id',
         'parent_product_id',
         'name',
         'sku',
@@ -35,6 +36,7 @@ class Product extends Model
     /** Columns the audit trail records changes to — see RecordsActivity. */
     protected array $auditable = [
         'category_id',
+        'vendor_id',
         'name',
         'sku',
         'barcode',
@@ -63,6 +65,11 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function vendor(): BelongsTo
+    {
+        return $this->belongsTo(Vendor::class);
     }
 
     public function stocks(): HasMany

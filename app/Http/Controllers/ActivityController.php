@@ -10,6 +10,7 @@ use App\Models\Register;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
+use App\Models\Vendor;
 use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -168,6 +169,7 @@ class ActivityController extends Controller
         'Store' => ['title' => 'Stores', 'href' => '/stores'],
         'Stock' => ['title' => 'Inventory', 'href' => '/inventory'],
         'User' => ['title' => 'Staff', 'href' => '/users'],
+        'Vendor' => ['title' => 'Vendors', 'href' => '/vendors'],
     ];
 
     /** Short URL name → class, for the record-history page. */
@@ -179,6 +181,7 @@ class ActivityController extends Controller
         'Register' => Register::class,
         'Stock' => Stock::class,
         'User' => User::class,
+        'Vendor' => Vendor::class,
     ];
 
     /** The name a since-deleted record went by, from its final log entry. */

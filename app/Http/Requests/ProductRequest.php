@@ -19,6 +19,7 @@ class ProductRequest extends FormRequest
 
         return [
             'category_id' => ['required', 'integer', Rule::exists('categories', 'id')],
+            'vendor_id' => ['nullable', 'integer', Rule::exists('vendors', 'id')],
 
             /*
              * Pack sizes are one level deep on purpose. A pack of a pack would
@@ -146,6 +147,11 @@ class ProductRequest extends FormRequest
             // An emptied field arrives as '' — that means "count singles", not zero.
             'case_size' => $this->input('case_size') ?: null,
         ]);
+
+        // '' from an emptied select means "no vendor"; an absent key leaves it be.
+        if ($this->has('vendor_id')) {
+            $this->merge(['vendor_id' => $this->input('vendor_id') ?: null]);
+        }
 
         /*
          * Only normalise the pack keys when the caller actually sent one.

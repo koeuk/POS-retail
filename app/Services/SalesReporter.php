@@ -302,6 +302,64 @@ class SalesReporter
             ]);
     }
 
+    /**
+     * Line revenue per supplier, keyed by vendor id. A pack sells as its own
+     * product row, so it is credited to its parent's vendor when it carries
+     * none of its own.
+     *
+     * @return Collection<int, array{orders: int, qty: int, revenue: string}>
+     */
+    public function salesByVendor(Carbon $from, Carbon $to): Collection
+    {
+        $vendor = 'COALESCE(products.vendor_id, parents.vendor_id)';
+
+        return $this->between($this->lines(), $from, $to)
+            ->join('products', 'products.id', '=', 'order_items.product_id')
+            ->leftJoin('products as parents', 'parents.id', '=', 'products.parent_product_id')
+            ->whereRaw("{$vendor} IS NOT NULL")
+            ->select([
+                DB::raw("{$vendor} as vendor_id"),
+                DB::raw('COUNT(DISTINCT orders.id) as orders'),
+                DB::raw('SUM(order_items.qty) as qty'),
+                DB::raw('SUM(order_items.subtotal) as revenue'),
+            ])
+            ->groupBy(DB::raw($vendor))
+            ->get()
+            ->mapWithKeys(fn (object $row) => [(int) $row->vendor_id => [
+                'orders' => (int) $row->orders,
+                'qty' => (int) $row->qty,
+                'revenue' => self::money($row->revenue),
+            ]]);
+    }
+
+    /**
+     * One supplier's sales per base product, keyed by product id — packs roll
+     * up into the product they are a pack of.
+     *
+     * @return Collection<int, array{qty: int, revenue: string}>
+     */
+    public function vendorProductSales(int $vendorId, Carbon $from, Carbon $to): Collection
+    {
+        $base = 'COALESCE(products.parent_product_id, products.id)';
+
+        return $this->between($this->lines(), $from, $to)
+            ->join('products', 'products.id', '=', 'order_items.product_id')
+            ->leftJoin('products as parents', 'parents.id', '=', 'products.parent_product_id')
+            ->whereRaw('COALESCE(products.vendor_id, parents.vendor_id) = ?', [$vendorId])
+            ->select([
+                DB::raw("{$base} as product_id"),
+                // Base units, so a case of 24 counts as 24 cans sold.
+                DB::raw('SUM(order_items.qty * COALESCE(products.units_per_pack, 1)) as qty'),
+                DB::raw('SUM(order_items.subtotal) as revenue'),
+            ])
+            ->groupBy(DB::raw($base))
+            ->get()
+            ->mapWithKeys(fn (object $row) => [(int) $row->product_id => [
+                'qty' => (int) $row->qty,
+                'revenue' => self::money($row->revenue),
+            ]]);
+    }
+
     public function paymentBreakdown(Carbon $from, Carbon $to): Collection
     {
         return $this->between($this->payments(), $from, $to)

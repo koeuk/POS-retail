@@ -16,6 +16,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\VendorController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -121,6 +122,9 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
     Route::resource('customers', CustomerController::class)
         ->only(['index', 'store', 'update', 'destroy'])->middleware('permission:customers');
 
+    Route::resource('vendors', VendorController::class)
+        ->only(['index', 'show', 'store', 'update', 'destroy'])->middleware('permission:vendors');
+
     Route::middleware('permission:users')->group(function () {
         Route::resource('users', UserController::class)->only(['index', 'store', 'update', 'destroy']);
         // Permissions save on their own path so the dialog sends only the
@@ -150,6 +154,7 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
             'stores' => 'Store',
             'inventory' => 'Stock',
             'users' => 'User',
+            'vendors' => 'Vendor',
         ] as $prefix => $type) {
             // The uuid is the public identity; bare digits still work so a
             // deleted record's history stays reachable from an old link.

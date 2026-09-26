@@ -8,6 +8,7 @@ use App\Enums\Role;
 use App\Http\Requests\UserRequest;
 use App\Models\Store;
 use App\Models\User;
+use App\Models\Vendor;
 use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
@@ -26,9 +27,18 @@ class UserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
+        $actor = $request->user();
+        $isVendor = $actor->hasRole(Role::Vendor);
+
         return Inertia::render('Users/Index', [
             'users' => QueryBuilder::for(User::class)
-                ->with('store:id,name')
+                ->with('store:id,name', 'vendor:id,name')
+                // A vendor sees its own team: itself and the cashiers it hired.
+                ->when($isVendor, fn ($q) => $q->where(fn (Builder $q) => $q
+                    ->where('users.id', $actor->id)
+                    ->orWhere(fn (Builder $q) => $q
+                        ->where('role', Role::Cashier->value)
+                        ->where('vendor_id', $actor->vendor_id))))
                 ->allowedFilters(...[
                     AllowedFilter::callback('search', function (Builder $query, string $search) {
                         $query->where(function (Builder $q) use ($search) {
@@ -45,7 +55,9 @@ class UserController extends Controller
                     'effective_permissions' => $u->effectivePermissions(),
                 ])),
             'stores' => Store::orderBy('name')->get(['id', 'name']),
-            'roles' => collect(Role::cases())->map(fn (Role $r) => [
+            'vendors' => Vendor::orderBy('name')->get(['id', 'name']),
+            // A vendor may only hire cashiers, so that is all it is offered.
+            'roles' => collect($isVendor ? [Role::Cashier] : Role::cases())->map(fn (Role $r) => [
                 'value' => $r->value,
                 'label' => $r->label(),
             ]),
@@ -55,6 +67,11 @@ class UserController extends Controller
                 'group' => $p->group(),
                 'defaults' => collect(Role::cases())
                     ->mapWithKeys(fn (Role $r) => [$r->value => $p->defaultFor($r)]),
+                // Per action as well: a role may reach an area yet not every
+                // verb in it (a vendor cannot delete by default).
+                'actionDefaults' => collect(Role::cases())
+                    ->mapWithKeys(fn (Role $r) => [$r->value => collect(Action::cases())
+                        ->mapWithKeys(fn (Action $a) => [$a->value => $p->defaultActionFor($r, $a)])]),
             ]),
             // The columns of the permissions grid — view / add / edit / delete.
             'actionOptions' => collect(Action::cases())->map(fn (Action $a) => [
@@ -78,6 +95,11 @@ class UserController extends Controller
             // staff manager creates accounts with role defaults only.
             if (! $request->user()->isAdmin()) {
                 unset($data['permissions']);
+            }
+
+            // A vendor's hires join the vendor's own team, whatever was sent.
+            if ($request->user()->hasRole(Role::Vendor)) {
+                $data['vendor_id'] = $request->user()->vendor_id;
             }
 
             DB::transaction(fn () => User::create($data));
@@ -112,7 +134,10 @@ class UserController extends Controller
             // account mid-session by demoting or deactivating it.
             if ($user->id === $request->user()->id) {
                 $data['role'] = $user->role->value;
+                $data['vendor_id'] = $user->vendor_id;
                 $data['is_active'] = true;
+            } elseif ($request->user()->hasRole(Role::Vendor)) {
+                $data['vendor_id'] = $request->user()->vendor_id;
             }
 
             DB::transaction(fn () => $user->update($data));

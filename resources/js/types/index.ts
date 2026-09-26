@@ -1,11 +1,13 @@
 import type { LucideIcon } from 'lucide-vue-next';
 
-export type Role = 'admin' | 'manager' | 'cashier';
+export type Role = 'admin' | 'manager' | 'cashier' | 'vendor';
 
 export interface Auth {
     user: User | null;
     /** The shop this person is bound to; null for admins, who see them all. */
     store_name: string | null;
+    /** The supplier a vendor account speaks for; null for everyone else. */
+    vendor_name: string | null;
     can: {
         accessAdmin: boolean;
         manage: boolean;
@@ -69,6 +71,8 @@ export interface User {
     avatar?: string;
     role: Role;
     store_id: number | null;
+    /** A vendor account's supplier, or the vendor team a cashier works for. */
+    vendor_id: number | null;
     is_active: boolean;
     email_verified_at?: string | null;
     created_at?: string;
@@ -109,6 +113,7 @@ export interface Product {
     id: number;
     uuid: string;
     category_id: number;
+    vendor_id?: number | null;
     /** Set when this row is a pack of another product — a case of the base unit. */
     parent_product_id?: number | null;
     parent?: Pick<Product, 'id' | 'name'> | null;
@@ -144,6 +149,20 @@ export interface Stock {
     qty: number;
     low_stock_threshold: number | null;
     store?: Pick<Store, 'id' | 'name'>;
+}
+
+export interface Vendor {
+    id: number;
+    uuid: string;
+    name: string;
+    contact_name: string | null;
+    phone: string | null;
+    email: string | null;
+    address: string | null;
+    notes: string | null;
+    is_active: boolean;
+    products_count?: number;
+    users_count?: number;
 }
 
 export interface Customer {

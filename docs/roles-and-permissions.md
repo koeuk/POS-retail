@@ -58,34 +58,41 @@ page.props.auth.can.isAdmin; // role flags still exist for role questions
 
 ## The model in one paragraph
 
-Every user has exactly one **role** — `admin`, `manager`, or `cashier` ([app/Enums/Role.php](../app/Enums/Role.php)). A role is only a _baseline_: it decides what a user can do **by default**. The real unit of access is the **permission** — one key per feature area ([app/Enums/Permission.php](../app/Enums/Permission.php)) — and any individual user can be granted or denied any permission on the Staff screen, regardless of role. Admins bypass the whole table: an admin always holds every permission, so the shop can never lock itself out of its own back office.
+Every user has exactly one **role** — `admin`, `manager`, `cashier`, or `vendor` ([app/Enums/Role.php](../app/Enums/Role.php)). A role is only a _baseline_: it decides what a user can do **by default**. The real unit of access is the **permission** — one key per feature area ([app/Enums/Permission.php](../app/Enums/Permission.php)) — and any individual user can be granted or denied any permission on the Staff screen, regardless of role. Admins bypass the whole table: an admin always holds every permission, so the shop can never lock itself out of its own back office.
 
 ## Roles
 
-| Role      | Store binding                             | Default access                             |
-| --------- | ----------------------------------------- | ------------------------------------------ |
-| `admin`   | none (sees all stores)                    | Everything, always. Overrides are ignored. |
-| `manager` | optional                                  | Everything except **Staff**                |
-| `cashier` | **required** — `/pos` reads stock from it | **Point of Sale** only                     |
+| Role      | Store binding                             | Default access                                                                                                                                                |
+| --------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `admin`   | none (sees all stores)                    | Everything, always. Overrides are ignored.                                                                                                                    |
+| `manager` | optional                                  | Everything except **Staff**                                                                                                                                   |
+| `cashier` | **required** — `/pos` reads stock from it | **Point of Sale** only                                                                                                                                        |
+| `vendor`  | optional; **`vendor_id` required**        | Everything except **Activity** and **Vendors**; **no Delete** in any area. On **Staff** it may only create cashiers, and only sees/edits its own (see below). |
+
+A `vendor` account belongs to one supplier (`users.vendor_id` → `vendors`). A cashier may optionally carry a `vendor_id` too — that puts it on the vendor's team.
 
 ## Permissions
 
 Defined in `App\Enums\Permission`, one case per feature area:
 
-| Key           | Screen             | Admin | Manager | Cashier |
-| ------------- | ------------------ | :---: | :-----: | :-----: |
-| `pos`         | Point of Sale      |   ✓   |    ✓    |    ✓    |
-| `orders`      | Order History      |   ✓   |    ✓    |    —    |
-| `debts`       | In Debt            |   ✓   |    ✓    |    —    |
-| `consumption` | Myself             |   ✓   |    ✓    |    —    |
-| `reports`     | Reports            |   ✓   |    ✓    |    —    |
-| `products`    | Products           |   ✓   |    ✓    |    —    |
-| `categories`  | Categories         |   ✓   |    ✓    |    —    |
-| `inventory`   | Inventory          |   ✓   |    ✓    |    —    |
-| `customers`   | Customers          |   ✓   |    ✓    |    —    |
-| `users`       | Staff              |   ✓   |    —    |    —    |
-| `stores`      | Stores & registers |   ✓   |    ✓    |    —    |
-| `activity`    | Activity log       |   ✓   |    —    |    —    |
+| Key | Screen | Admin | Manager | Cashier |
+| --- | ------ | :---: | :-----: | :-----: |
+
+The `vendor` role matches Manager's column, except it **has** `users` (for hiring cashiers) and **lacks** `vendors`.
+
+| `pos` | Point of Sale | ✓ | ✓ | ✓ |
+| `orders` | Order History | ✓ | ✓ | — |
+| `debts` | In Debt | ✓ | ✓ | — |
+| `consumption` | Myself | ✓ | ✓ | — |
+| `reports` | Reports | ✓ | ✓ | — |
+| `products` | Products | ✓ | ✓ | — |
+| `categories` | Categories | ✓ | ✓ | — |
+| `inventory` | Inventory | ✓ | ✓ | — |
+| `customers` | Customers | ✓ | ✓ | — |
+| `users` | Staff | ✓ | — | — |
+| `stores` | Stores & registers | ✓ | ✓ | — |
+| `activity` | Activity log | ✓ | — | — |
+| `vendors` | Vendors (+summary) | ✓ | — | — |
 
 Dashboard and the public `/menu` need no permission. Shop settings (`/settings/shop`) are deliberately **role-gated to admin**, not permission-gated — they change what every screen shows.
 
@@ -97,7 +104,7 @@ Dashboard and the public `/menu` need no permission. Shop settings (`/settings/s
 2. **Override present** in the `users.permissions` JSON column? → use it.
 3. Otherwise → the role's default from `Permission::defaultFor(Role $r)`.
 
-`User::mayDo(Permission $p, Action $a)` answers the **action** question: the area gate first (someone who cannot open Products cannot delete one), then the stored override for that key.
+`User::mayDo(Permission $p, Action $a)` answers the **action** question: the area gate first (someone who cannot open Products cannot delete one), then the stored override for that key — or, with no override, `Permission::defaultActionFor(Role, Action)`. That is where a role-level verb rule lives: it follows `defaultFor()` except that `vendor` gets `delete = false` everywhere. The Staff dialog seeds its switches from the same function (`actionDefaults`), so an admin can grant Delete to one vendor account.
 
 An override is stored in one of two shapes, and both are valid:
 
@@ -278,6 +285,7 @@ Each row is one `Route::middleware('permission:<key>')` group — the middleware
 | `customers`   | index/store/update/destroy                                                                                                                                                                                                                                                          |
 | `users`       | index/store/update/destroy (admin-only by default; see invariants)                                                                                                                                                                                                                  |
 | `stores`      | `GET/POST /stores`, `PUT/DELETE /stores/{store}`, `POST/PUT .../registers`                                                                                                                                                                                                          |
+| `vendors`     | index/show/store/update/destroy — show is the per-vendor summary (products, stock on hand, sales over 7/30/90 days); destroy refuses while the vendor has staff accounts                                                                                                            |
 | `activity`    | `GET /activity` (whole log) · `GET /<resource>/{id}/history` (a record's own history page, beside its show/edit endpoints: products, categories, customers, stores, inventory, users) — read-only by design: no write route exists, rows age out via the weekly `activitylog:clean` |
 
 ## The POS data API
@@ -349,6 +357,15 @@ Rules that keep the two doors honest:
 - **Deactivation kills tokens.** `EnsureRole` runs on every API request; it skips the session teardown when there is no session ([EnsureRole](../app/Http/Middleware/EnsureRole.php)) but the 403 stands.
 - **Store pinning survives the door.** A cashier's token is bound to their store for orders, debts, inventory and sync, exactly as their session is.
 - Lists paginate through the same `PerPage` whitelist (`?per_page=`), and filters use the same Spatie grammar — one query language across web and API.
+
+## Vendor accounts and the Staff screen
+
+A vendor holds `users`, so it can open Staff — but `UserPolicy::inReach()` and `UserRequest` keep it to its own team:
+
+- It lists only itself and cashiers with its `vendor_id` (`UserController::index`).
+- It may create **cashiers only** (`role` rule in `UserRequest`); the controller pins the hire's `vendor_id` to the vendor's own, whatever was sent.
+- It may update/delete only cashiers on its team (`UserPolicy::inReach`), never other staff.
+- Like every non-admin, it cannot edit `permissions`.
 
 ## Security invariants (keep these true)
 

@@ -44,6 +44,13 @@ class UserRequest extends FormRequest
                     if ($value === Role::Admin->value && ! $this->user()->isAdmin()) {
                         $fail('Only an administrator can grant the admin role.');
                     }
+
+                    // A vendor hires cashiers only. Its own account keeps its
+                    // role — the controller pins that on a self-edit.
+                    $isSelf = $this->route('user')?->id === $this->user()->id;
+                    if ($this->user()->hasRole(Role::Vendor) && ! $isSelf && $value !== Role::Cashier->value) {
+                        $fail('A vendor account can only create cashiers.');
+                    }
                 },
             ],
 
@@ -71,6 +78,14 @@ class UserRequest extends FormRequest
                 'integer',
                 Rule::exists('stores', 'id'),
             ],
+            // Required for a vendor account; optional for a cashier (the
+            // vendor team they work for); meaningless for anyone else.
+            'vendor_id' => [
+                Rule::requiredIf(fn () => $this->input('role') === Role::Vendor->value),
+                'nullable',
+                'integer',
+                Rule::exists('vendors', 'id'),
+            ],
             'is_active' => ['boolean'],
         ];
     }
@@ -79,6 +94,7 @@ class UserRequest extends FormRequest
     {
         return [
             'store_id.required' => 'A cashier must be assigned to a store.',
+            'vendor_id.required' => 'A vendor account must belong to a vendor.',
         ];
     }
 
@@ -119,6 +135,9 @@ class UserRequest extends FormRequest
         $this->merge([
             'is_active' => $this->boolean('is_active'),
             'store_id' => $this->input('store_id') ?: null,
+            'vendor_id' => in_array($this->input('role'), [Role::Vendor->value, Role::Cashier->value], true)
+                ? ($this->input('vendor_id') ?: null)
+                : null,
             // Admins hold everything regardless, so store no overrides.
             'permissions' => $this->input('role') === Role::Admin->value ? null : $permissions,
         ]);
