@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
+import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
 import type { Paginated } from '@/types';
@@ -44,6 +45,7 @@ const props = defineProps<{
 }>();
 
 const { currency, money } = useCurrency();
+const { may } = usePermissions();
 
 /* Riel has no fractional unit, so a step or minimum of 0.01 asks for a
    payment that cannot be made. Both follow the currency instead. */
@@ -83,6 +85,7 @@ const settling = ref<Debt | null>(null);
 const form = useForm({ amount: '', method: 'cash', reference_no: '' });
 
 function openSettle(d: Debt) {
+    if (!may('debts', 'update')) return;
     settling.value = d;
     form.clearErrors();
     form.amount = owed(d).toFixed(2);
@@ -204,6 +207,7 @@ watch(customerQuery, () => {
 });
 
 function openAdd(customer: PickedCustomer | null = null) {
+    if (!may('debts', 'create')) return;
     adding.value = true;
     addForm.clearErrors();
     addForm.reset();
@@ -248,7 +252,7 @@ function submitAdd() {
         <div class="px-2.5 py-6 md:px-8">
             <PageHeader title="In Debt" description="Sales made on credit. Record money as it comes in; a debt is settled once it is paid in full.">
                 <template #actions>
-                    <Button class="press" @click="openAdd()">
+                    <Button v-if="may('debts', 'create')" class="press" @click="openAdd()">
                         <Plus class="size-4" />
                         Add debt
                     </Button>
@@ -303,9 +307,9 @@ function submitAdd() {
                             </p>
                         </button>
 
-                        <div v-if="owed(d) > 0 || d.customer" class="flex gap-2 border-t border-border px-3.5 py-2">
+                        <div v-if="(d.customer && may('debts', 'create')) || (owed(d) > 0 && may('debts', 'update'))" class="flex gap-2 border-t border-border px-3.5 py-2">
                             <Button
-                                v-if="d.customer"
+                                v-if="d.customer && may('debts', 'create')"
                                 variant="outline"
                                 size="sm"
                                 class="press flex-1"
@@ -315,7 +319,7 @@ function submitAdd() {
                                 <Plus class="size-3.5" />
                                 Add
                             </Button>
-                            <Button v-if="owed(d) > 0" size="sm" class="press flex-1" @click="openSettle(d)">Record payment</Button>
+                            <Button v-if="owed(d) > 0 && may('debts', 'update')" size="sm" class="press flex-1" @click="openSettle(d)">Record payment</Button>
                         </div>
                     </li>
                 </ul>
@@ -364,7 +368,7 @@ function submitAdd() {
                                             <Eye class="size-4" />
                                         </Button>
                                         <Button
-                                            v-if="d.customer"
+                                            v-if="d.customer && may('debts', 'create')"
                                             variant="outline"
                                             size="sm"
                                             class="press"
@@ -374,7 +378,7 @@ function submitAdd() {
                                             <Plus class="size-3.5" />
                                             Add
                                         </Button>
-                                        <Button v-if="owed(d) > 0" size="sm" class="press" @click="openSettle(d)">Record payment</Button>
+                                        <Button v-if="owed(d) > 0 && may('debts', 'update')" size="sm" class="press" @click="openSettle(d)">Record payment</Button>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -469,7 +473,7 @@ function submitAdd() {
                         <Link :href="route('orders.show', { order: viewing.uuid })">Full order</Link>
                     </Button>
                     <Button
-                        v-if="owed(viewing) > 0"
+                        v-if="owed(viewing) > 0 && may('debts', 'update')"
                         class="press flex-1"
                         @click="
                             openSettle(viewing);

@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
 import type { Paginated, SharedData, Store, User, Vendor } from '@/types';
@@ -54,6 +55,7 @@ const props = defineProps<{
 }>();
 
 const page = usePage<SharedData>();
+const { may } = usePermissions();
 const currentUserId = computed(() => page.props.auth.user?.id);
 const canEditPermissions = computed(() => page.props.auth.can.isAdmin);
 /** A vendor's hires join its own team, so it is never asked which vendor. */
@@ -149,6 +151,7 @@ function reseedFromRole(role: unknown) {
 }
 
 function openCreate() {
+    if (!may('users', 'create')) return;
     editing.value = null;
     form.reset();
     form.clearErrors();
@@ -159,6 +162,7 @@ function openCreate() {
 }
 
 function openEdit(user: User & { effective_permissions: Record<string, EffectivePermission> }) {
+    if (!may('users', 'update')) return;
     editing.value = user;
     form.clearErrors();
     form.name = user.name;
@@ -243,7 +247,7 @@ function submitPermissions() {
 const pendingDelete = ref<User | null>(null);
 
 function confirmDelete() {
-    if (!pendingDelete.value) return;
+    if (!pendingDelete.value || !may('users', 'delete')) return;
     router.delete(route('users.destroy', { user: pendingDelete.value.uuid }), {
         preserveScroll: true,
         onFinish: () => (pendingDelete.value = null),
@@ -260,7 +264,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
         <div class="px-2.5 py-6 md:px-8">
             <PageHeader title="Staff" description="Accounts are created here — there is no public sign-up. Everyone signs in on the same login page.">
                 <template #actions>
-                    <Button class="press" @click="openCreate">
+                    <Button v-if="may('users', 'create')" class="press" @click="openCreate">
                         <Plus class="size-4" />
                         New staff
                     </Button>
@@ -346,11 +350,18 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                             <ShieldCheck class="size-4" />
                                         </Button>
                                         <HistoryButton subject-type="User" :subject-id="u.uuid" :label="u.name" />
-                                        <Button variant="ghost" size="icon" class="press size-8" aria-label="Edit" @click="openEdit(u)">
+                                        <Button
+                                            v-if="may('users', 'update')"
+                                            variant="ghost"
+                                            size="icon"
+                                            class="press size-8"
+                                            aria-label="Edit"
+                                            @click="openEdit(u)"
+                                        >
                                             <Pencil class="size-4" />
                                         </Button>
                                         <Button
-                                            v-if="u.id !== currentUserId"
+                                            v-if="may('users', 'delete') && u.id !== currentUserId"
                                             variant="ghost"
                                             size="icon"
                                             class="press size-8 text-muted-foreground hover:text-destructive"
@@ -368,7 +379,13 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
 
                 <ul v-if="users.data.length" class="md:hidden">
                     <li v-for="u in users.data" :key="u.id" class="list-row">
-                        <button type="button" class="list-row-main" :aria-label="`Edit ${u.name}`" @click="openEdit(u)">
+                        <button
+                            type="button"
+                            class="list-row-main"
+                            :disabled="!may('users', 'update')"
+                            :aria-label="may('users', 'update') ? `Edit ${u.name}` : u.name"
+                            @click="openEdit(u)"
+                        >
                             <span
                                 class="mt-1 size-1.5 shrink-0 self-start rounded-full"
                                 :class="u.is_active ? 'bg-primary' : 'bg-muted-foreground/40'"
@@ -398,7 +415,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                         </button>
 
                         <button
-                            v-if="u.id !== currentUserId"
+                            v-if="may('users', 'delete') && u.id !== currentUserId"
                             type="button"
                             class="list-row-action"
                             :aria-label="`Delete ${u.name}`"
@@ -407,7 +424,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                             <Trash2 class="size-4" />
                         </button>
                         <!-- Keeps the name column aligned across rows where the
-                             delete control is absent (you cannot delete yourself). -->
+                             delete control is absent (you cannot delete yourself or lack delete permission). -->
                         <span v-else class="w-12 shrink-0" aria-hidden="true" />
                     </li>
                 </ul>

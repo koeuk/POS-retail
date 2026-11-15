@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrency, type CurrencyDef } from '@/composables/useCurrency';
+import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { printReceipt } from '@/Pos/composables/usePrint';
 import { Head, Link } from '@inertiajs/vue3';
@@ -47,6 +48,7 @@ const props = defineProps<{
 }>();
 
 const { money } = useCurrency(() => props.settings.currency);
+const { may } = usePermissions();
 
 const stamp = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—');
 
@@ -124,7 +126,7 @@ onMounted(() => {
                         of {{ money(order.total) }} on this sale.
                     </p>
                 </div>
-                <Button as-child size="sm" class="press">
+                <Button v-if="may('debts', 'update')" as-child size="sm" class="press">
                     <Link :href="route('debts.index', { search: order.order_no })">Record payment</Link>
                 </Button>
             </div>
