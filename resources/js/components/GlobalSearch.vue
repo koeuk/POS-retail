@@ -246,20 +246,20 @@ onUnmounted(() => {
 <template>
     <div ref="containerRef" :class="cn('relative w-full max-w-md sm:max-w-xl lg:max-w-2xl xl:max-w-3xl', props.class)">
         <form @submit.prevent="handleSubmit" class="relative flex items-center">
-            <Search class="pointer-events-none absolute left-3.5 size-5 text-muted-foreground/75" />
+            <Search class="pointer-events-none absolute left-3.5 size-5 text-primary/70" />
             <input
                 ref="inputRef"
                 v-model="searchQuery"
                 type="text"
                 placeholder="Search products, orders, customers…"
-                class="h-11 w-full rounded-full border border-border/80 bg-muted/40 pl-11 pr-16 text-sm text-foreground transition-all placeholder:text-muted-foreground/70 focus:border-primary/60 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/25 sm:text-[15px]"
+                class="shadow-2xs h-11 w-full rounded-full border-2 border-primary/35 bg-background/95 pl-11 pr-16 text-sm text-foreground transition-all placeholder:text-muted-foreground/70 hover:border-primary/60 focus:border-primary focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/15 dark:border-primary/50 dark:bg-muted/40 sm:text-[15px]"
                 autocomplete="off"
                 spellcheck="false"
                 @focus="onFocus"
                 @keydown="handleKeyDown"
             />
             <div class="absolute right-3 flex items-center gap-1.5">
-                <Loader2 v-if="isLoading" class="size-4.5 animate-spin text-muted-foreground" />
+                <Loader2 v-if="isLoading" class="size-4.5 animate-spin text-primary/70" />
                 <button
                     v-else-if="searchQuery"
                     type="button"
@@ -271,7 +271,7 @@ onUnmounted(() => {
                 </button>
                 <kbd
                     v-else
-                    class="shadow-2xs pointer-events-none hidden select-none items-center gap-0.5 rounded-md border border-border/80 bg-background/90 px-2 py-0.5 font-mono text-[11px] font-semibold text-muted-foreground lg:inline-flex"
+                    class="shadow-2xs pointer-events-none hidden select-none items-center gap-0.5 rounded-md border border-primary/25 bg-background/90 px-2 py-0.5 font-mono text-[11px] font-semibold text-muted-foreground lg:inline-flex"
                 >
                     ⌘K
                 </kbd>
@@ -281,7 +281,7 @@ onUnmounted(() => {
         <!-- Dropdown panel -->
         <div
             v-if="isOpen"
-            class="absolute left-0 top-full z-50 mt-2 w-full min-w-[22rem] overflow-hidden rounded-2xl border border-border bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur-md duration-100 animate-in fade-in-0 zoom-in-95 sm:min-w-[28rem] md:min-w-[34rem]"
+            class="absolute left-0 top-full z-50 mt-2 w-full min-w-[22rem] overflow-hidden rounded-2xl border-2 border-primary/20 bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur-md duration-100 animate-in fade-in-0 zoom-in-95 dark:border-primary/35 sm:min-w-[28rem] md:min-w-[34rem]"
         >
             <div class="max-h-[26rem] space-y-2 overflow-y-auto p-1.5">
                 <!-- Navigation section -->

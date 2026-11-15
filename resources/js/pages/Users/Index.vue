@@ -77,9 +77,17 @@ const roleDefaults = (role: string): Record<string, ActionMap> =>
         ]),
     );
 
-/** Server shape → form shape: keep the actions, drop the area summary. */
-const toActionMatrix = (effective: Record<string, EffectivePermission>): Record<string, ActionMap> =>
-    Object.fromEntries(Object.entries(effective).map(([key, value]) => [key, { ...value.actions }]));
+/** Server shape → form shape: ensure every area and action is present. */
+const toActionMatrix = (effective?: Record<string, EffectivePermission>): Record<string, ActionMap> => {
+    const matrix: Record<string, ActionMap> = {};
+    for (const option of props.permissionOptions) {
+        matrix[option.value] = {};
+        for (const action of props.actionOptions) {
+            matrix[option.value][action.value] = effective?.[option.value]?.actions?.[action.value] ?? false;
+        }
+    }
+    return matrix;
+};
 
 const ALL = 'all';
 const NONE = 'none';
@@ -200,10 +208,22 @@ function openPermissions(user: User & { effective_permissions: Record<string, Ef
 
 /** Whole-row toggle: the area's checkbox drives all four of its actions. */
 function toggleArea(area: string, granted: boolean) {
-    permissionsForm.permissions[area] = Object.fromEntries(props.actionOptions.map((a) => [a.value, granted]));
+    if (!permissionsForm.permissions[area]) {
+        permissionsForm.permissions[area] = {};
+    }
+    for (const a of props.actionOptions) {
+        permissionsForm.permissions[area][a.value] = granted;
+    }
 }
 
-const areaGranted = (area: string) => props.actionOptions.some((a) => permissionsForm.permissions[area]?.[a.value]);
+const areaGranted = (area: string) => props.actionOptions.some((a) => Boolean(permissionsForm.permissions[area]?.[a.value]));
+
+function setActionPermission(area: string, action: string, granted: boolean) {
+    if (!permissionsForm.permissions[area]) {
+        permissionsForm.permissions[area] = {};
+    }
+    permissionsForm.permissions[area][action] = granted;
+}
 
 /** Back to what the role alone grants — clears every per-user override. */
 function resetToRoleDefaults() {
@@ -601,10 +621,10 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                     <label v-for="action in actionOptions" :key="action.value" class="flex w-12 shrink-0 items-center justify-center">
                                         <span class="sr-only">{{ action.label }} {{ option.label }}</span>
                                         <Checkbox
-                                            :model-value="permissionsForm.permissions[option.value]?.[action.value] ?? false"
-                                            @update:model-value="
+                                            :checked="Boolean(permissionsForm.permissions[option.value]?.[action.value])"
+                                            @update:checked="
                                                 (v: boolean | 'indeterminate') =>
-                                                    (permissionsForm.permissions[option.value][action.value] = v === true)
+                                                    setActionPermission(option.value, action.value, v === true)
                                             "
                                         />
                                     </label>

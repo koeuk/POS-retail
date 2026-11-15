@@ -142,15 +142,16 @@ class GlobalSearchController extends Controller
                         ->orWhere('barcode', 'like', "%{$q}%");
                 })
                 ->limit(5)
-                ->get(['id', 'name', 'sku', 'barcode', 'sell_price', 'unit', 'image'])
+                ->get(['id', 'uuid', 'name', 'sku', 'barcode', 'sell_price', 'unit', 'image'])
                 ->map(fn (Product $p) => [
                     'id' => $p->id,
+                    'uuid' => $p->uuid,
                     'title' => $p->name,
                     'subtitle' => 'SKU: ' . ($p->sku ?: '-') . ($p->barcode ? ' • Barcode: ' . $p->barcode : ''),
                     'price' => $p->sell_price,
                     'unit' => $p->unit,
                     'image' => $p->image,
-                    'url' => route('products.show', $p->id),
+                    'url' => route('products.show', $p),
                 ]);
         }
 
@@ -165,14 +166,15 @@ class GlobalSearchController extends Controller
                 })
                 ->latest()
                 ->limit(5)
-                ->get(['id', 'order_no', 'total', 'customer_id', 'status', 'created_at'])
+                ->get(['id', 'uuid', 'order_no', 'total', 'customer_id', 'status', 'created_at'])
                 ->map(fn (Order $o) => [
                     'id' => $o->id,
+                    'uuid' => $o->uuid,
                     'title' => 'Order #' . $o->order_no,
                     'subtitle' => ($o->customer ? $o->customer->name . ' • ' : '') . $o->created_at->format('M d, Y h:i A'),
                     'total' => $o->total,
                     'status' => $o->status->value ?? (string) $o->status,
-                    'url' => route('orders.show', $o->id),
+                    'url' => route('orders.show', $o),
                 ]);
         }
 
@@ -186,9 +188,10 @@ class GlobalSearchController extends Controller
                         ->orWhere('email', 'like', "%{$q}%");
                 })
                 ->limit(5)
-                ->get(['id', 'name', 'phone', 'email'])
+                ->get(['id', 'uuid', 'name', 'phone', 'email'])
                 ->map(fn (Customer $c) => [
                     'id' => $c->id,
+                    'uuid' => $c->uuid,
                     'title' => $c->name,
                     'subtitle' => $c->phone ?: ($c->email ?: 'Customer'),
                     'url' => route('customers.index', ['filter' => ['search' => $c->name]]),
