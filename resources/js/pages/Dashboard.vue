@@ -138,56 +138,9 @@ const quickActions = computed(() =>
                 </template>
             </PageHeader>
 
-            <!--
-                The hero, every screen size. One painted card carrying the only
-                number that matters before lunch, with the day's routes out of
-                it — on a phone they sit under the number for the thumb, on a
-                desk they line up beside it. The gradient is the shopfront's
-                paint catching light, not flat ink.
-            -->
-            <section
-                class="animate-rise mb-4 rounded-xl bg-teal-800 p-5 text-white md:mb-6 md:flex md:items-center md:justify-between md:gap-8 md:p-7 dark:from-green-800 dark:to-green-700"
-            >
-                <div>
-                    <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] opacity-85">{{ heroLabel }}</p>
-
-                    <div class="mt-1 flex items-end gap-2">
-                        <p class="tabular font-mono text-4xl font-bold leading-none md:text-5xl">{{ money(today.sales) }}</p>
-                        <span
-                            v-if="salesDelta !== null"
-                            class="mb-0.5 rounded-full px-2 py-0.5 text-[0.7rem] font-semibold"
-                            :class="
-                                salesDelta >= 0 ? 'bg-white/20 text-white' : 'bg-white/10 text-white/80'
-                            "
-                        >
-                            {{ salesDelta >= 0 ? '+' : '' }}{{ salesDelta.toFixed(0) }}%
-                        </span>
-                    </div>
-
-                    <p class="tabular mt-1.5 font-mono text-[0.8125rem] opacity-90 sm:text-sm md:text-lg">
-                        {{ today.orders }} order{{ today.orders === 1 ? '' : 's' }} · {{ today.items }} item{{ today.items === 1 ? '' : 's' }}
-                        <span v-if="offlineToday > 0"> · {{ offlineToday }} synced offline</span>
-                    </p>
-                </div>
-
-                <div class="hidden items-start gap-2 md:flex md:justify-end md:gap-7">
-                    <Link
-                        v-for="action in quickActions"
-                        :key="action.href"
-                        :href="action.href"
-                        class="press flex flex-col items-center gap-1.5 md:flex-none"
-                    >
-                        <span class="flex size-12 items-center justify-center rounded-full bg-white/15 transition-colors hover:bg-white/25">
-                            <component :is="action.icon" class="size-5" />
-                        </span>
-                        <span class="text-[0.7rem] font-medium opacity-80">{{ action.title }}</span>
-                    </Link>
-                </div>
-            </section>
-
-            <!-- Phone: the shortcuts live in their own card under the figure,
-                 so the green banner stays a single clean number. -->
-            <nav class="animate-rise mb-4 flex items-stretch gap-2 md:hidden" style="animation-delay: 40ms" aria-label="Quick actions">
+            <!-- Phone: the shortcuts live in their own card under the figure on mobile,
+                 so mobile screens still have direct thumb access. -->
+            <nav class="animate-rise mb-4 flex items-stretch gap-2 lg:hidden" style="animation-delay: 40ms" aria-label="Quick actions">
                 <Link
                     v-for="action in quickActions"
                     :key="action.href"
@@ -204,7 +157,7 @@ const quickActions = computed(() =>
             <!-- Phone summary: one swipeable rail, bleeding to the screen
                  edges — the half-visible card is the scroll affordance.
                  Desktop shows these figures in the wider tile rows below. -->
-            <div v-if="canSeeReports" class="stagger scrollbar-none mb-4 flex snap-x snap-proximity gap-2 overflow-x-auto rounded-2xl md:hidden">
+            <div v-if="canSeeReports" class="stagger scrollbar-none mb-4 flex snap-x snap-proximity gap-2 overflow-x-auto rounded-2xl lg:hidden">
                 <StatTile class="w-44 shrink-0 snap-start" label="Products" :value="String(catalogue.products)" :icon="Boxes" :accent="1" />
                 <StatTile class="w-44 shrink-0 snap-start" label="Categories" :value="String(catalogue.categories)" :icon="Shapes" :accent="2" />
                 <StatTile
@@ -225,82 +178,131 @@ const quickActions = computed(() =>
                 />
             </div>
 
-            <div class="stagger hidden gap-4 md:grid md:grid-cols-3">
-                <StatTile label="Orders" :value="String(today.orders)" :icon="Receipt" :accent="2" :previous="yesterday.orders" />
-                <StatTile
-                    label="Average basket"
-                    :value="money(today.basket)"
-                    :icon="Boxes"
-                    :accent="1"
-                    :hint="`${today.items} item${today.items === 1 ? '' : 's'} sold`"
-                />
-                <StatTile
-                    label="Synced from offline"
-                    :value="String(offlineToday)"
-                    :icon="CloudOff"
-                    :accent="5"
-                    hint="Sales rung up without a connection"
-                />
-            </div>
+            <!-- Two-column dashboard layout (Left 2/3, Right 1/3) -->
+            <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+                <!-- LEFT COLUMN (2/3 width) -->
+                <div class="space-y-4 lg:col-span-2">
+                    <!-- Today's Sales Hero Banner -->
+                    <section
+                        class="animate-rise flex min-h-[136px] flex-col justify-between rounded-xl bg-teal-800 p-5 text-white md:p-6 dark:from-green-800 dark:to-green-700"
+                    >
+                        <div>
+                            <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] opacity-85">{{ heroLabel }}</p>
 
-            <!-- The owner's own money: what is still out on credit, and what
-                 the shop fed its keeper. Manager eyes only, like the pages. -->
-            <div v-if="canSeeReports" class="stagger mt-4 hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-4">
-                <StatTile
-                    label="Owed to you"
-                    :value="money(debts.owed)"
-                    :icon="HandCoins"
-                    :tone="debts.count > 0 ? 'warning' : 'default'"
-                    :hint="`${debts.count} sale${debts.count === 1 ? '' : 's'} on credit, not yet paid`"
-                />
-                <StatTile label="Myself · week" :value="money(myself.week.value)" :icon="Utensils" :accent="4" :hint="times(myself.week.count)" />
-                <StatTile label="Myself · month" :value="money(myself.month.value)" :icon="Utensils" :accent="4" :hint="times(myself.month.count)" />
-                <StatTile label="Myself · year" :value="money(myself.year.value)" :icon="Utensils" :accent="4" :hint="times(myself.year.count)" />
-            </div>
-
-            <!-- items-start: panels size to their own content rather than
-                 stretching to the tallest column, which left the chart sitting
-                 above a block of dead space. -->
-            <div class="mt-4 grid items-start gap-4 lg:grid-cols-3">
-                <!-- One series, so no legend: the panel title names it. -->
-                <section
-                    class="animate-rise min-w-0 rounded-2xl border border-border bg-card p-4 lg:col-span-2"
-                    style="animation-delay: 120ms"
-                >
-                    <div class="mb-3 flex items-baseline justify-between">
-                        <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Sales · last 7 days</h2>
-                        <p class="tabular font-mono text-sm font-semibold">{{ money(weekTotal) }}</p>
-                    </div>
-
-                    <SalesBarChart :rows="trend" :height="200" />
-                </section>
-
-                <section class="animate-rise rounded-2xl border border-border bg-card" style="animation-delay: 160ms">
-                    <div class="flex items-center justify-between border-b border-border px-4 py-3">
-                        <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Latest sales</h2>
-                        <Link
-                            v-if="canSeeReports"
-                            :href="route('orders.index')"
-                            class="press flex items-center gap-0.5 text-xs font-medium text-primary"
-                        >
-                            View all
-                            <ChevronRight class="size-3.5" />
-                        </Link>
-                    </div>
-
-                    <ul v-if="recentOrders.length" class="divide-y divide-border">
-                        <li v-for="order in recentOrders" :key="order.id" class="flex items-center gap-3 px-4 py-2.5">
-                            <div class="min-w-0 flex-1">
-                                <p class="tabular truncate font-mono text-xs font-medium">{{ order.order_no }}</p>
-                                <p class="truncate text-[0.7rem] text-muted-foreground">
-                                    {{ order.cashier?.name ?? 'Unknown' }} · {{ time(order.created_offline_at) }}
-                                </p>
+                            <div class="mt-1 flex items-end gap-2">
+                                <p class="tabular font-mono text-4xl font-bold leading-none md:text-5xl">{{ money(today.sales) }}</p>
+                                <span
+                                    v-if="salesDelta !== null"
+                                    class="mb-0.5 rounded-full px-2 py-0.5 text-[0.7rem] font-semibold"
+                                    :class="
+                                        salesDelta >= 0 ? 'bg-white/20 text-white' : 'bg-white/10 text-white/80'
+                                    "
+                                >
+                                    {{ salesDelta >= 0 ? '+' : '' }}{{ salesDelta.toFixed(0) }}%
+                                </span>
                             </div>
-                            <Money :value="order.total" :muted="false" />
-                        </li>
-                    </ul>
-                    <p v-else class="px-4 py-8 text-center text-sm text-muted-foreground">No sales yet today.</p>
-                </section>
+
+                            <p class="tabular mt-1.5 font-mono text-[0.8125rem] opacity-90 sm:text-sm md:text-lg">
+                                {{ today.orders }} order{{ today.orders === 1 ? '' : 's' }} · {{ today.items }} item{{ today.items === 1 ? '' : 's' }}
+                                <span v-if="offlineToday > 0"> · {{ offlineToday }} synced offline</span>
+                            </p>
+                        </div>
+                    </section>
+
+                    <!-- Orders, Average basket & Synced from offline -->
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <StatTile label="Orders" :value="String(today.orders)" :icon="Receipt" :accent="2" :previous="yesterday.orders" />
+                        <StatTile
+                            label="Average basket"
+                            :value="money(today.basket)"
+                            :icon="Boxes"
+                            :accent="1"
+                            :hint="`${today.items} item${today.items === 1 ? '' : 's'} sold`"
+                        />
+                        <StatTile
+                            label="Synced from offline"
+                            :value="String(offlineToday)"
+                            :icon="CloudOff"
+                            :accent="5"
+                            hint="Sales rung up without a connection"
+                        />
+                    </div>
+
+                    <!-- Owner's stats (Owed to you, Myself week, Myself month, Myself year) -->
+                    <div v-if="canSeeReports" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        <StatTile
+                            label="Owed to you"
+                            :value="money(debts.owed)"
+                            :icon="HandCoins"
+                            :tone="debts.count > 0 ? 'warning' : 'default'"
+                            :hint="`${debts.count} sale${debts.count === 1 ? '' : 's'} on credit, not yet paid`"
+                        />
+                        <StatTile label="Myself · week" :value="money(myself.week.value)" :icon="Utensils" :accent="4" :hint="times(myself.week.count)" />
+                        <StatTile label="Myself · month" :value="money(myself.month.value)" :icon="Utensils" :accent="4" :hint="times(myself.month.count)" />
+                        <StatTile label="Myself · year" :value="money(myself.year.value)" :icon="Utensils" :accent="4" :hint="times(myself.year.count)" />
+                    </div>
+
+                    <!-- Sales · last 7 days chart -->
+                    <section
+                        class="animate-rise min-w-0 rounded-2xl border border-border bg-card p-4"
+                        style="animation-delay: 120ms"
+                    >
+                        <div class="mb-3 flex items-baseline justify-between">
+                            <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Sales · last 7 days</h2>
+                            <p class="tabular font-mono text-sm font-semibold">{{ money(weekTotal) }}</p>
+                        </div>
+
+                        <SalesBarChart :rows="trend" :height="200" />
+                    </section>
+                </div>
+
+                <!-- RIGHT COLUMN (1/3 width) -->
+                <div class="space-y-4 lg:col-span-1">
+                    <!-- Quick Actions Banner (matching green style & height) -->
+                    <section
+                        class="animate-rise hidden min-h-[136px] items-center justify-around rounded-xl bg-teal-800 p-5 text-white lg:flex md:p-6 dark:from-green-800 dark:to-green-700"
+                    >
+                        <Link
+                            v-for="action in quickActions"
+                            :key="action.href"
+                            :href="action.href"
+                            class="press flex flex-col items-center gap-1.5"
+                        >
+                            <span class="flex size-12 items-center justify-center rounded-full bg-white/15 transition-colors hover:bg-white/25">
+                                <component :is="action.icon" class="size-5" />
+                            </span>
+                            <span class="text-[0.7rem] font-medium opacity-80">{{ action.title }}</span>
+                        </Link>
+                    </section>
+
+                    <!-- Latest sales -->
+                    <section class="animate-rise rounded-2xl border border-border bg-card" style="animation-delay: 160ms">
+                        <div class="flex items-center justify-between border-b border-border px-4 py-3">
+                            <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Latest sales</h2>
+                            <Link
+                                v-if="canSeeReports"
+                                :href="route('orders.index')"
+                                class="press flex items-center gap-0.5 text-xs font-medium text-primary"
+                            >
+                                View all
+                                <ChevronRight class="size-3.5" />
+                            </Link>
+                        </div>
+
+                        <ul v-if="recentOrders.length" class="divide-y divide-border">
+                            <li v-for="order in recentOrders" :key="order.id" class="flex items-center gap-3 px-4 py-2.5">
+                                <div class="min-w-0 flex-1">
+                                    <p class="tabular truncate font-mono text-xs font-medium">{{ order.order_no }}</p>
+                                    <p class="truncate text-[0.7rem] text-muted-foreground">
+                                        {{ order.cashier?.name ?? 'Unknown' }} · {{ time(order.created_offline_at) }}
+                                    </p>
+                                </div>
+                                <Money :value="order.total" :muted="false" />
+                            </li>
+                        </ul>
+                        <p v-else class="px-4 py-8 text-center text-sm text-muted-foreground">No sales yet today.</p>
+                    </section>
+                </div>
             </div>
 
             <div class="mt-4 grid items-start gap-4 lg:grid-cols-2">
