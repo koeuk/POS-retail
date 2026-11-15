@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import DevicePreviewSelect from '@/components/DevicePreviewSelect.vue';
+import GlobalSearch from '@/components/GlobalSearch.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -48,6 +49,8 @@ const props = withDefaults(
                 </Breadcrumb>
             </template>
         </div>
+
+        <GlobalSearch class="mx-3 max-w-sm flex-1 sm:mx-6 sm:max-w-md lg:max-w-xl" />
 
         <!-- Page-supplied chrome (a sync badge, a register picker) sits with
              the breadcrumb rather than inside the page body, so it stays put

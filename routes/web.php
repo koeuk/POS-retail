@@ -6,6 +6,7 @@ use App\Http\Controllers\ConsumptionController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DebtController;
+use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
@@ -49,6 +50,7 @@ Route::get('menu/{product}', [MenuController::class, 'show'])->name('menu.show')
 Route::middleware(['auth', 'verified', 'role'])->group(function () {
 
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('global-search', [GlobalSearchController::class, 'index'])->name('global-search');
 
     /*
     | POS data endpoints — JSON, not Inertia. See PosDataController.

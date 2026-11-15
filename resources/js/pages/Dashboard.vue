@@ -182,35 +182,35 @@ const quickActions = computed(() =>
             <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
                 <!-- LEFT COLUMN (2/3 width) -->
                 <div class="space-y-4 lg:col-span-2">
-                    <!-- Today's Sales Hero Banner -->
-                    <section
-                        class="animate-rise flex min-h-[136px] flex-col justify-between rounded-xl bg-teal-800 p-5 text-white md:p-6 dark:from-green-800 dark:to-green-700"
-                    >
-                        <div>
-                            <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] opacity-85">{{ heroLabel }}</p>
-
-                            <div class="mt-1 flex items-end gap-2">
-                                <p class="tabular font-mono text-4xl font-bold leading-none md:text-5xl">{{ money(today.sales) }}</p>
+                    <!-- Row 1: Today's Sales, Orders, Average basket & Synced from offline in ONE row -->
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <!-- Today's Sales Hero Tile -->
+                        <article
+                            class="animate-rise relative flex flex-col justify-between overflow-hidden rounded-2xl bg-teal-800 p-4 text-white shadow-sm dark:from-green-800 dark:to-green-700"
+                        >
+                            <div class="relative flex items-start justify-between gap-1">
+                                <p class="font-mono text-[0.65rem] uppercase tracking-[0.14em] opacity-85">
+                                    {{ heroLabel }}
+                                </p>
                                 <span
                                     v-if="salesDelta !== null"
-                                    class="mb-0.5 rounded-full px-2 py-0.5 text-[0.7rem] font-semibold"
-                                    :class="
-                                        salesDelta >= 0 ? 'bg-white/20 text-white' : 'bg-white/10 text-white/80'
-                                    "
+                                    class="rounded-full px-1.5 py-0.5 text-[0.65rem] font-semibold"
+                                    :class="salesDelta >= 0 ? 'bg-white/20 text-white' : 'bg-white/10 text-white/80'"
                                 >
                                     {{ salesDelta >= 0 ? '+' : '' }}{{ salesDelta.toFixed(0) }}%
                                 </span>
                             </div>
 
-                            <p class="tabular mt-1.5 font-mono text-[0.8125rem] opacity-90 sm:text-sm md:text-lg">
-                                {{ today.orders }} order{{ today.orders === 1 ? '' : 's' }} · {{ today.items }} item{{ today.items === 1 ? '' : 's' }}
-                                <span v-if="offlineToday > 0"> · {{ offlineToday }} synced offline</span>
+                            <p class="tabular relative mt-1 font-mono text-2xl font-bold leading-none">
+                                {{ money(today.sales) }}
                             </p>
-                        </div>
-                    </section>
 
-                    <!-- Orders, Average basket & Synced from offline -->
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <p class="tabular relative mt-1.5 truncate text-xs opacity-85">
+                                {{ today.orders }} order{{ today.orders === 1 ? '' : 's' }} · {{ today.items }} item{{ today.items === 1 ? '' : 's' }}
+                                <span v-if="offlineToday > 0"> · {{ offlineToday }} synced</span>
+                            </p>
+                        </article>
+
                         <StatTile label="Orders" :value="String(today.orders)" :icon="Receipt" :accent="2" :previous="yesterday.orders" />
                         <StatTile
                             label="Average basket"
@@ -229,7 +229,7 @@ const quickActions = computed(() =>
                     </div>
 
                     <!-- Owner's stats (Owed to you, Myself week, Myself month, Myself year) -->
-                    <div v-if="canSeeReports" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <div v-if="canSeeReports" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <StatTile
                             label="Owed to you"
                             :value="money(debts.owed)"
@@ -254,24 +254,68 @@ const quickActions = computed(() =>
 
                         <SalesBarChart :rows="trend" :height="200" />
                     </section>
+
+                    <!--
+                        Oversold is the reconciliation list: stock driven below zero
+                        by offline sales that synced after the shelf was empty. It is
+                        the deliberate cost of never rejecting a completed sale.
+                    -->
+                    <section
+                        v-if="oversold.length"
+                        class="animate-rise rounded-2xl border border-destructive/40 bg-card"
+                        style="animation-delay: 200ms"
+                    >
+                        <h2
+                            class="flex items-center gap-2 border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-destructive"
+                        >
+                            <TriangleAlert class="size-4" />
+                            Oversold — needs reconciling
+                        </h2>
+                        <ul class="divide-y divide-border">
+                            <li v-for="row in oversold" :key="row.id" class="flex items-center gap-3 px-4 py-2.5">
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-medium">{{ row.product?.name }}</p>
+                                    <p class="truncate text-[0.7rem] text-muted-foreground">{{ row.store?.name }}</p>
+                                </div>
+                                <span class="tabular font-mono text-sm font-semibold text-destructive"> {{ row.qty }} {{ row.product?.unit }} </span>
+                            </li>
+                        </ul>
+                    </section>
+
+                    <!-- Low stock -->
+                    <section class="animate-rise rounded-2xl border border-border bg-card" style="animation-delay: 240ms">
+                        <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                            Low stock
+                        </h2>
+                        <ul v-if="lowStock.length" class="divide-y divide-border">
+                            <li v-for="row in lowStock" :key="row.id" class="flex items-center gap-3 px-4 py-2.5">
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-medium">{{ row.product?.name }}</p>
+                                    <p class="truncate text-[0.7rem] text-muted-foreground">{{ row.store?.name }}</p>
+                                </div>
+                                <Badge variant="outline" class="tabular font-mono"> {{ row.qty }} / {{ row.low_stock_threshold }} </Badge>
+                            </li>
+                        </ul>
+                        <p v-else class="px-4 py-8 text-center text-sm text-muted-foreground">Everything is above its threshold.</p>
+                    </section>
                 </div>
 
                 <!-- RIGHT COLUMN (1/3 width) -->
                 <div class="space-y-4 lg:col-span-1">
-                    <!-- Quick Actions Banner (matching green style & height) -->
+                    <!-- Quick Actions Banner (matching green style & height of Row 1) -->
                     <section
-                        class="animate-rise hidden min-h-[136px] items-center justify-around rounded-xl bg-teal-800 p-5 text-white lg:flex md:p-6 dark:from-green-800 dark:to-green-700"
+                        class="animate-rise hidden min-h-[105px] items-center justify-around rounded-2xl bg-teal-800 p-3.5 text-white shadow-sm lg:flex dark:from-green-800 dark:to-green-700"
                     >
                         <Link
                             v-for="action in quickActions"
                             :key="action.href"
                             :href="action.href"
-                            class="press flex flex-col items-center gap-1.5"
+                            class="press flex flex-col items-center gap-1"
                         >
-                            <span class="flex size-12 items-center justify-center rounded-full bg-white/15 transition-colors hover:bg-white/25">
+                            <span class="flex size-10 items-center justify-center rounded-full bg-white/15 transition-colors hover:bg-white/25">
                                 <component :is="action.icon" class="size-5" />
                             </span>
-                            <span class="text-[0.7rem] font-medium opacity-80">{{ action.title }}</span>
+                            <span class="text-[0.6875rem] font-medium opacity-80">{{ action.title }}</span>
                         </Link>
                     </section>
 
@@ -303,51 +347,6 @@ const quickActions = computed(() =>
                         <p v-else class="px-4 py-8 text-center text-sm text-muted-foreground">No sales yet today.</p>
                     </section>
                 </div>
-            </div>
-
-            <div class="mt-4 grid items-start gap-4 lg:grid-cols-2">
-                <!--
-                    Oversold is the reconciliation list: stock driven below zero
-                    by offline sales that synced after the shelf was empty. It is
-                    the deliberate cost of never rejecting a completed sale.
-                -->
-                <section
-                    v-if="oversold.length"
-                    class="animate-rise rounded-2xl border border-destructive/40 bg-card"
-                    style="animation-delay: 200ms"
-                >
-                    <h2
-                        class="flex items-center gap-2 border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-destructive"
-                    >
-                        <TriangleAlert class="size-4" />
-                        Oversold — needs reconciling
-                    </h2>
-                    <ul class="divide-y divide-border">
-                        <li v-for="row in oversold" :key="row.id" class="flex items-center gap-3 px-4 py-2.5">
-                            <div class="min-w-0 flex-1">
-                                <p class="truncate text-sm font-medium">{{ row.product?.name }}</p>
-                                <p class="truncate text-[0.7rem] text-muted-foreground">{{ row.store?.name }}</p>
-                            </div>
-                            <span class="tabular font-mono text-sm font-semibold text-destructive"> {{ row.qty }} {{ row.product?.unit }} </span>
-                        </li>
-                    </ul>
-                </section>
-
-                <section class="animate-rise rounded-2xl border border-border bg-card" style="animation-delay: 240ms">
-                    <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                        Low stock
-                    </h2>
-                    <ul v-if="lowStock.length" class="divide-y divide-border">
-                        <li v-for="row in lowStock" :key="row.id" class="flex items-center gap-3 px-4 py-2.5">
-                            <div class="min-w-0 flex-1">
-                                <p class="truncate text-sm font-medium">{{ row.product?.name }}</p>
-                                <p class="truncate text-[0.7rem] text-muted-foreground">{{ row.store?.name }}</p>
-                            </div>
-                            <Badge variant="outline" class="tabular font-mono"> {{ row.qty }} / {{ row.low_stock_threshold }} </Badge>
-                        </li>
-                    </ul>
-                    <p v-else class="px-4 py-8 text-center text-sm text-muted-foreground">Everything is above its threshold.</p>
-                </section>
             </div>
 
             <div v-if="canSeeReports" class="mt-4 flex justify-center">
