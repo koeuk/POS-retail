@@ -146,7 +146,7 @@ const quickActions = computed(() =>
                 paint catching light, not flat ink.
             -->
             <section
-                class="surface-brand animate-rise mb-4 rounded-3xl p-5 text-brand-foreground md:mb-6 md:flex md:items-center md:justify-between md:gap-8 md:p-7"
+                class="animate-rise mb-4 rounded-xl bg-teal-800 p-5 text-white md:mb-6 md:flex md:items-center md:justify-between md:gap-8 md:p-7 dark:from-green-800 dark:to-green-700"
             >
                 <div>
                     <p class="font-mono text-[0.65rem] uppercase tracking-[0.18em] opacity-85">{{ heroLabel }}</p>
@@ -157,7 +157,7 @@ const quickActions = computed(() =>
                             v-if="salesDelta !== null"
                             class="mb-0.5 rounded-full px-2 py-0.5 text-[0.7rem] font-semibold"
                             :class="
-                                salesDelta >= 0 ? 'bg-brand-foreground/20 text-brand-foreground' : 'bg-brand-foreground/10 text-brand-foreground/80'
+                                salesDelta >= 0 ? 'bg-white/20 text-white' : 'bg-white/10 text-white/80'
                             "
                         >
                             {{ salesDelta >= 0 ? '+' : '' }}{{ salesDelta.toFixed(0) }}%
@@ -177,9 +177,7 @@ const quickActions = computed(() =>
                         :href="action.href"
                         class="press flex flex-col items-center gap-1.5 md:flex-none"
                     >
-                        <span
-                            class="flex size-12 items-center justify-center rounded-full bg-brand-foreground/15 transition-colors hover:bg-brand-foreground/25"
-                        >
+                        <span class="flex size-12 items-center justify-center rounded-full bg-white/15 transition-colors hover:bg-white/25">
                             <component :is="action.icon" class="size-5" />
                         </span>
                         <span class="text-[0.7rem] font-medium opacity-80">{{ action.title }}</span>
