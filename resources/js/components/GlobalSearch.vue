@@ -244,34 +244,34 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div ref="containerRef" class="relative w-full max-w-sm sm:max-w-md lg:max-w-lg">
+    <div ref="containerRef" :class="cn('relative w-full max-w-md sm:max-w-xl lg:max-w-2xl xl:max-w-3xl', props.class)">
         <form @submit.prevent="handleSubmit" class="relative flex items-center">
-            <Search class="pointer-events-none absolute left-3 size-4 text-muted-foreground/70" />
+            <Search class="pointer-events-none absolute left-3.5 size-5 text-muted-foreground/75" />
             <input
                 ref="inputRef"
                 v-model="searchQuery"
                 type="text"
                 placeholder="Search products, orders, customers…"
-                class="h-9.5 w-full rounded-full border border-border/70 bg-muted/40 pl-9 pr-14 text-sm text-foreground transition-colors placeholder:text-muted-foreground/60 focus:border-primary/50 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
+                class="h-11 w-full rounded-full border border-border/80 bg-muted/40 pl-11 pr-16 text-sm text-foreground transition-all placeholder:text-muted-foreground/70 focus:border-primary/60 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/25 sm:text-[15px]"
                 autocomplete="off"
                 spellcheck="false"
                 @focus="onFocus"
                 @keydown="handleKeyDown"
             />
-            <div class="absolute right-2.5 flex items-center gap-1">
-                <Loader2 v-if="isLoading" class="size-4 animate-spin text-muted-foreground" />
+            <div class="absolute right-3 flex items-center gap-1.5">
+                <Loader2 v-if="isLoading" class="size-4.5 animate-spin text-muted-foreground" />
                 <button
                     v-else-if="searchQuery"
                     type="button"
-                    class="flex size-5 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                    class="flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
                     title="Clear search"
                     @click="clearSearch"
                 >
-                    <X class="size-3.5" />
+                    <X class="size-4" />
                 </button>
                 <kbd
                     v-else
-                    class="shadow-2xs pointer-events-none hidden select-none items-center gap-0.5 rounded border border-border/80 bg-background/80 px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground lg:inline-flex"
+                    class="shadow-2xs pointer-events-none hidden select-none items-center gap-0.5 rounded-md border border-border/80 bg-background/90 px-2 py-0.5 font-mono text-[11px] font-semibold text-muted-foreground lg:inline-flex"
                 >
                     ⌘K
                 </kbd>
@@ -281,7 +281,7 @@ onUnmounted(() => {
         <!-- Dropdown panel -->
         <div
             v-if="isOpen"
-            class="absolute left-0 top-full z-50 mt-2 w-full min-w-[20rem] overflow-hidden rounded-xl border border-border bg-popover/95 text-popover-foreground shadow-xl backdrop-blur-md duration-100 animate-in fade-in-0 zoom-in-95 sm:min-w-[26rem] md:min-w-[30rem]"
+            class="absolute left-0 top-full z-50 mt-2 w-full min-w-[22rem] overflow-hidden rounded-2xl border border-border bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur-md duration-100 animate-in fade-in-0 zoom-in-95 sm:min-w-[28rem] md:min-w-[34rem]"
         >
             <div class="max-h-[26rem] space-y-2 overflow-y-auto p-1.5">
                 <!-- Navigation section -->
