@@ -8,10 +8,14 @@ use App\Models\Order;
 use App\Models\Setting;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\AuditLog;
 use App\Support\Currency;
 use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -106,6 +110,59 @@ class OrderController extends Controller
                 'currency' => Currency::current()->toArray(),
             ],
         ]);
+    }
+
+    public function pay(Request $request, Order $order): RedirectResponse
+    {
+        $this->scoped($request->user())->whereKey($order->id)->firstOrFail();
+
+        $owed = (float) $order->total - (float) $order->paid_amount;
+        if ($owed <= 0) {
+            return back()->with('info', 'This order is already fully paid.');
+        }
+
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01', "max:{$owed}"],
+            'method' => ['required', Rule::in([PaymentMethod::Cash->value, PaymentMethod::Card->value, PaymentMethod::Qr->value])],
+            'reference_no' => ['nullable', 'string', 'max:255'],
+        ], [
+            'amount.max' => 'That is more than is owed on this order.',
+        ]);
+
+        DB::transaction(function () use ($order, $data) {
+            $order->payments()->create([
+                'method' => $data['method'],
+                'amount' => number_format((float) $data['amount'], 2, '.', ''),
+                'reference_no' => $data['reference_no'] ?? null,
+            ]);
+
+            $order->update([
+                'paid_amount' => $order->payments()->sum('amount'),
+            ]);
+        });
+
+        $order->refresh();
+        $left = (float) $order->outstanding();
+
+        AuditLog::money(
+            $left > 0 ? "Payment on {$order->order_no}" : "Order {$order->order_no} paid in full",
+            $order,
+            [
+                'order_no' => $order->order_no,
+                'amount' => number_format((float) $data['amount'], 2, '.', ''),
+                'method' => $data['method'],
+                'reference_no' => $data['reference_no'] ?? null,
+                'outstanding_after' => number_format($left, 2, '.', ''),
+            ],
+            $left > 0 ? 'order_payment' : 'order_paid',
+        );
+
+        return back()->with(
+            'success',
+            $left > 0
+                ? "Payment of ".Currency::current()->format((float) $data['amount'])." recorded on {$order->order_no}."
+                : "Order {$order->order_no} paid in full.",
+        );
     }
 
     /** Admins see every store; everyone else is pinned to their own. */

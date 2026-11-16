@@ -68,7 +68,7 @@ export interface User {
     uuid: string;
     name: string;
     email: string;
-    avatar?: string;
+    avatar?: string | null;
     role: Role;
     store_id: number | null;
     /** A vendor account's supplier, or the vendor team a cashier works for. */

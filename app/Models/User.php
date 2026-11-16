@@ -23,6 +23,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'avatar',
         'password',
         'role',
         'permissions',
@@ -42,6 +43,7 @@ class User extends Authenticatable
     protected array $auditable = [
         'name',
         'email',
+        'avatar',
         'role',
         'permissions',
         'store_id',

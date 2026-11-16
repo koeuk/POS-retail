@@ -5,7 +5,17 @@ import Money from '@/components/Money.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
@@ -13,7 +23,20 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
 import type { Paginated } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { CloudOff, Eye, HandCoins, Printer, ReceiptText, Search, Utensils } from 'lucide-vue-next';
+import {
+    Banknote,
+    Check,
+    Clock,
+    CloudOff,
+    CreditCard,
+    Eye,
+    HandCoins,
+    Printer,
+    QrCode,
+    ReceiptText,
+    Search,
+    Utensils,
+} from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 interface OrderRow {
@@ -88,6 +111,45 @@ const owed = (o: OrderRow) => Math.max(0, Number(o.total) - Number(o.paid_amount
 const statusTone = (s: string) => (s === 'completed' ? 'secondary' : s === 'refunded' ? 'outline' : 'destructive');
 
 const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase() + m.slice(1));
+
+const payModalOpen = ref(false);
+const payingOrder = ref<OrderRow | null>(null);
+const payAmount = ref<number>(0);
+const payMethod = ref<'cash' | 'card' | 'qr'>('cash');
+const payRef = ref('');
+const isSubmitting = ref(false);
+
+function openPayModal(order: OrderRow) {
+    payingOrder.value = order;
+    payAmount.value = owed(order);
+    payMethod.value = 'cash';
+    payRef.value = '';
+    payModalOpen.value = true;
+}
+
+function submitPayment() {
+    if (!payingOrder.value || payAmount.value <= 0) return;
+    isSubmitting.value = true;
+
+    router.post(
+        route('orders.pay', payingOrder.value.uuid),
+        {
+            amount: payAmount.value,
+            method: payMethod.value,
+            reference_no: payRef.value || null,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                payModalOpen.value = false;
+                payingOrder.value = null;
+            },
+            onFinish: () => {
+                isSubmitting.value = false;
+            },
+        },
+    );
+}
 </script>
 
 <template>
@@ -154,9 +216,17 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
 
                             <div class="mt-2 flex flex-wrap items-center gap-1 pr-9">
                                 <Badge :variant="statusTone(order.status)" class="capitalize">{{ order.status }}</Badge>
-                                <Badge v-if="owed(order) > 0" variant="destructive" class="gap-1">
+                                <Badge v-if="owed(order) > 0 && order.sale_type === 'debt'" variant="destructive" class="gap-1">
                                     <HandCoins class="size-3" />
                                     Owes <span class="tabular font-mono">{{ money(owed(order)) }}</span>
+                                </Badge>
+                                <Badge
+                                    v-else-if="owed(order) > 0"
+                                    variant="outline"
+                                    class="border-amber-500/60 bg-amber-500/10 text-amber-700 dark:text-amber-400 gap-1 font-semibold"
+                                >
+                                    <Clock class="size-3" />
+                                    Pay later <span class="tabular font-mono">({{ money(owed(order)) }})</span>
                                 </Badge>
                                 <Badge v-else-if="order.sale_type === 'debt'" variant="outline">Debt · settled</Badge>
                                 <Badge v-else-if="order.sale_type === 'myself'" variant="outline" class="gap-1">
@@ -170,14 +240,25 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                             </div>
                         </Link>
 
-                        <!-- A sibling, not a nested link — see the desktop print note below. -->
-                        <Link
-                            :href="route('orders.show', { order: order.uuid, print: 1 })"
-                            class="press absolute bottom-2 right-2 flex size-8 items-center justify-center rounded-md text-muted-foreground"
-                            :aria-label="`Print receipt for ${order.order_no}`"
-                        >
-                            <Printer class="size-4" />
-                        </Link>
+                        <!-- Mobile action buttons -->
+                        <div class="absolute bottom-2 right-2 flex items-center gap-1">
+                            <Button
+                                v-if="owed(order) > 0"
+                                size="sm"
+                                class="press h-8 px-2.5 gap-1 bg-primary text-primary-foreground text-xs font-semibold"
+                                @click.stop.prevent="openPayModal(order)"
+                            >
+                                <CreditCard class="size-3.5" />
+                                Pay
+                            </Button>
+                            <Link
+                                :href="route('orders.show', { order: order.uuid, print: 1 })"
+                                class="press flex size-8 items-center justify-center rounded-md text-muted-foreground"
+                                :aria-label="`Print receipt for ${order.order_no}`"
+                            >
+                                <Printer class="size-4" />
+                            </Link>
+                        </div>
                     </li>
                 </ul>
 
@@ -229,9 +310,17 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                                     <div class="flex flex-wrap items-center gap-1">
                                         <Badge :variant="statusTone(order.status)" class="capitalize">{{ order.status }}</Badge>
                                         <!-- A live balance, not a flag: shown only while money is owed. -->
-                                        <Badge v-if="owed(order) > 0" variant="destructive" class="gap-1">
+                                        <Badge v-if="owed(order) > 0 && order.sale_type === 'debt'" variant="destructive" class="gap-1">
                                             <HandCoins class="size-3" />
                                             Owes <span class="tabular font-mono">{{ money(owed(order)) }}</span>
+                                        </Badge>
+                                        <Badge
+                                            v-else-if="owed(order) > 0"
+                                            variant="outline"
+                                            class="border-amber-500/60 bg-amber-500/10 text-amber-700 dark:text-amber-400 gap-1 font-semibold"
+                                        >
+                                            <Clock class="size-3" />
+                                            Pay later · Unpaid
                                         </Badge>
                                         <Badge v-else-if="order.sale_type === 'debt'" variant="outline">Debt · settled</Badge>
                                         <Badge v-else-if="order.sale_type === 'myself'" variant="outline" class="gap-1">
@@ -241,7 +330,17 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    <div class="flex items-center gap-1">
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        <Button
+                                            v-if="owed(order) > 0"
+                                            size="sm"
+                                            class="press h-8 px-2.5 gap-1 bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90"
+                                            title="Collect payment for this order"
+                                            @click.stop="openPayModal(order)"
+                                        >
+                                            <CreditCard class="size-3.5" />
+                                            Pay
+                                        </Button>
                                         <Link
                                             :href="route('orders.show', { order: order.uuid })"
                                             class="press flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
@@ -281,5 +380,105 @@ const methodLabel = (m: string) => (m === 'qr' ? 'QR' : m.charAt(0).toUpperCase(
                 <Pagination :links="orders.links" :from="orders.from" :to="orders.to" :total="orders.total" :per-page="orders.per_page" />
             </div>
         </div>
+
+        <!-- Pay modal for Pay Later / Unpaid orders -->
+        <Dialog :open="payModalOpen" @update:open="(val) => (!val && (payModalOpen = false))">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <CreditCard class="size-5 text-primary" />
+                        Pay order {{ payingOrder?.order_no }}
+                    </DialogTitle>
+                    <DialogDescription>
+                        Collect and record payment for this order to complete it.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div v-if="payingOrder" class="space-y-4 py-2">
+                    <div class="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-3">
+                        <div>
+                            <p class="text-xs text-muted-foreground">Order total: {{ money(payingOrder.total) }}</p>
+                            <p class="text-xs text-muted-foreground">Already paid: {{ money(payingOrder.paid_amount) }}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="block text-xs font-semibold text-muted-foreground">Still owed</span>
+                            <span class="font-mono text-xl font-bold text-primary">
+                                {{ money(owed(payingOrder)) }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label>Payment method</Label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button
+                                type="button"
+                                class="press flex flex-col items-center gap-1.5 rounded-lg border p-2.5 text-xs font-medium transition-colors"
+                                :class="payMethod === 'cash' ? 'border-primary bg-primary/10 text-primary font-semibold' : 'border-border text-muted-foreground'"
+                                @click="payMethod = 'cash'"
+                            >
+                                <Banknote class="size-4" />
+                                Cash
+                            </button>
+                            <button
+                                type="button"
+                                class="press flex flex-col items-center gap-1.5 rounded-lg border p-2.5 text-xs font-medium transition-colors"
+                                :class="payMethod === 'card' ? 'border-primary bg-primary/10 text-primary font-semibold' : 'border-border text-muted-foreground'"
+                                @click="payMethod = 'card'"
+                            >
+                                <CreditCard class="size-4" />
+                                Card
+                            </button>
+                            <button
+                                type="button"
+                                class="press flex flex-col items-center gap-1.5 rounded-lg border p-2.5 text-xs font-medium transition-colors"
+                                :class="payMethod === 'qr' ? 'border-primary bg-primary/10 text-primary font-semibold' : 'border-border text-muted-foreground'"
+                                @click="payMethod = 'qr'"
+                            >
+                                <QrCode class="size-4" />
+                                QR
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <Label for="pay-amount">Amount to pay</Label>
+                        <Input
+                            id="pay-amount"
+                            v-model.number="payAmount"
+                            type="number"
+                            step="any"
+                            min="0.01"
+                            :max="owed(payingOrder)"
+                            class="font-mono"
+                        />
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <Label for="pay-reference">Reference / Note (optional)</Label>
+                        <Input
+                            id="pay-reference"
+                            v-model="payRef"
+                            placeholder="Terminal or transaction no."
+                        />
+                    </div>
+                </div>
+
+                <DialogFooter class="gap-2 sm:gap-0">
+                    <Button variant="outline" type="button" @click="payModalOpen = false">
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        class="gap-1.5"
+                        :disabled="isSubmitting || payAmount <= 0"
+                        @click="submitPayment"
+                    >
+                        <Check class="size-4" />
+                        {{ isSubmitting ? 'Saving…' : 'Confirm payment' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

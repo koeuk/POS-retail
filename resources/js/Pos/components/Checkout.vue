@@ -3,11 +3,15 @@ import type { CurrencyDef } from '@/composables/useCurrency';
 import { useCart } from '@/Pos/composables/useCart';
 import { formatMoney } from '@/Pos/lib/money';
 import type { SaleType } from '@/Pos/types';
-import { CreditCard, HandCoins, UserRound, Utensils } from 'lucide-vue-next';
+import { Clock, CreditCard, HandCoins, UserRound, Utensils } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 defineProps<{ currency: CurrencyDef }>();
-const emit = defineEmits<{ pay: []; 'pick-customer': [] }>();
+const emit = defineEmits<{
+    pay: [];
+    'pay-later': [];
+    'pick-customer': [];
+}>();
 
 const cart = useCart();
 
@@ -18,7 +22,7 @@ const cart = useCart();
  */
 const types: { value: SaleType; label: string; icon: typeof UserRound; hint: string }[] = [
     { value: 'customer', label: 'Customer', icon: UserRound, hint: 'A normal sale' },
-    { value: 'debt', label: 'Pay later', icon: HandCoins, hint: 'Pay later — needs a customer name' },
+    { value: 'debt', label: 'In debt', icon: HandCoins, hint: 'A sale on credit — money owed' },
     { value: 'myself', label: 'Myself', icon: Utensils, hint: 'Not a sale' },
 ];
 
@@ -29,8 +33,7 @@ function choose(t: SaleType) {
 }
 
 function onPayLater() {
-    cart.saleType = 'debt';
-    emit('pay');
+    emit('pay-later');
 }
 
 /* A debt with nobody attached must not be completable. */
@@ -39,11 +42,11 @@ const blocked = computed(() => cart.saleType === 'debt' && !cart.customerId);
 const cta = computed(() => {
     switch (cart.saleType) {
         case 'debt':
-            return blocked.value ? 'Choose who owes this' : 'Record pay later';
+            return blocked.value ? 'Choose who owes this' : 'Record in debt';
         case 'myself':
             return 'Take for myself';
         default:
-            return 'Complete sale';
+            return 'Pay now';
     }
 });
 </script>
@@ -92,16 +95,16 @@ const cta = computed(() => {
                 </p>
             </div>
 
-            <!-- Action buttons: Pay later & Complete sale in Customer mode -->
+            <!-- Action buttons: Pay later & Pay now in Customer mode -->
             <div v-if="cart.saleType === 'customer'" class="grid grid-cols-2 gap-2">
                 <button
                     type="button"
                     :disabled="cart.isEmpty"
                     class="press flex h-14 items-center justify-center gap-2 rounded-xl border-2 border-primary/40 bg-background text-sm font-semibold text-primary transition-all hover:border-primary hover:bg-primary/5 disabled:opacity-40"
-                    title="Pay later — records to customer debt"
+                    title="Pay later — hold order while drinking or dining"
                     @click="onPayLater"
                 >
-                    <HandCoins class="size-5" />
+                    <Clock class="size-5" />
                     Pay later
                 </button>
 
@@ -112,7 +115,7 @@ const cta = computed(() => {
                     @click="emit('pay')"
                 >
                     <CreditCard class="size-5" />
-                    Complete sale
+                    Pay now
                 </button>
             </div>
 

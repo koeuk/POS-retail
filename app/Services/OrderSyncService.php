@@ -179,11 +179,10 @@ class OrderSyncService
          */
         $paymentsToRecord = match (true) {
             ! $saleType->isRevenue() => [],
-            $saleType->isReceivable() => array_values(array_filter(
+            default => array_values(array_filter(
                 $payload['payments'] ?? [],
                 fn (array $payment) => OrderTotals::toMinor($payment['amount'] ?? 0) > 0,
             )),
-            default => $payload['payments'] ?? [],
         };
 
         foreach ($paymentsToRecord as $payment) {

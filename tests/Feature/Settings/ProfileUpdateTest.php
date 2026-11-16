@@ -4,6 +4,8 @@ namespace Tests\Feature\Settings;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProfileUpdateTest extends TestCase
@@ -59,6 +61,103 @@ class ProfileUpdateTest extends TestCase
             ->assertRedirect('/settings/profile');
 
         $this->assertNotNull($user->refresh()->email_verified_at);
+    }
+
+    public function test_user_can_upload_an_avatar()
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $file = UploadedFile::fake()->image('avatar.jpg', 200, 200);
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/settings/profile', [
+                'name' => 'Test User',
+                'email' => $user->email,
+                'avatar' => $file,
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/settings/profile');
+
+        $user->refresh();
+        $this->assertNotNull($user->avatar);
+        Storage::disk('public')->assertExists($user->avatar);
+    }
+
+    public function test_user_can_replace_and_delete_old_avatar()
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $oldFile = UploadedFile::fake()->image('old.jpg');
+
+        $this->actingAs($user)->patch('/settings/profile', [
+            'name' => 'Test User',
+            'email' => $user->email,
+            'avatar' => $oldFile,
+        ]);
+
+        $oldPath = $user->refresh()->avatar;
+        Storage::disk('public')->assertExists($oldPath);
+
+        $newFile = UploadedFile::fake()->image('new.jpg');
+        $this->actingAs($user)->patch('/settings/profile', [
+            'name' => 'Test User',
+            'email' => $user->email,
+            'avatar' => $newFile,
+        ]);
+
+        $newPath = $user->refresh()->avatar;
+        $this->assertNotSame($oldPath, $newPath);
+        Storage::disk('public')->assertMissing($oldPath);
+        Storage::disk('public')->assertExists($newPath);
+    }
+
+    public function test_user_can_remove_avatar()
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $file = UploadedFile::fake()->image('avatar.jpg');
+
+        $this->actingAs($user)->patch('/settings/profile', [
+            'name' => 'Test User',
+            'email' => $user->email,
+            'avatar' => $file,
+        ]);
+
+        $path = $user->refresh()->avatar;
+        Storage::disk('public')->assertExists($path);
+
+        $this->actingAs($user)->patch('/settings/profile', [
+            'name' => 'Test User',
+            'email' => $user->email,
+            'remove_avatar' => true,
+        ]);
+
+        $this->assertNull($user->refresh()->avatar);
+        Storage::disk('public')->assertMissing($path);
+    }
+
+    public function test_non_image_avatar_is_rejected()
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $file = UploadedFile::fake()->create('document.pdf', 500);
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/settings/profile', [
+                'name' => 'Test User',
+                'email' => $user->email,
+                'avatar' => $file,
+            ]);
+
+        $response->assertSessionHasErrors('avatar');
     }
 
     public function test_user_can_delete_their_account()

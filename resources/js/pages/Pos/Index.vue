@@ -81,6 +81,12 @@ function attachCustomer(c: { id: number; name: string }) {
     pickerOpen.value = false;
 }
 
+/** Pay later — immediately store sale to Order History without modal */
+function handlePayLater() {
+    if (cart.isEmpty || paying.value) return;
+    void completeSale({ method: 'cash', amount: 0, reference: 'Pay later' });
+}
+
 /*
  * On a phone the cart lives in a sheet rather than stacked under the grid.
  * Stacking gave the grid a few squeezed rows and pushed the total off-screen;
@@ -236,7 +242,12 @@ async function completeSale(payment: { method: PaymentMethod; amount: number; re
     paying.value = false;
     await sync.refreshCount();
 
-    flash('ok', `Sale saved · ${formatMoney(Number(order.total), currency.value)}`);
+    flash(
+        'ok',
+        payment.amount === 0
+            ? 'Order saved to Order History · Pay later'
+            : `Sale saved · ${formatMoney(Number(order.total), currency.value)}`,
+    );
 
     void sync.flush().then(() => {
         if (sync.online.value) void refreshStockHints();
@@ -322,8 +333,12 @@ onMounted(loadFeed);
                 <!-- Desktop keeps the cart permanently alongside the grid. -->
                 <aside class="hidden min-h-0 w-[24rem] shrink-0 flex-col lg:flex">
                     <Cart :currency="currency" />
-                    <Checkout :currency="currency" @pay="startCheckout"
-                        @pick-customer="((pickerAsksDeposit = false), (pickerOpen = true))" />
+                    <Checkout
+                        :currency="currency"
+                        @pay="startCheckout"
+                        @pay-later="handlePayLater"
+                        @pick-customer="((pickerAsksDeposit = false), (pickerOpen = true))"
+                    />
                 </aside>
             </main>
 
@@ -369,8 +384,12 @@ onMounted(loadFeed);
                 </SheetHeader>
 
                 <Cart :currency="currency" />
-                <Checkout :currency="currency" @pay="startCheckout"
-                    @pick-customer="((pickerAsksDeposit = false), (pickerOpen = true))" />
+                <Checkout
+                    :currency="currency"
+                    @pay="startCheckout"
+                    @pay-later="((cartOpen = false), handlePayLater())"
+                    @pick-customer="((pickerAsksDeposit = false), (pickerOpen = true))"
+                />
             </SheetContent>
         </Sheet>
 

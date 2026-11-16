@@ -50,7 +50,7 @@ class HandleInertiaRequests extends Middleware
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
                 'user' => $request->user()?->only([
-                    'id', 'name', 'email', 'role', 'store_id', 'vendor_id', 'is_active',
+                    'id', 'name', 'email', 'avatar', 'role', 'store_id', 'vendor_id', 'is_active',
                 ]),
                 // Which shop this person is standing in — shown in the sidebar
                 // so a multi-store operator always knows where they are.

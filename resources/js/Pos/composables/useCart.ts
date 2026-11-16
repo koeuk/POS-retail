@@ -101,6 +101,20 @@ export const useCart = defineStore('pos-cart', () => {
         saleType.value = 'customer';
     }
 
+    function restore(data: {
+        lines: CartLine[];
+        orderDiscount?: number;
+        customerId?: number | null;
+        customerName?: string | null;
+        saleType?: SaleType;
+    }) {
+        lines.value = data.lines.map((l) => ({ ...l }));
+        orderDiscount.value = data.orderDiscount ?? 0;
+        customerId.value = data.customerId ?? null;
+        customerName.value = data.customerName ?? null;
+        saleType.value = data.saleType ?? 'customer';
+    }
+
     return {
         lines,
         orderDiscount,
@@ -116,5 +130,6 @@ export const useCart = defineStore('pos-cart', () => {
         remove,
         setOrderDiscount,
         clear,
+        restore,
     };
 });
