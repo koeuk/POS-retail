@@ -36,12 +36,12 @@ const formattedTime = computed(() =>
 
 <template>
     <div
-        class="hidden md:flex h-9 items-center gap-2 rounded-md border border-input/80 bg-card/60 px-3 text-xs select-none tabular-nums text-muted-foreground shadow-xs"
+        class="hidden md:flex items-center gap-2 text-sm select-none tabular-nums text-primary"
         :title="`${formattedDate} ${formattedTime}`"
     >
-        <Clock class="size-3.5 shrink-0 text-muted-foreground" />
-        <span class="hidden lg:inline font-medium text-foreground">{{ formattedDate }}</span>
-        <span class="hidden lg:inline text-muted-foreground/40">·</span>
-        <span class="font-mono font-medium text-foreground">{{ formattedTime }}</span>
+        <Clock class="size-4 shrink-0 text-primary" />
+        <span class="hidden lg:inline font-medium text-primary">{{ formattedDate }}</span>
+        <span class="hidden lg:inline text-primary/40">·</span>
+        <span class="font-mono font-semibold tracking-tight text-primary">{{ formattedTime }}</span>
     </div>
 </template>

@@ -20,12 +20,12 @@ defineProps<{
             <h1 class="font-display text-3xl font-semibold leading-none tracking-tight">
                 <slot name="title">{{ title }}</slot>
             </h1>
-            <p v-if="description" class="max-w-prose text-sm text-muted-foreground">
+            <p v-if="description" class="text-sm text-muted-foreground md:whitespace-nowrap">
                 {{ description }}
             </p>
         </div>
 
-        <p v-if="description" class="w-full max-w-prose text-sm leading-snug text-muted-foreground md:hidden">
+        <p v-if="description" class="w-full text-sm leading-snug text-muted-foreground md:hidden">
             {{ description }}
         </p>
 

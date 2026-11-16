@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import DevicePreviewSelect from '@/components/DevicePreviewSelect.vue';
 import GlobalSearch from '@/components/GlobalSearch.vue';
+import HeaderCalculator from '@/components/HeaderCalculator.vue';
 import LiveClock from '@/components/LiveClock.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -38,6 +39,8 @@ const props = withDefaults(
              while the content below it scrolls. -->
         <div class="ml-auto flex items-center gap-2">
             <slot name="actions" />
+
+            <HeaderCalculator />
 
             <LiveClock />
 
