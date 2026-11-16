@@ -381,6 +381,109 @@ class SalesReporter
     }
 
     /**
+     * Top spending customers in a date range.
+     *
+     * @return Collection<int, array{id: int, name: string, phone: ?string, orders_count: int, total_spend: string}>
+     */
+    public function salesByCustomer(Carbon $from, Carbon $to, int $limit = 8): Collection
+    {
+        return $this->between($this->orders(), $from, $to)
+            ->join('customers', 'customers.id', '=', 'orders.customer_id')
+            ->select([
+                'customers.id',
+                'customers.name',
+                'customers.phone',
+                DB::raw('COUNT(orders.id) as orders_count'),
+                DB::raw('SUM(orders.total) as total_spend'),
+            ])
+            ->groupBy('customers.id', 'customers.name', 'customers.phone')
+            ->orderByDesc('total_spend')
+            ->limit($limit)
+            ->get()
+            ->map(fn (object $row) => [
+                'id' => (int) $row->id,
+                'name' => $row->name,
+                'phone' => $row->phone,
+                'orders_count' => (int) $row->orders_count,
+                'total_spend' => self::money($row->total_spend),
+            ]);
+    }
+
+    /**
+     * Customers ranked by total unpaid debt currently owed to the shop.
+     *
+     * @return Collection<int, array{id: int, name: string, phone: ?string, debts_count: int, total_owed: string}>
+     */
+    public function openDebtsByCustomer(int $limit = 8): Collection
+    {
+        return DB::table('orders')
+            ->join('customers', 'customers.id', '=', 'orders.customer_id')
+            ->where('orders.status', OrderStatus::Completed->value)
+            ->where('orders.sale_type', '!=', SaleType::Myself->value)
+            ->whereColumn('orders.paid_amount', '<', 'orders.total')
+            ->when($this->storeId, fn (Query $q, int $id) => $q->where('orders.store_id', $id))
+            ->select([
+                'customers.id',
+                'customers.name',
+                'customers.phone',
+                DB::raw('COUNT(orders.id) as debts_count'),
+                DB::raw('SUM(orders.total - orders.paid_amount) as total_owed'),
+            ])
+            ->groupBy('customers.id', 'customers.name', 'customers.phone')
+            ->orderByDesc('total_owed')
+            ->limit($limit)
+            ->get()
+            ->map(fn (object $row) => [
+                'id' => (int) $row->id,
+                'name' => $row->name,
+                'phone' => $row->phone,
+                'debts_count' => (int) $row->debts_count,
+                'total_owed' => self::money($row->total_owed),
+            ]);
+    }
+
+    /**
+     * Full list of customers with outstanding debts.
+     *
+     * @return Collection<int, array{id: int, uuid: string, name: string, phone: ?string, unpaid_orders_count: int, total_owed: string, total_amount: string, total_paid: string, latest_order_at: ?string}>
+     */
+    public function customersStillInDebt(int $limit = 50): Collection
+    {
+        return DB::table('orders')
+            ->join('customers', 'customers.id', '=', 'orders.customer_id')
+            ->where('orders.status', OrderStatus::Completed->value)
+            ->where('orders.sale_type', '!=', SaleType::Myself->value)
+            ->whereColumn('orders.paid_amount', '<', 'orders.total')
+            ->when($this->storeId, fn (Query $q, int $id) => $q->where('orders.store_id', $id))
+            ->select([
+                'customers.id',
+                'customers.uuid',
+                'customers.name',
+                'customers.phone',
+                DB::raw('COUNT(orders.id) as unpaid_orders_count'),
+                DB::raw('SUM(orders.total - orders.paid_amount) as total_owed'),
+                DB::raw('SUM(orders.total) as total_amount'),
+                DB::raw('SUM(orders.paid_amount) as total_paid'),
+                DB::raw('MAX('.self::businessMoment().') as latest_order_at'),
+            ])
+            ->groupBy('customers.id', 'customers.uuid', 'customers.name', 'customers.phone')
+            ->orderByDesc('total_owed')
+            ->limit($limit)
+            ->get()
+            ->map(fn (object $row) => [
+                'id' => (int) $row->id,
+                'uuid' => $row->uuid,
+                'name' => $row->name,
+                'phone' => $row->phone,
+                'unpaid_orders_count' => (int) $row->unpaid_orders_count,
+                'total_owed' => self::money($row->total_owed),
+                'total_amount' => self::money($row->total_amount),
+                'total_paid' => self::money($row->total_paid),
+                'latest_order_at' => $row->latest_order_at ? Carbon::parse($row->latest_order_at)->format('M j, Y') : null,
+            ]);
+    }
+
+    /**
      * Money out on credit and not yet collected — the receivable book.
      * Not revenue timing: the sale already counted; this is who still owes.
      *
