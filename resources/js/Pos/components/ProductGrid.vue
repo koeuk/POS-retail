@@ -6,7 +6,7 @@ import { formatMoney } from '@/Pos/lib/money';
 import { imageSrc } from '@/lib/utils';
 import type { PosCategory, PosProduct } from '@/Pos/types';
 import { ChevronLeft, ChevronRight, Layers, PackageOpen, Search } from 'lucide-vue-next';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = defineProps<{
     products: PosProduct[];
@@ -127,6 +127,10 @@ const chipRail = ref<HTMLElement | null>(null);
 const canScrollLeft = ref(false);
 const canScrollRight = ref(false);
 
+let scrollTarget: number | null = null;
+let scrollResetTimeout: ReturnType<typeof setTimeout> | null = null;
+let resizeObserver: ResizeObserver | null = null;
+
 function updateChipArrows() {
     const el = chipRail.value;
     if (!el) return;
@@ -134,18 +138,57 @@ function updateChipArrows() {
     canScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
 }
 
+function onScroll() {
+    updateChipArrows();
+}
+
 function scrollChips(direction: 1 | -1) {
     const el = chipRail.value;
     if (!el) return;
-    el.scrollBy({ left: direction * Math.round(el.clientWidth * 0.7), behavior: 'smooth' });
+
+    const step = Math.max(160, Math.round(el.clientWidth * 0.7));
+    const maxScroll = el.scrollWidth - el.clientWidth;
+
+    const current = scrollTarget !== null ? scrollTarget : el.scrollLeft;
+    const target = Math.max(0, Math.min(maxScroll, current + direction * step));
+    scrollTarget = target;
+
+    el.scrollTo({ left: target, behavior: 'smooth' });
+
+    if (scrollResetTimeout) clearTimeout(scrollResetTimeout);
+    scrollResetTimeout = setTimeout(() => {
+        scrollTarget = null;
+        updateChipArrows();
+    }, 450);
+
+    canScrollLeft.value = target > 4;
+    canScrollRight.value = target < maxScroll - 4;
 }
+
+watch(
+    () => props.categories,
+    () => {
+        void nextTick(updateChipArrows);
+    },
+    { deep: true },
+);
 
 onMounted(() => {
     void nextTick(updateChipArrows);
     window.addEventListener('resize', updateChipArrows);
+    if (chipRail.value && typeof ResizeObserver !== 'undefined') {
+        resizeObserver = new ResizeObserver(() => {
+            updateChipArrows();
+        });
+        resizeObserver.observe(chipRail.value);
+    }
 });
 
-onBeforeUnmount(() => window.removeEventListener('resize', updateChipArrows));
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', updateChipArrows);
+    resizeObserver?.disconnect();
+    if (scrollResetTimeout) clearTimeout(scrollResetTimeout);
+});
 </script>
 
 <template>
@@ -165,20 +208,22 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateChipArrows));
             </div>
 
             <div class="relative">
-                <!-- Paging chevrons: only rendered while that direction has more chips. -->
+                <!-- Paging chevrons: smoothly transitions visibility, avoiding jump on click -->
                 <button
-                    v-if="canScrollLeft"
                     type="button"
-                    class="press absolute -left-1 top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-colors hover:text-foreground"
+                    class="absolute -left-1 top-1/2 -mt-4 z-10 flex size-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-all duration-200 hover:text-foreground active:scale-95"
+                    :class="canScrollLeft ? 'opacity-100 scale-100 cursor-pointer' : 'opacity-0 scale-90 pointer-events-none'"
+                    :tabindex="canScrollLeft ? 0 : -1"
                     aria-label="Scroll categories left"
                     @click="scrollChips(-1)"
                 >
                     <ChevronLeft class="size-4" />
                 </button>
                 <button
-                    v-if="canScrollRight"
                     type="button"
-                    class="press absolute -right-1 top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-colors hover:text-foreground"
+                    class="absolute -right-1 top-1/2 -mt-4 z-10 flex size-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-all duration-200 hover:text-foreground active:scale-95"
+                    :class="canScrollRight ? 'opacity-100 scale-100 cursor-pointer' : 'opacity-0 scale-90 pointer-events-none'"
+                    :tabindex="canScrollRight ? 0 : -1"
                     aria-label="Scroll categories right"
                     @click="scrollChips(1)"
                 >
@@ -186,10 +231,16 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateChipArrows));
                 </button>
 
                 <!-- Soft edges hint that the rail continues past the fold. -->
-                <div v-if="canScrollLeft" class="pointer-events-none absolute inset-y-0 left-0 z-[5] w-10 bg-gradient-to-r from-background to-transparent" />
-                <div v-if="canScrollRight" class="pointer-events-none absolute inset-y-0 right-0 z-[5] w-10 bg-gradient-to-l from-background to-transparent" />
+                <div
+                    class="pointer-events-none absolute inset-y-0 left-0 z-[5] w-10 bg-gradient-to-r from-background to-transparent transition-opacity duration-200"
+                    :class="canScrollLeft ? 'opacity-100' : 'opacity-0'"
+                />
+                <div
+                    class="pointer-events-none absolute inset-y-0 right-0 z-[5] w-10 bg-gradient-to-l from-background to-transparent transition-opacity duration-200"
+                    :class="canScrollRight ? 'opacity-100' : 'opacity-0'"
+                />
 
-                <div ref="chipRail" class="scrollbar-none flex gap-1.5 overflow-x-auto" @scroll.passive="updateChipArrows">
+                <div ref="chipRail" class="scrollbar-none flex gap-1.5 overflow-x-auto" @scroll.passive="onScroll">
                     <button
                         type="button"
                         class="press h-9 shrink-0 rounded-full border px-4 text-sm font-medium"

@@ -28,6 +28,9 @@ class ReportController extends Controller
                 'byDay' => $reporter->salesByDay($from, $to),
                 'byProduct' => $reporter->salesByProduct($from, $to),
                 'byPayment' => $reporter->paymentBreakdown($from, $to),
+                'byCustomer' => $reporter->salesByCustomer($from, $to),
+                'debtsByCustomer' => $reporter->openDebtsByCustomer(),
+                'debtorsList' => $reporter->customersStillInDebt(),
             ]);
         } catch (QueryException $e) {
             /*
@@ -46,6 +49,9 @@ class ReportController extends Controller
                 'byDay' => [],
                 'byProduct' => [],
                 'byPayment' => [],
+                'byCustomer' => [],
+                'debtsByCustomer' => [],
+                'debtorsList' => [],
             ]);
         }
     }

@@ -17,7 +17,7 @@ import { http } from '@/Pos/lib/http';
 import { formatMoney, toDecimalString } from '@/Pos/lib/money';
 import type { PaymentMethod, PosFeed, StoredOrder } from '@/Pos/types';
 import { Head } from '@inertiajs/vue3';
-import { CircleAlert, LoaderCircle, ShoppingCart } from 'lucide-vue-next';
+import { CircleAlert, GripVertical, LoaderCircle, ShoppingCart } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 
 const props = defineProps<{
@@ -268,7 +268,110 @@ async function refreshStockHints() {
     }
 }
 
-onMounted(loadFeed);
+const DEFAULT_CART_WIDTH = 384;
+const MIN_CART_WIDTH = 280;
+const STORAGE_KEY = 'pos_cart_width';
+
+const cartWidth = ref(DEFAULT_CART_WIDTH);
+const isDragging = ref(false);
+const mainContainer = ref<HTMLElement | null>(null);
+
+function handlePointerMove(clientX: number) {
+    if (!mainContainer.value) return;
+    const rect = mainContainer.value.getBoundingClientRect();
+    const maxWidth = Math.max(MIN_CART_WIDTH, Math.min(rect.width * 0.7, rect.width - 320));
+    const targetWidth = Math.round(rect.right - clientX);
+    cartWidth.value = Math.min(maxWidth, Math.max(MIN_CART_WIDTH, targetWidth));
+}
+
+function onMouseMove(e: MouseEvent) {
+    if (!isDragging.value) return;
+    handlePointerMove(e.clientX);
+}
+
+function onMouseUp() {
+    if (!isDragging.value) return;
+    isDragging.value = false;
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    try {
+        localStorage.setItem(STORAGE_KEY, String(cartWidth.value));
+    } catch {
+        /* ignore */
+    }
+}
+
+function startDrag(e: MouseEvent) {
+    if (e.button !== 0) return;
+    isDragging.value = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+}
+
+function onTouchMove(e: TouchEvent) {
+    if (!isDragging.value || !e.touches[0]) return;
+    if (e.cancelable) e.preventDefault();
+    handlePointerMove(e.touches[0].clientX);
+}
+
+function onTouchEnd() {
+    if (!isDragging.value) return;
+    isDragging.value = false;
+    window.removeEventListener('touchmove', onTouchMove);
+    window.removeEventListener('touchend', onTouchEnd);
+    window.removeEventListener('touchcancel', onTouchEnd);
+    try {
+        localStorage.setItem(STORAGE_KEY, String(cartWidth.value));
+    } catch {
+        /* ignore */
+    }
+}
+
+function startTouchDrag(e: TouchEvent) {
+    if (!e.touches[0]) return;
+    isDragging.value = true;
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd);
+    window.addEventListener('touchcancel', onTouchEnd);
+}
+
+function resetWidth() {
+    cartWidth.value = DEFAULT_CART_WIDTH;
+    try {
+        localStorage.setItem(STORAGE_KEY, String(DEFAULT_CART_WIDTH));
+    } catch {
+        /* ignore */
+    }
+}
+
+onMounted(() => {
+    loadFeed();
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const parsed = parseInt(saved, 10);
+            if (!isNaN(parsed) && parsed >= MIN_CART_WIDTH && parsed <= 800) {
+                cartWidth.value = parsed;
+            }
+        }
+    } catch {
+        /* ignore */
+    }
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+    window.removeEventListener('touchmove', onTouchMove);
+    window.removeEventListener('touchend', onTouchEnd);
+    window.removeEventListener('touchcancel', onTouchEnd);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+});
 </script>
 
 <template>

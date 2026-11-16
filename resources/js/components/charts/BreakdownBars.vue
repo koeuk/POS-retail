@@ -26,8 +26,10 @@ const props = withDefaults(
         showRank?: boolean;
         /** Custom value formatter instead of currency formatting. */
         formatValue?: (value: number) => string;
+        /** Accent tone for single-hue bars: primary (default), warning, or destructive. */
+        tone?: 'primary' | 'warning' | 'destructive';
     }>(),
-    { currency: () => USD, categorical: false, showRank: false },
+    { currency: () => USD, categorical: false, showRank: false, tone: 'primary' },
 );
 
 /*
@@ -44,6 +46,12 @@ const width = (value: number) => `${Math.max(1.5, (value / peak.value) * 100)}%`
 /** Fixed slot order, never cycled — colour follows the entity, not its rank. */
 const seriesVar = (row: Row, index: number) => `var(--series-${((row.slot ?? index) % 4) + 1})`;
 
+const barColor = computed(() => {
+    if (props.tone === 'warning') return 'hsl(38 92% 50%)';
+    if (props.tone === 'destructive') return 'hsl(var(--destructive))';
+    return 'hsl(var(--primary))';
+});
+
 const share = (value: number) => (total.value > 0 ? Math.round((value / total.value) * 100) : 0);
 
 const money = (n: number) => formatCurrency(n, props.currency ?? USD);
@@ -58,15 +66,18 @@ const displayValue = (n: number) => (props.formatValue ? props.formatValue(n) : 
                 <span class="flex min-w-0 items-center gap-2">
                     <span
                         v-if="showRank"
-                        class="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted font-mono text-[0.6875rem] font-semibold text-muted-foreground"
+                        class="flex size-5 shrink-0 items-center justify-center rounded-full font-mono text-[0.6875rem] font-semibold"
+                        :class="
+                            tone === 'warning'
+                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                                : tone === 'destructive'
+                                  ? 'bg-destructive/15 text-destructive'
+                                  : 'bg-muted text-muted-foreground'
+                        "
                     >
                         {{ i + 1 }}
                     </span>
-                    <span
-                        v-else
-                        class="size-2.5 shrink-0 rounded-[3px]"
-                        :style="{ background: categorical ? seriesVar(row, i) : 'hsl(var(--primary))' }"
-                    />
+                    <span v-else class="size-2.5 shrink-0 rounded-[3px]" :style="{ background: categorical ? seriesVar(row, i) : barColor }" />
                     <!-- No capitalize transform: labels arrive presentation-ready,
                          and it would mangle product names and initialisms. -->
                     <span class="truncate">{{ row.label }}</span>
@@ -81,7 +92,7 @@ const displayValue = (n: number) => (props.formatValue ? props.formatValue(n) : 
                         class="h-full rounded-full transition-[width] duration-300 ease-out-quint"
                         :style="{
                             width: width(row.value),
-                            background: categorical ? seriesVar(row, i) : 'hsl(var(--primary))',
+                            background: categorical ? seriesVar(row, i) : barColor,
                         }"
                     />
                 </div>

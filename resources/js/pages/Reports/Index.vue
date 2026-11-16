@@ -8,9 +8,37 @@ import { Button } from '@/components/ui/button';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
-import { Boxes, Download, Receipt, TrendingUp } from 'lucide-vue-next';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { Boxes, Download, HandCoins, Receipt, TrendingUp, Users } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
+
+interface CustomerRow {
+    id: number;
+    name: string;
+    phone: string | null;
+    orders_count: number;
+    total_spend: string;
+}
+
+interface DebtCustomerRow {
+    id: number;
+    name: string;
+    phone: string | null;
+    debts_count: number;
+    total_owed: string;
+}
+
+interface DebtorRow {
+    id: number;
+    uuid: string;
+    name: string;
+    phone: string | null;
+    unpaid_orders_count: number;
+    total_owed: string;
+    total_amount: string;
+    total_paid: string;
+    latest_order_at: string | null;
+}
 
 const props = defineProps<{
     filters: { from: string; to: string };
@@ -18,6 +46,9 @@ const props = defineProps<{
     byDay: { day: string; orders: number; sales: string }[];
     byProduct: { product_name: string; qty: number; revenue: string }[];
     byPayment: { method: string; count: number; amount: string }[];
+    byCustomer: CustomerRow[];
+    debtsByCustomer: DebtCustomerRow[];
+    debtorsList: DebtorRow[];
 }>();
 
 const from = ref(props.filters.from);
@@ -68,6 +99,24 @@ const productRows = computed(() =>
         meta: `${row.qty}`,
     })),
 );
+
+const topCustomers = computed(() =>
+    props.byCustomer.slice(0, 8).map((row) => ({
+        label: row.name,
+        value: Number(row.total_spend),
+        meta: `${row.phone ? row.phone + ' · ' : ''}${row.orders_count} order${row.orders_count === 1 ? '' : 's'}`,
+    })),
+);
+
+const debtCustomers = computed(() =>
+    props.debtsByCustomer.slice(0, 8).map((row) => ({
+        label: row.name,
+        value: Number(row.total_owed),
+        meta: `${row.phone ? row.phone + ' · ' : ''}${row.debts_count} unpaid`,
+    })),
+);
+
+const totalDebtOwed = computed(() => props.debtorsList.reduce((sum, d) => sum + Number(d.total_owed), 0));
 
 const exportUrl = computed(() => route('reports.export', { from: from.value, to: to.value }));
 </script>
@@ -122,6 +171,7 @@ const exportUrl = computed(() => route('reports.export', { from: from.value, to:
                 <SalesBarChart :rows="byDay" :height="240" />
             </section>
 
+            <!-- Breakdown: Payment methods & Top products -->
             <div class="mt-4 grid gap-4 lg:grid-cols-2">
                 <section class="animate-rise rounded-xl border border-border bg-card p-4" style="animation-delay: 160ms">
                     <h2 class="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Payment methods</h2>
@@ -136,9 +186,35 @@ const exportUrl = computed(() => route('reports.export', { from: from.value, to:
                 </section>
             </div>
 
-            <!-- The table view the contrast warning obliges, and the thing an
-                 accountant actually wants to copy out. -->
-            <section class="animate-rise mt-4 overflow-hidden rounded-xl border border-border bg-card" style="animation-delay: 240ms">
+            <!-- Customer Breakdown: Bought Most & Who in Debt -->
+            <div class="mt-4 grid gap-4 lg:grid-cols-2">
+                <section class="animate-rise rounded-xl border border-border bg-card p-4" style="animation-delay: 240ms">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h2 class="flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                            <Users class="size-4 text-primary" />
+                            Customers who bought the most
+                        </h2>
+                        <span class="text-xs text-muted-foreground">By total spend</span>
+                    </div>
+                    <BreakdownBars :rows="topCustomers" show-rank />
+                </section>
+
+                <section class="animate-rise rounded-xl border border-border bg-card p-4" style="animation-delay: 280ms">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h2
+                            class="flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400"
+                        >
+                            <HandCoins class="size-4" />
+                            Top debt by customer
+                        </h2>
+                        <span class="text-xs text-muted-foreground">Amount still owed</span>
+                    </div>
+                    <BreakdownBars :rows="debtCustomers" show-rank tone="warning" />
+                </section>
+            </div>
+
+            <!-- The table view: Sales by product -->
+            <section class="animate-rise mt-4 overflow-hidden rounded-xl border border-border bg-card" style="animation-delay: 320ms">
                 <h2 class="border-b border-border px-4 py-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                     Sales by product
                 </h2>
@@ -166,6 +242,77 @@ const exportUrl = computed(() => route('reports.export', { from: from.value, to:
                     </Table>
                 </div>
                 <p v-else class="px-4 py-10 text-center text-sm text-muted-foreground">No sales in this range.</p>
+            </section>
+
+            <!-- Table: Customers still in debt -->
+            <section class="animate-rise mt-4 overflow-hidden rounded-xl border border-border bg-card" style="animation-delay: 360ms">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
+                    <div>
+                        <h2 class="flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                            <HandCoins class="size-4 text-amber-600 dark:text-amber-400" />
+                            Customers still in debt
+                        </h2>
+                        <p class="text-xs text-muted-foreground">Accounts receivable with outstanding balances waiting to be collected.</p>
+                    </div>
+                    <div v-if="debtorsList.length" class="flex items-center gap-2">
+                        <span
+                            class="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400"
+                        >
+                            {{ debtorsList.length }} customer{{ debtorsList.length === 1 ? '' : 's' }} · {{ money(totalDebtOwed) }} owed
+                        </span>
+                        <Button as-child variant="outline" size="sm" class="press h-7 text-xs">
+                            <Link :href="route('debts.index')">Open Debt book</Link>
+                        </Button>
+                    </div>
+                </div>
+
+                <div v-if="debtorsList.length" class="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow class="hover:bg-transparent">
+                                <TableHead>Customer</TableHead>
+                                <TableHead data-numeric class="text-right">Unpaid sales</TableHead>
+                                <TableHead data-numeric class="text-right">Total credit</TableHead>
+                                <TableHead data-numeric class="text-right">Paid so far</TableHead>
+                                <TableHead data-numeric class="text-right">Still owed</TableHead>
+                                <TableHead class="text-right">Latest sale</TableHead>
+                                <TableHead class="text-right">Action</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <tbody class="[&_tr:last-child]:border-0">
+                            <TableRow v-for="d in debtorsList" :key="d.id" class="group">
+                                <TableCell>
+                                    <div class="font-medium text-foreground">{{ d.name }}</div>
+                                    <div v-if="d.phone" class="font-mono text-xs text-muted-foreground">{{ d.phone }}</div>
+                                </TableCell>
+                                <TableCell data-numeric class="tabular text-right font-mono">
+                                    {{ d.unpaid_orders_count }}
+                                </TableCell>
+                                <TableCell data-numeric class="tabular text-right font-mono text-muted-foreground">
+                                    {{ money(d.total_amount) }}
+                                </TableCell>
+                                <TableCell data-numeric class="tabular text-right font-mono text-muted-foreground">
+                                    {{ money(d.total_paid) }}
+                                </TableCell>
+                                <TableCell data-numeric class="tabular text-right font-mono font-bold text-amber-600 dark:text-amber-400">
+                                    {{ money(d.total_owed) }}
+                                </TableCell>
+                                <TableCell class="text-right text-xs text-muted-foreground">
+                                    {{ d.latest_order_at ?? '—' }}
+                                </TableCell>
+                                <TableCell class="text-right">
+                                    <Button as-child variant="ghost" size="sm" class="press h-8 px-2 text-xs text-primary hover:bg-primary/10">
+                                        <Link :href="route('debts.index', { 'filter[search]': d.name })"> Settle debt </Link>
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        </tbody>
+                    </Table>
+                </div>
+                <div v-else class="flex flex-col items-center justify-center p-8 text-center">
+                    <p class="text-sm font-medium text-foreground">No customers in debt</p>
+                    <p class="text-xs text-muted-foreground">All customer sales on credit and pay later orders are paid up.</p>
+                </div>
             </section>
         </div>
     </AppLayout>

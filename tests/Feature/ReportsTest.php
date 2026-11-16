@@ -277,6 +277,9 @@ class ReportsTest extends TestCase
                 ->where('byDay', [])
                 ->where('byProduct', [])
                 ->where('byPayment', [])
+                ->where('byCustomer', [])
+                ->where('debtsByCustomer', [])
+                ->where('debtorsList', [])
                 ->where('flash.error', 'The report could not be loaded. Try again in a moment.')
             );
     }
@@ -290,5 +293,54 @@ class ReportsTest extends TestCase
             ->get(route('reports.export'))
             ->assertRedirect(route('reports.index'))
             ->assertSessionHas('error', 'The report could not be loaded. Try again in a moment.');
+    }
+
+    public function test_report_includes_top_customers_and_debtors(): void
+    {
+        $customer = \App\Models\Customer::create([
+            'name' => 'Big Spender',
+            'phone' => '012345678',
+            'loyalty_points' => 0,
+        ]);
+
+        $debtor = \App\Models\Customer::create([
+            'name' => 'Debtor Customer',
+            'phone' => '098765432',
+            'loyalty_points' => 0,
+        ]);
+
+        // Completed sale with customer
+        $this->sale([
+            'customer_id' => $customer->id,
+            'total' => '150.00',
+            'paid_amount' => '150.00',
+        ]);
+
+        // Open debt sale with debtor
+        $this->sale([
+            'customer_id' => $debtor->id,
+            'sale_type' => \App\Enums\SaleType::Debt->value,
+            'total' => '80.00',
+            'paid_amount' => '20.00',
+        ]);
+
+        $reporter = new SalesReporter($this->store->id);
+        $from = now()->subDays(7);
+        $to = now();
+
+        $byCustomer = $reporter->salesByCustomer($from, $to);
+        $this->assertNotEmpty($byCustomer);
+        $this->assertSame('Big Spender', $byCustomer->first()['name']);
+        $this->assertSame('150.00', $byCustomer->first()['total_spend']);
+
+        $debtsByCustomer = $reporter->openDebtsByCustomer();
+        $this->assertNotEmpty($debtsByCustomer);
+        $this->assertSame('Debtor Customer', $debtsByCustomer->first()['name']);
+        $this->assertSame('60.00', $debtsByCustomer->first()['total_owed']);
+
+        $debtorsList = $reporter->customersStillInDebt();
+        $this->assertNotEmpty($debtorsList);
+        $this->assertSame('Debtor Customer', $debtorsList->first()['name']);
+        $this->assertSame('60.00', $debtorsList->first()['total_owed']);
     }
 }
