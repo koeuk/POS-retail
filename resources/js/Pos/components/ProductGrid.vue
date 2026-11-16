@@ -402,11 +402,7 @@ onBeforeUnmount(() => {
         <!-- Grid. No entrance animation: this re-renders on every keystroke,
              and a cashier tapping 60 items a minute needs it to feel instant. -->
         <div class="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-3">
-            <div
-                v-if="visible.length"
-                class="grid gap-2.5"
-                style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));"
-            >
+            <div v-if="visible.length" class="pos-product-grid">
                 <div v-for="product in visible" :key="product.id" class="relative min-w-0">
                     <button
                         type="button"
@@ -519,3 +515,18 @@ onBeforeUnmount(() => {
         </Dialog>
     </div>
 </template>
+
+<style scoped>
+.pos-product-grid {
+    display: grid;
+    gap: 0.625rem;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+@media (min-width: 640px) {
+    .pos-product-grid {
+        gap: 0.75rem;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+</style>
