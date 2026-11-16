@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import type { CurrencyDef } from '@/composables/useCurrency';
+import { useCart } from '@/Pos/composables/useCart';
 import { formatMoney } from '@/Pos/lib/money';
 import type { PaymentMethod, PosQrSettings } from '@/Pos/types';
-import { Banknote, Check, CreditCard, Delete, QrCode, Wallet, X } from 'lucide-vue-next';
+import { Banknote, Check, CreditCard, Delete, QrCode, UserRound, Wallet, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import QrPayPanel from './QrPayPanel.vue';
+
+const cart = useCart();
 
 const props = defineProps<{
     open: boolean;
@@ -133,6 +136,18 @@ function confirm() {
                             <p class="tabular mt-1 font-mono text-4xl font-bold text-primary">
                                 {{ formatMoney(total, currency) }}
                             </p>
+                        </div>
+
+                        <!-- Customer info -->
+                        <div class="flex items-center justify-between border-b border-border/60 bg-muted/20 px-5 py-2 text-xs">
+                            <div class="flex min-w-0 items-center gap-1.5">
+                                <UserRound class="size-3.5 shrink-0 text-muted-foreground" />
+                                <span class="text-muted-foreground">Customer:</span>
+                                <span class="truncate font-medium text-foreground">
+                                    {{ cart.customerName ?? 'Walk-in' }}
+                                </span>
+                            </div>
+                            <span class="text-[0.7rem] text-muted-foreground">Optional</span>
                         </div>
 
                         <div class="min-h-0 flex-1 overflow-y-auto p-4">

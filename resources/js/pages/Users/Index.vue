@@ -4,6 +4,7 @@ import HistoryButton from '@/components/HistoryButton.vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,13 +14,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useInitials } from '@/composables/useInitials';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { currentPerPage } from '@/lib/utils';
+import { currentPerPage, imageSrc } from '@/lib/utils';
 import type { Paginated, SharedData, Store, User, Vendor } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { Pencil, Plus, Search, ShieldCheck, Trash2, Users } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { Camera, Pencil, Plus, Search, ShieldCheck, Trash2, Users, X } from 'lucide-vue-next';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
 type PermissionOption = {
     value: string;
@@ -120,6 +122,9 @@ watch(roleFilter, reload);
 
 const editing = ref<User | null>(null);
 const dialogOpen = ref(false);
+const { getInitials } = useInitials();
+const blobUrl = ref<string | null>(null);
+const avatarInput = ref<HTMLInputElement>();
 
 const form = useForm({
     name: '',
@@ -131,6 +136,53 @@ const form = useForm({
     vendor_id: NONE,
     is_active: true as boolean,
     permissions: {} as Record<string, ActionMap>,
+    avatar: null as File | null,
+    remove_avatar: false as boolean,
+});
+
+const savedAvatar = computed(() => (editing.value?.avatar ? imageSrc(editing.value.avatar) : null));
+
+const avatarPreview = computed(() => {
+    if (blobUrl.value) return blobUrl.value;
+    if (form.remove_avatar) return null;
+    return savedAvatar.value ?? null;
+});
+
+function pickAvatar(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    dropBlob();
+    blobUrl.value = URL.createObjectURL(file);
+    form.avatar = file;
+    form.remove_avatar = false;
+    input.value = '';
+}
+
+function removeAvatar() {
+    dropBlob();
+    form.avatar = null;
+    form.remove_avatar = true;
+    if (avatarInput.value) avatarInput.value.value = '';
+}
+
+function dropBlob() {
+    if (blobUrl.value) {
+        URL.revokeObjectURL(blobUrl.value);
+        blobUrl.value = null;
+    }
+}
+
+onBeforeUnmount(() => {
+    dropBlob();
+});
+
+watch(dialogOpen, (open) => {
+    if (!open) {
+        dropBlob();
+        if (avatarInput.value) avatarInput.value.value = '';
+    }
 });
 
 /** A cashier cannot open /pos without a store, so the field becomes required. */
@@ -153,18 +205,25 @@ function reseedFromRole(role: unknown) {
 function openCreate() {
     if (!may('users', 'create')) return;
     editing.value = null;
+    dropBlob();
     form.reset();
     form.clearErrors();
+    form.avatar = null;
+    form.remove_avatar = false;
     form.store_id = NONE;
     form.vendor_id = NONE;
     form.permissions = roleDefaults(form.role);
+    if (avatarInput.value) avatarInput.value.value = '';
     dialogOpen.value = true;
 }
 
 function openEdit(user: User & { effective_permissions: Record<string, EffectivePermission> }) {
     if (!may('users', 'update')) return;
     editing.value = user;
+    dropBlob();
     form.clearErrors();
+    form.avatar = null;
+    form.remove_avatar = false;
     form.name = user.name;
     form.email = user.email;
     form.password = '';
@@ -174,22 +233,33 @@ function openEdit(user: User & { effective_permissions: Record<string, Effective
     form.vendor_id = user.vendor_id ? String(user.vendor_id) : NONE;
     form.is_active = user.is_active;
     form.permissions = toActionMatrix(user.effective_permissions);
+    if (avatarInput.value) avatarInput.value.value = '';
     dialogOpen.value = true;
 }
 
 function submit() {
-    const opts = { onSuccess: () => (dialogOpen.value = false), preserveScroll: true };
-
-    form.transform((d) => ({
-        ...d,
-        store_id: d.store_id === NONE ? null : d.store_id,
-        vendor_id: d.vendor_id === NONE ? null : d.vendor_id,
-    }));
+    const opts = {
+        onSuccess: () => {
+            dialogOpen.value = false;
+            dropBlob();
+            form.reset('avatar', 'remove_avatar');
+        },
+        preserveScroll: true,
+    };
 
     if (editing.value) {
-        form.put(route('users.update', { user: editing.value.uuid }), opts);
+        form.transform((d) => ({
+            ...d,
+            store_id: d.store_id === NONE ? null : d.store_id,
+            vendor_id: d.vendor_id === NONE ? null : d.vendor_id,
+            _method: 'put',
+        })).post(route('users.update', { user: editing.value.uuid }), opts);
     } else {
-        form.post(route('users.store'), opts);
+        form.transform((d) => ({
+            ...d,
+            store_id: d.store_id === NONE ? null : d.store_id,
+            vendor_id: d.vendor_id === NONE ? null : d.vendor_id,
+        })).post(route('users.store'), opts);
     }
 }
 
@@ -312,11 +382,19 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                         >
                             <TableRow v-for="u in users.data" :key="u.id" class="group">
                                 <TableCell>
-                                    <p class="font-medium leading-tight">
-                                        {{ u.name }}
-                                        <span v-if="u.id === currentUserId" class="ml-1 text-xs text-muted-foreground">(you)</span>
-                                    </p>
-                                    <p class="text-xs text-muted-foreground">{{ u.email }}</p>
+                                    <div class="flex items-center gap-3">
+                                        <Avatar class="size-8 shrink-0 rounded-full">
+                                            <AvatarImage v-if="u.avatar" :src="imageSrc(u.avatar) ?? ''" :alt="u.name" />
+                                            <AvatarFallback class="text-xs">{{ getInitials(u.name) }}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p class="font-medium leading-tight">
+                                                {{ u.name }}
+                                                <span v-if="u.id === currentUserId" class="ml-1 text-xs text-muted-foreground">(you)</span>
+                                            </p>
+                                            <p class="text-xs text-muted-foreground">{{ u.email }}</p>
+                                        </div>
+                                    </div>
                                 </TableCell>
                                 <TableCell>
                                     <Badge :variant="roleTone(u.role)" class="capitalize">{{ u.role }}</Badge>
@@ -391,6 +469,11 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                 :class="u.is_active ? 'bg-primary' : 'bg-muted-foreground/40'"
                             />
 
+                            <Avatar class="size-8 shrink-0 rounded-full">
+                                <AvatarImage v-if="u.avatar" :src="imageSrc(u.avatar) ?? ''" :alt="u.name" />
+                                <AvatarFallback class="text-xs">{{ getInitials(u.name) }}</AvatarFallback>
+                            </Avatar>
+
                             <div class="min-w-0 flex-1">
                                 <p class="truncate font-medium leading-tight">
                                     {{ u.name }}
@@ -447,6 +530,67 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                     </DialogHeader>
 
                     <div class="grid gap-4 py-5">
+                        <!-- Profile photo -->
+                        <div class="grid gap-2">
+                            <Label>Profile photo</Label>
+                            <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
+                                <div class="relative size-16 shrink-0">
+                                    <div
+                                        class="shadow-xs flex size-16 items-center justify-center overflow-hidden rounded-full border border-border bg-muted/50"
+                                    >
+                                        <img v-if="avatarPreview" :src="avatarPreview" :alt="form.name || 'User'" class="size-full object-cover" />
+                                        <span v-else class="select-none text-lg font-medium text-muted-foreground">
+                                            {{ getInitials(form.name || 'User') }}
+                                        </span>
+                                    </div>
+                                    <button
+                                        v-if="avatarPreview"
+                                        type="button"
+                                        class="press absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-background/90 text-muted-foreground shadow-sm ring-1 ring-border hover:text-destructive"
+                                        aria-label="Remove photo"
+                                        @click="removeAvatar"
+                                    >
+                                        <X class="size-3" />
+                                    </button>
+                                </div>
+
+                                <div class="flex-1 space-y-1.5">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            class="h-8 cursor-pointer text-xs"
+                                            @click="avatarInput?.click()"
+                                        >
+                                            <Camera class="mr-1.5 size-3.5 text-muted-foreground" />
+                                            <span>{{ avatarPreview ? 'Change photo' : 'Upload photo' }}</span>
+                                        </Button>
+                                        <Button
+                                            v-if="avatarPreview"
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            class="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                            @click="removeAvatar"
+                                        >
+                                            Remove
+                                        </Button>
+                                    </div>
+                                    <p class="text-xs text-muted-foreground">JPG, PNG, GIF, or WebP. Max 2 MB.</p>
+                                    <InputError :message="form.errors.avatar" />
+                                </div>
+
+                                <input
+                                    ref="avatarInput"
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp,image/gif"
+                                    class="hidden"
+                                    @change="pickAvatar"
+                                />
+                            </div>
+                        </div>
+
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
                                 <Label for="u-name">Name</Label>
@@ -640,8 +784,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                                         <Checkbox
                                             :checked="Boolean(permissionsForm.permissions[option.value]?.[action.value])"
                                             @update:checked="
-                                                (v: boolean | 'indeterminate') =>
-                                                    setActionPermission(option.value, action.value, v === true)
+                                                (v: boolean | 'indeterminate') => setActionPermission(option.value, action.value, v === true)
                                             "
                                         />
                                     </label>

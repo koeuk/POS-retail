@@ -27,6 +27,8 @@ class UserRequest extends FormRequest
                 'required', 'email', 'max:255',
                 Rule::unique('users', 'email')->ignore($userId),
             ],
+            'avatar' => ['nullable', 'image', 'max:2048'],
+            'remove_avatar' => ['nullable', 'boolean'],
             'password' => [
                 $isCreate ? 'required' : 'nullable',
                 'confirmed',

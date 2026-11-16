@@ -26,10 +26,8 @@ const breadcrumbItems: BreadcrumbItem[] = [
 ];
 
 const passwordInput = ref<HTMLInputElement>();
-const currentPasswordInput = ref<HTMLInputElement>();
 
 const form = useForm({
-    current_password: '',
     password: '',
     password_confirmation: '',
 });
@@ -43,13 +41,6 @@ const updatePassword = () => {
                 form.reset('password', 'password_confirmation');
                 if (passwordInput.value instanceof HTMLInputElement) {
                     passwordInput.value.focus();
-                }
-            }
-
-            if (errors.current_password) {
-                form.reset('current_password');
-                if (currentPasswordInput.value instanceof HTMLInputElement) {
-                    currentPasswordInput.value.focus();
                 }
             }
         },
@@ -66,20 +57,6 @@ const updatePassword = () => {
                 <HeadingSmall title="Update password" description="Ensure your account is using a long, random password to stay secure" />
 
                 <form @submit.prevent="updatePassword" class="space-y-6">
-                    <div class="grid gap-2">
-                        <Label for="current_password">Current Password</Label>
-                        <Input
-                            id="current_password"
-                            ref="currentPasswordInput"
-                            v-model="form.current_password"
-                            type="password"
-                            class="mt-1 block w-full"
-                            autocomplete="current-password"
-                            placeholder="Current password"
-                        />
-                        <InputError :message="form.errors.current_password" />
-                    </div>
-
                     <div class="grid gap-2">
                         <Label for="password">New password</Label>
                         <Input

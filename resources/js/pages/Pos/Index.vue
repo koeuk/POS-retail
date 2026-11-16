@@ -75,9 +75,14 @@ function recordDebt(c: { id: number; name: string }, deposit: number) {
     void completeSale({ method: 'cash', amount: deposit, reference: null });
 }
 
-function attachCustomer(c: { id: number; name: string }) {
-    cart.customerId = c.id;
-    cart.customerName = c.name;
+function attachCustomer(c: { id: number; name: string } | null) {
+    if (c) {
+        cart.customerId = c.id;
+        cart.customerName = c.name;
+    } else {
+        cart.customerId = null;
+        cart.customerName = null;
+    }
     pickerOpen.value = false;
 }
 
@@ -244,9 +249,7 @@ async function completeSale(payment: { method: PaymentMethod; amount: number; re
 
     flash(
         'ok',
-        payment.amount === 0
-            ? 'Order saved to Order History · Pay later'
-            : `Sale saved · ${formatMoney(Number(order.total), currency.value)}`,
+        payment.amount === 0 ? 'Order saved to Order History · Pay later' : `Sale saved · ${formatMoney(Number(order.total), currency.value)}`,
     );
 
     void sync.flush().then(() => {
@@ -269,7 +272,6 @@ onMounted(loadFeed);
 </script>
 
 <template>
-
     <Head title="Point of Sale" />
 
     <AppLayout :breadcrumbs="[{ title: 'Point of Sale', href: '/pos' }]">
@@ -280,17 +282,26 @@ onMounted(loadFeed);
         -->
         <template #actions>
             <div v-if="feed && feed.registers.length > 1" class="flex gap-1">
-                <button v-for="r in feed.registers" :key="r.id" type="button"
+                <button
+                    v-for="r in feed.registers"
+                    :key="r.id"
+                    type="button"
                     class="press h-8 rounded-md border px-2.5 text-xs font-medium"
                     :class="registerId === r.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'"
-                    @click="chooseRegister(r.id)">
+                    @click="chooseRegister(r.id)"
+                >
                     {{ r.name }}
                 </button>
             </div>
 
-            <SyncStatusBadge :online="sync.online.value" :syncing="sync.syncing.value" :pending="sync.pending.value"
-                :rejected="sync.rejected.value" :auth-expired="sync.authExpired.value"
-                @retry="sync.rejected.value > 0 ? sync.retryRejected() : sync.flush()" />
+            <SyncStatusBadge
+                :online="sync.online.value"
+                :syncing="sync.syncing.value"
+                :pending="sync.pending.value"
+                :rejected="sync.rejected.value"
+                :auth-expired="sync.authExpired.value"
+                @retry="sync.rejected.value > 0 ? sync.retryRejected() : sync.flush()"
+            />
         </template>
 
         <!-- Fills the viewport under the layout chrome. The grid and cart each
@@ -303,9 +314,12 @@ onMounted(loadFeed);
             scroll internally instead.
         -->
         <div
-            class="flex h-[calc(100dvh-var(--safe-top)-var(--appbar-h)-var(--tabbar-h)-var(--safe-bottom))] min-h-[24rem] flex-col md:h-[calc(100dvh-4rem)]">
-            <div v-if="sync.authExpired.value"
-                class="shrink-0 border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-center text-xs text-destructive">
+            class="flex h-[calc(100dvh-var(--safe-top)-var(--appbar-h)-var(--tabbar-h)-var(--safe-bottom))] min-h-[24rem] flex-col md:h-[calc(100dvh-4rem)]"
+        >
+            <div
+                v-if="sync.authExpired.value"
+                class="shrink-0 border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-center text-xs text-destructive"
+            >
                 Your session expired. Sales are still saved on this device —
                 <a href="/login" class="underline">sign in again</a> to sync them.
             </div>
@@ -317,17 +331,14 @@ onMounted(loadFeed);
             <div v-else-if="loadError" class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
                 <CircleAlert class="size-8 text-destructive" />
                 <p class="max-w-sm text-sm text-muted-foreground">{{ loadError }}</p>
-                <button type="button"
-                    class="press h-10 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground"
-                    @click="loadFeed">
+                <button type="button" class="press h-10 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground" @click="loadFeed">
                     Try again
                 </button>
             </div>
 
             <main v-else class="flex min-h-0 flex-1 flex-col lg:flex-row">
                 <section class="min-h-0 flex-1 lg:border-r lg:border-border">
-                    <ProductGrid :products="products" :categories="feed!.categories" :currency="currency"
-                        @add="cart.add($event)" />
+                    <ProductGrid :products="products" :categories="feed!.categories" :currency="currency" @add="cart.add($event)" />
                 </section>
 
                 <!-- Desktop keeps the cart permanently alongside the grid. -->
@@ -348,14 +359,19 @@ onMounted(loadFeed);
                 carries the running total — the number a customer asks for
                 before the cart is ever opened.
             -->
-            <button v-if="!loading && !loadError" type="button"
+            <button
+                v-if="!loading && !loadError"
+                type="button"
                 class="press flex shrink-0 items-center gap-3 border-t border-border bg-card px-4 py-3 text-left lg:hidden"
-                :disabled="cart.isEmpty" @click="cartOpen = true">
-                <span
-                    class="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                :disabled="cart.isEmpty"
+                @click="cartOpen = true"
+            >
+                <span class="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <ShoppingCart class="size-5" />
-                    <span v-if="cart.count"
-                        class="tabular absolute -right-1 -top-1 flex min-w-5 items-center justify-center rounded-full bg-foreground px-1 font-mono text-[0.65rem] font-bold text-background">
+                    <span
+                        v-if="cart.count"
+                        class="tabular absolute -right-1 -top-1 flex min-w-5 items-center justify-center rounded-full bg-foreground px-1 font-mono text-[0.65rem] font-bold text-background"
+                    >
                         {{ cart.count }}
                     </span>
                 </span>
@@ -365,14 +381,11 @@ onMounted(loadFeed);
                         {{ cart.isEmpty ? 'Cart is empty' : 'View cart' }}
                     </span>
                     <span class="block truncate text-xs text-muted-foreground">
-                        {{ cart.isEmpty ? 'Tap a product to start' : `${cart.count} item${cart.count === 1 ? '' : 's'}`
-                        }}
+                        {{ cart.isEmpty ? 'Tap a product to start' : `${cart.count} item${cart.count === 1 ? '' : 's'}` }}
                     </span>
                 </span>
 
-                <span class="tabular shrink-0 font-mono text-xl font-bold text-primary"> {{
-                    formatMoney(cart.totals.total,
-                    currency) }} </span>
+                <span class="tabular shrink-0 font-mono text-xl font-bold text-primary"> {{ formatMoney(cart.totals.total, currency) }} </span>
             </button>
         </div>
 
@@ -393,22 +406,43 @@ onMounted(loadFeed);
             </SheetContent>
         </Sheet>
 
-        <CustomerPicker :open="pickerOpen" :with-deposit="pickerAsksDeposit" :total="cart.totals.total"
+        <CustomerPicker
+            :open="pickerOpen"
+            :with-deposit="pickerAsksDeposit"
+            :total="cart.totals.total"
             :currency="currency"
+            :mode="cart.saleType === 'debt' ? 'debt' : 'customer'"
             :preselected="cart.customerId ? { id: cart.customerId, name: cart.customerName ?? '', phone: null } : null"
-            @close="pickerOpen = false" @pick="attachCustomer" @confirm="recordDebt" />
+            @close="pickerOpen = false"
+            @pick="attachCustomer"
+            @confirm="recordDebt"
+        />
 
-        <PaymentModal :open="paymentOpen" :total="cart.totals.total" :currency="currency" :busy="paying"
-            :qr="feed?.settings.qr" :online="sync.online.value" :store-id="boot.store_id" :register-id="registerId"
-            @close="paymentOpen = false" @confirm="completeSale" />
+        <PaymentModal
+            :open="paymentOpen"
+            :total="cart.totals.total"
+            :currency="currency"
+            :busy="paying"
+            :qr="feed?.settings.qr"
+            :online="sync.online.value"
+            :store-id="boot.store_id"
+            :register-id="registerId"
+            @close="paymentOpen = false"
+            @confirm="completeSale"
+        />
 
-        <Transition enter-from-class="opacity-0 translate-y-2"
-            enter-active-class="transition duration-200 ease-out-quint" leave-to-class="opacity-0"
-            leave-active-class="transition duration-150">
-            <div v-if="toast"
+        <Transition
+            enter-from-class="opacity-0 translate-y-2"
+            enter-active-class="transition duration-200 ease-out-quint"
+            leave-to-class="opacity-0"
+            leave-active-class="transition duration-150"
+        >
+            <div
+                v-if="toast"
                 class="pointer-events-none fixed bottom-5 left-1/2 z-[60] -translate-x-1/2 rounded-full px-5 py-2.5 text-sm font-medium shadow-lg"
                 :class="toast.kind === 'ok' ? 'bg-primary text-primary-foreground' : 'bg-destructive text-destructive-foreground'"
-                role="status">
+                role="status"
+            >
                 {{ toast.text }}
             </div>
         </Transition>

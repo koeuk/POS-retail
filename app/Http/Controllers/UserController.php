@@ -16,6 +16,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -102,6 +103,11 @@ class UserController extends Controller
                 $data['vendor_id'] = $request->user()->vendor_id;
             }
 
+            if ($request->hasFile('avatar')) {
+                $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
+            }
+            unset($data['remove_avatar']);
+
             DB::transaction(fn () => User::create($data));
 
             return back()->with('success', 'Staff account created.');
@@ -139,6 +145,22 @@ class UserController extends Controller
             } elseif ($request->user()->hasRole(Role::Vendor)) {
                 $data['vendor_id'] = $request->user()->vendor_id;
             }
+
+            if ($request->hasFile('avatar')) {
+                $path = $request->file('avatar')->store('avatars', 'public');
+                if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                    Storage::disk('public')->delete($user->avatar);
+                }
+                $data['avatar'] = $path;
+            } elseif ($request->boolean('remove_avatar')) {
+                if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                    Storage::disk('public')->delete($user->avatar);
+                }
+                $data['avatar'] = null;
+            } else {
+                unset($data['avatar']);
+            }
+            unset($data['remove_avatar']);
 
             DB::transaction(fn () => $user->update($data));
 
@@ -210,6 +232,9 @@ class UserController extends Controller
             }
 
             $name = $user->name;
+            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                Storage::disk('public')->delete($user->avatar);
+            }
             DB::transaction(fn () => $user->delete());
 
             return back()->with('success', "{$name} was deleted.");

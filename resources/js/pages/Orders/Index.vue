@@ -6,14 +6,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,20 +16,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
 import type { Paginated } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
-import {
-    Banknote,
-    Check,
-    Clock,
-    CloudOff,
-    CreditCard,
-    Eye,
-    HandCoins,
-    Printer,
-    QrCode,
-    ReceiptText,
-    Search,
-    Utensils,
-} from 'lucide-vue-next';
+import { Banknote, Check, Clock, CloudOff, CreditCard, Eye, HandCoins, Printer, QrCode, ReceiptText, Search, Utensils } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 interface OrderRow {
@@ -132,7 +112,7 @@ function submitPayment() {
     isSubmitting.value = true;
 
     router.post(
-        route('orders.pay', payingOrder.value.uuid),
+        route('orders.pay', { order: payingOrder.value.uuid }),
         {
             amount: payAmount.value,
             method: payMethod.value,
@@ -194,11 +174,7 @@ function submitPayment() {
                      way to fit 390px — it only pretends to, behind a sideways
                      scroll nobody discovers. -->
                 <ul v-if="orders.data.length" class="space-y-2 p-2.5 md:hidden">
-                    <li
-                        v-for="order in orders.data"
-                        :key="order.id"
-                        class="relative overflow-hidden rounded-xl border border-border bg-card"
-                    >
+                    <li v-for="order in orders.data" :key="order.id" class="relative overflow-hidden rounded-xl border border-border bg-card">
                         <Link :href="route('orders.show', { order: order.uuid })" class="row-press block px-3.5 py-3">
                             <div class="flex items-baseline justify-between gap-3">
                                 <span class="tabular truncate font-mono text-xs font-semibold">{{ order.order_no }}</span>
@@ -223,7 +199,7 @@ function submitPayment() {
                                 <Badge
                                     v-else-if="owed(order) > 0"
                                     variant="outline"
-                                    class="border-amber-500/60 bg-amber-500/10 text-amber-700 dark:text-amber-400 gap-1 font-semibold"
+                                    class="gap-1 border-amber-500/60 bg-amber-500/10 font-semibold text-amber-700 dark:text-amber-400"
                                 >
                                     <Clock class="size-3" />
                                     Pay later <span class="tabular font-mono">({{ money(owed(order)) }})</span>
@@ -245,7 +221,7 @@ function submitPayment() {
                             <Button
                                 v-if="owed(order) > 0"
                                 size="sm"
-                                class="press h-8 px-2.5 gap-1 bg-primary text-primary-foreground text-xs font-semibold"
+                                class="press h-8 gap-1 bg-primary px-2.5 text-xs font-semibold text-primary-foreground"
                                 @click.stop.prevent="openPayModal(order)"
                             >
                                 <CreditCard class="size-3.5" />
@@ -317,7 +293,7 @@ function submitPayment() {
                                         <Badge
                                             v-else-if="owed(order) > 0"
                                             variant="outline"
-                                            class="border-amber-500/60 bg-amber-500/10 text-amber-700 dark:text-amber-400 gap-1 font-semibold"
+                                            class="gap-1 border-amber-500/60 bg-amber-500/10 font-semibold text-amber-700 dark:text-amber-400"
                                         >
                                             <Clock class="size-3" />
                                             Pay later · Unpaid
@@ -334,7 +310,7 @@ function submitPayment() {
                                         <Button
                                             v-if="owed(order) > 0"
                                             size="sm"
-                                            class="press h-8 px-2.5 gap-1 bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90"
+                                            class="press h-8 gap-1 bg-primary px-2.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
                                             title="Collect payment for this order"
                                             @click.stop="openPayModal(order)"
                                         >
@@ -382,16 +358,14 @@ function submitPayment() {
         </div>
 
         <!-- Pay modal for Pay Later / Unpaid orders -->
-        <Dialog :open="payModalOpen" @update:open="(val) => (!val && (payModalOpen = false))">
+        <Dialog :open="payModalOpen" @update:open="(val) => !val && (payModalOpen = false)">
             <DialogContent class="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
                         <CreditCard class="size-5 text-primary" />
                         Pay order {{ payingOrder?.order_no }}
                     </DialogTitle>
-                    <DialogDescription>
-                        Collect and record payment for this order to complete it.
-                    </DialogDescription>
+                    <DialogDescription> Collect and record payment for this order to complete it. </DialogDescription>
                 </DialogHeader>
 
                 <div v-if="payingOrder" class="space-y-4 py-2">
@@ -414,7 +388,11 @@ function submitPayment() {
                             <button
                                 type="button"
                                 class="press flex flex-col items-center gap-1.5 rounded-lg border p-2.5 text-xs font-medium transition-colors"
-                                :class="payMethod === 'cash' ? 'border-primary bg-primary/10 text-primary font-semibold' : 'border-border text-muted-foreground'"
+                                :class="
+                                    payMethod === 'cash'
+                                        ? 'border-primary bg-primary/10 font-semibold text-primary'
+                                        : 'border-border text-muted-foreground'
+                                "
                                 @click="payMethod = 'cash'"
                             >
                                 <Banknote class="size-4" />
@@ -423,7 +401,11 @@ function submitPayment() {
                             <button
                                 type="button"
                                 class="press flex flex-col items-center gap-1.5 rounded-lg border p-2.5 text-xs font-medium transition-colors"
-                                :class="payMethod === 'card' ? 'border-primary bg-primary/10 text-primary font-semibold' : 'border-border text-muted-foreground'"
+                                :class="
+                                    payMethod === 'card'
+                                        ? 'border-primary bg-primary/10 font-semibold text-primary'
+                                        : 'border-border text-muted-foreground'
+                                "
                                 @click="payMethod = 'card'"
                             >
                                 <CreditCard class="size-4" />
@@ -432,7 +414,11 @@ function submitPayment() {
                             <button
                                 type="button"
                                 class="press flex flex-col items-center gap-1.5 rounded-lg border p-2.5 text-xs font-medium transition-colors"
-                                :class="payMethod === 'qr' ? 'border-primary bg-primary/10 text-primary font-semibold' : 'border-border text-muted-foreground'"
+                                :class="
+                                    payMethod === 'qr'
+                                        ? 'border-primary bg-primary/10 font-semibold text-primary'
+                                        : 'border-border text-muted-foreground'
+                                "
                                 @click="payMethod = 'qr'"
                             >
                                 <QrCode class="size-4" />
@@ -456,24 +442,13 @@ function submitPayment() {
 
                     <div class="space-y-1.5">
                         <Label for="pay-reference">Reference / Note (optional)</Label>
-                        <Input
-                            id="pay-reference"
-                            v-model="payRef"
-                            placeholder="Terminal or transaction no."
-                        />
+                        <Input id="pay-reference" v-model="payRef" placeholder="Terminal or transaction no." />
                     </div>
                 </div>
 
                 <DialogFooter class="gap-2 sm:gap-0">
-                    <Button variant="outline" type="button" @click="payModalOpen = false">
-                        Cancel
-                    </Button>
-                    <Button
-                        type="button"
-                        class="gap-1.5"
-                        :disabled="isSubmitting || payAmount <= 0"
-                        @click="submitPayment"
-                    >
+                    <Button variant="outline" type="button" @click="payModalOpen = false"> Cancel </Button>
+                    <Button type="button" class="gap-1.5" :disabled="isSubmitting || payAmount <= 0" @click="submitPayment">
                         <Check class="size-4" />
                         {{ isSubmitting ? 'Saving…' : 'Confirm payment' }}
                     </Button>

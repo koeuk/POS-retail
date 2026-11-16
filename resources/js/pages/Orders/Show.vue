@@ -3,14 +3,17 @@ import Money from '@/components/Money.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrency, type CurrencyDef } from '@/composables/useCurrency';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { printReceipt } from '@/Pos/composables/usePrint';
-import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, CloudOff, HandCoins, Printer, Utensils } from 'lucide-vue-next';
-import { computed, onMounted } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ArrowLeft, Banknote, Check, Clock, CloudOff, CreditCard, HandCoins, Printer, QrCode, Utensils } from 'lucide-vue-next';
+import { computed, onMounted, ref } from 'vue';
 
 interface Item {
     id: number;
@@ -24,6 +27,7 @@ interface Item {
 const props = defineProps<{
     order: {
         id: number;
+        uuid: string;
         order_no: string;
         status: string;
         sale_type: 'customer' | 'debt' | 'myself';
@@ -64,6 +68,43 @@ const statusTone = (s: string) => (s === 'completed' ? 'secondary' : s === 'refu
    owed and vanishes the moment the debt is settled. */
 const owed = computed(() => Number(props.outstanding));
 const stillInDebt = computed(() => props.order.sale_type === 'debt' && owed.value > 0);
+const isPayLater = computed(() => props.order.sale_type === 'customer' && owed.value > 0);
+
+const payModalOpen = ref(false);
+const payAmount = ref<number>(owed.value);
+const payMethod = ref<'cash' | 'card' | 'qr'>('cash');
+const payRef = ref('');
+const isSubmitting = ref(false);
+
+function openPayModal() {
+    payAmount.value = owed.value;
+    payMethod.value = 'cash';
+    payRef.value = '';
+    payModalOpen.value = true;
+}
+
+function submitPayment() {
+    if (payAmount.value <= 0) return;
+    isSubmitting.value = true;
+
+    router.post(
+        route('orders.pay', { order: props.order.uuid }),
+        {
+            amount: payAmount.value,
+            method: payMethod.value,
+            reference_no: payRef.value || null,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                payModalOpen.value = false;
+            },
+            onFinish: () => {
+                isSubmitting.value = false;
+            },
+        },
+    );
+}
 
 /*
  * Arriving with ?print=1 means the printer icon in the order list was clicked,
@@ -126,8 +167,34 @@ onMounted(() => {
                         of {{ money(order.total) }} on this sale.
                     </p>
                 </div>
-                <Button v-if="may('debts', 'update')" as-child size="sm" class="press">
-                    <Link :href="route('debts.index', { search: order.order_no })">Record payment</Link>
+                <div class="flex items-center gap-2">
+                    <Button size="sm" class="press gap-1.5" @click="openPayModal()">
+                        <CreditCard class="size-4" />
+                        Pay now
+                    </Button>
+                    <Button v-if="may('debts', 'update')" as-child variant="outline" size="sm" class="press">
+                        <Link :href="route('debts.index', { search: order.order_no })">Debt record</Link>
+                    </Button>
+                </div>
+            </div>
+
+            <!-- Pay later order waiting to be paid -->
+            <div
+                v-else-if="isPayLater"
+                class="animate-rise mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3"
+            >
+                <Clock class="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                <div class="min-w-0 flex-1">
+                    <p class="font-semibold text-amber-700 dark:text-amber-300">Pay later — Not yet paid</p>
+                    <p class="text-sm text-muted-foreground">
+                        This order has an unpaid balance of
+                        <strong class="tabular font-mono text-foreground">{{ money(owed) }}</strong>
+                        of {{ money(order.total) }}.
+                    </p>
+                </div>
+                <Button size="sm" class="press gap-1.5" @click="openPayModal()">
+                    <CreditCard class="size-4" />
+                    Pay now
                 </Button>
             </div>
             <div
@@ -353,5 +420,96 @@ onMounted(() => {
                 </footer>
             </article>
         </div>
+
+        <!-- Pay modal for Pay Later / Unpaid orders -->
+        <Dialog :open="payModalOpen" @update:open="(val) => !val && (payModalOpen = false)">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <CreditCard class="size-5 text-primary" />
+                        Pay order {{ order.order_no }}
+                    </DialogTitle>
+                    <DialogDescription> Collect and record payment for this order to complete it. </DialogDescription>
+                </DialogHeader>
+
+                <div class="space-y-4 py-2">
+                    <div class="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-3">
+                        <div>
+                            <p class="text-xs text-muted-foreground">Order total: {{ money(order.total) }}</p>
+                            <p class="text-xs text-muted-foreground">Already paid: {{ money(order.paid_amount) }}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="block text-xs font-semibold text-muted-foreground">Still owed</span>
+                            <span class="font-mono text-xl font-bold text-primary">
+                                {{ money(owed) }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label>Payment method</Label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button
+                                type="button"
+                                class="press flex flex-col items-center gap-1.5 rounded-lg border p-2.5 text-xs font-medium transition-colors"
+                                :class="
+                                    payMethod === 'cash'
+                                        ? 'border-primary bg-primary/10 font-semibold text-primary'
+                                        : 'border-border text-muted-foreground'
+                                "
+                                @click="payMethod = 'cash'"
+                            >
+                                <Banknote class="size-4" />
+                                Cash
+                            </button>
+                            <button
+                                type="button"
+                                class="press flex flex-col items-center gap-1.5 rounded-lg border p-2.5 text-xs font-medium transition-colors"
+                                :class="
+                                    payMethod === 'card'
+                                        ? 'border-primary bg-primary/10 font-semibold text-primary'
+                                        : 'border-border text-muted-foreground'
+                                "
+                                @click="payMethod = 'card'"
+                            >
+                                <CreditCard class="size-4" />
+                                Card
+                            </button>
+                            <button
+                                type="button"
+                                class="press flex flex-col items-center gap-1.5 rounded-lg border p-2.5 text-xs font-medium transition-colors"
+                                :class="
+                                    payMethod === 'qr'
+                                        ? 'border-primary bg-primary/10 font-semibold text-primary'
+                                        : 'border-border text-muted-foreground'
+                                "
+                                @click="payMethod = 'qr'"
+                            >
+                                <QrCode class="size-4" />
+                                QR
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <Label for="detail-pay-amount">Amount to pay</Label>
+                        <Input id="detail-pay-amount" v-model.number="payAmount" type="number" step="any" min="0.01" :max="owed" class="font-mono" />
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <Label for="detail-pay-reference">Reference / Note (optional)</Label>
+                        <Input id="detail-pay-reference" v-model="payRef" placeholder="Terminal or transaction no." />
+                    </div>
+                </div>
+
+                <DialogFooter class="gap-2 sm:gap-0">
+                    <Button variant="outline" type="button" @click="payModalOpen = false"> Cancel </Button>
+                    <Button type="button" class="gap-1.5" :disabled="isSubmitting || payAmount <= 0" @click="submitPayment">
+                        <Check class="size-4" />
+                        {{ isSubmitting ? 'Saving…' : 'Confirm payment' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

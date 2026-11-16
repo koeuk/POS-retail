@@ -42,7 +42,7 @@ const form = useForm({
     name: user.name,
     email: user.email,
     avatar: null as File | null,
-    remove_avatar: false,
+    remove_avatar: false as boolean,
 });
 
 const savedAvatar = computed(() => imageSrc(user.avatar));
@@ -110,13 +110,10 @@ const submit = () => {
                         <Label>Profile photo</Label>
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
                             <div class="relative size-20 shrink-0">
-                                <div class="flex size-20 items-center justify-center overflow-hidden rounded-full border border-border bg-muted/50 shadow-xs">
-                                    <img
-                                        v-if="avatarPreview"
-                                        :src="avatarPreview"
-                                        :alt="form.name || user.name"
-                                        class="size-full object-cover"
-                                    />
+                                <div
+                                    class="shadow-xs flex size-20 items-center justify-center overflow-hidden rounded-full border border-border bg-muted/50"
+                                >
+                                    <img v-if="avatarPreview" :src="avatarPreview" :alt="form.name || user.name" class="size-full object-cover" />
                                     <span v-else class="select-none text-xl font-medium text-muted-foreground">
                                         {{ getInitials(form.name || user.name) }}
                                     </span>
@@ -134,13 +131,7 @@ const submit = () => {
 
                             <div class="flex-1 space-y-2">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        class="cursor-pointer"
-                                        @click="avatarInput?.click()"
-                                    >
+                                    <Button type="button" variant="outline" size="sm" class="cursor-pointer" @click="avatarInput?.click()">
                                         <Camera class="mr-1.5 size-4 text-muted-foreground" />
                                         <span>{{ avatarPreview ? 'Change photo' : 'Upload photo' }}</span>
                                     </Button>

@@ -10,6 +10,8 @@ use App\Models\Stock;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -267,6 +269,59 @@ class AdminCrudTest extends TestCase
         // Role and active flag are pinned server-side for your own account.
         $this->assertTrue($this->admin->fresh()->isAdmin());
         $this->assertTrue($this->admin->fresh()->is_active);
+    }
+
+    public function test_admin_can_create_update_and_remove_staff_avatar(): void
+    {
+        Storage::fake('public');
+
+        $file = UploadedFile::fake()->image('staff.jpg', 150, 150);
+
+        $this->actingAs($this->admin)->post(route('users.store'), [
+            'name' => 'Staff With Avatar',
+            'email' => 'staff.avatar@test.local',
+            'password' => 'Str0ng-Password!',
+            'password_confirmation' => 'Str0ng-Password!',
+            'role' => Role::Cashier->value,
+            'store_id' => $this->store->id,
+            'is_active' => true,
+            'avatar' => $file,
+        ])->assertRedirect();
+
+        $staff = User::where('email', 'staff.avatar@test.local')->firstOrFail();
+        $this->assertNotNull($staff->avatar);
+        Storage::disk('public')->assertExists($staff->avatar);
+
+        // Update avatar
+        $newFile = UploadedFile::fake()->image('new-staff.jpg', 150, 150);
+        $oldPath = $staff->avatar;
+
+        $this->actingAs($this->admin)->put(route('users.update', $staff), [
+            'name' => 'Staff With Avatar',
+            'email' => 'staff.avatar@test.local',
+            'role' => Role::Cashier->value,
+            'store_id' => $this->store->id,
+            'is_active' => true,
+            'avatar' => $newFile,
+        ])->assertRedirect();
+
+        $staff->refresh();
+        $this->assertNotSame($oldPath, $staff->avatar);
+        Storage::disk('public')->assertMissing($oldPath);
+        Storage::disk('public')->assertExists($staff->avatar);
+
+        // Remove avatar
+        $this->actingAs($this->admin)->put(route('users.update', $staff), [
+            'name' => 'Staff With Avatar',
+            'email' => 'staff.avatar@test.local',
+            'role' => Role::Cashier->value,
+            'store_id' => $this->store->id,
+            'is_active' => true,
+            'remove_avatar' => true,
+        ])->assertRedirect();
+
+        $staff->refresh();
+        $this->assertNull($staff->avatar);
     }
 
     /* ------------------------------------------------------------------ */

@@ -30,9 +30,14 @@ const props = defineProps<{
     currency?: CurrencyDef;
     /** Already attached to the cart — the deposit step starts from them. */
     preselected?: Customer | null;
+    mode?: 'debt' | 'customer';
 }>();
 
-const emit = defineEmits<{ close: []; pick: [customer: Customer]; confirm: [customer: Customer, deposit: number] }>();
+const emit = defineEmits<{
+    close: [];
+    pick: [customer: Customer | null];
+    confirm: [customer: Customer, deposit: number];
+}>();
 
 const query = ref('');
 const results = ref<Customer[]>([]);
@@ -77,12 +82,12 @@ watch(query, () => {
     debounce = setTimeout(search, 250);
 });
 
-function choose(c: Customer) {
+function choose(c: Customer | null) {
     if (!props.withDeposit) {
         emit('pick', c);
         return;
     }
-    chosen.value = c;
+    if (c) chosen.value = c;
 }
 
 /** Back from the money step to the list — wrong name happens. */
@@ -130,13 +135,14 @@ const money = (v: number) => (props.currency ? formatMoney(v, props.currency) : 
     <Dialog :open="open" @update:open="(v) => !v && emit('close')">
         <DialogContent class="sm:max-w-sm">
             <DialogHeader>
-                <DialogTitle>Who owes this?</DialogTitle>
+                <DialogTitle>{{ mode === 'customer' || !withDeposit ? 'Select customer (optional)' : 'Who owes this?' }}</DialogTitle>
                 <DialogDescription>
                     <template v-if="withDeposit && chosen">
                         <strong class="text-foreground">{{ chosen.name }}</strong> owes
                         <strong class="tabular font-mono text-foreground">{{ money(total ?? 0) }}</strong> — take part of it now, or put the whole
                         bill in debt.
                     </template>
+                    <template v-else-if="mode === 'customer' || !withDeposit"> Search or add a customer for this order, or choose walk-in. </template>
                     <template v-else>A debt has to have a name on it, or there is nobody to collect from.</template>
                 </DialogDescription>
             </DialogHeader>
@@ -223,15 +229,22 @@ const money = (v: number) => (props.currency ? formatMoney(v, props.currency) : 
                 </div>
             </div>
 
-            <DialogFooter class="gap-2">
-                <Button type="button" variant="ghost" class="press" @click="emit('close')">Cancel</Button>
-                <template v-if="withDeposit && chosen">
-                    <Button type="button" variant="outline" class="press" @click="emit('confirm', chosen, 0)">All in debt</Button>
-                    <Button type="button" class="press" :disabled="!validDeposit" @click="emit('confirm', chosen, deposit)">
-                        <HandCoins class="size-4" />
-                        Take {{ money(deposit) }}
-                    </Button>
-                </template>
+            <DialogFooter class="flex-row items-center justify-between gap-2 sm:justify-between">
+                <Button v-if="!withDeposit" type="button" variant="outline" size="sm" class="press text-xs" @click="choose(null)">
+                    Walk-in (No customer)
+                </Button>
+                <div class="ml-auto flex items-center gap-2">
+                    <Button type="button" variant="ghost" size="sm" class="press text-xs" @click="emit('close')">Cancel</Button>
+                    <template v-if="withDeposit && chosen">
+                        <Button type="button" variant="outline" size="sm" class="press text-xs" @click="emit('confirm', chosen, 0)"
+                            >All in debt</Button
+                        >
+                        <Button type="button" size="sm" class="press text-xs" :disabled="!validDeposit" @click="emit('confirm', chosen, deposit)">
+                            <HandCoins class="size-4" />
+                            Take {{ money(deposit) }}
+                        </Button>
+                    </template>
+                </div>
             </DialogFooter>
         </DialogContent>
     </Dialog>
