@@ -541,4 +541,213 @@ class SalesReporter
             $this->between($this->lines(), $from, $to),
         );
     }
+
+    /**
+     * Sales and order distribution across all 24 hours of the day (0..23)
+     * in the shop's business timezone.
+     *
+     * @return Collection<int, array{hour: int, label: string, orders: int, sales: string}>
+     */
+    public function hourlySales(Carbon $from, Carbon $to): Collection
+    {
+        $hourExpr = 'HOUR('.self::businessMoment().')';
+
+        $rows = $this->between($this->orders(), $from, $to)
+            ->select([
+                DB::raw("{$hourExpr} as hour"),
+                DB::raw('COUNT(*) as orders'),
+                DB::raw('SUM(orders.total) as sales'),
+            ])
+            ->groupBy(DB::raw($hourExpr))
+            ->get()
+            ->keyBy('hour');
+
+        $out = collect();
+        for ($h = 0; $h < 24; $h++) {
+            $row = $rows->get($h);
+            $out->push([
+                'hour' => $h,
+                'label' => sprintf('%02d:00', $h),
+                'orders' => (int) ($row->orders ?? 0),
+                'sales' => self::money($row->sales ?? 0),
+            ]);
+        }
+
+        return $out;
+    }
+
+    /**
+     * Sales and orders aggregated by day of week (Monday through Sunday)
+     * in the shop's business timezone.
+     *
+     * @return Collection<int, array{day_index: int, name: string, short_name: string, orders: int, sales: string}>
+     */
+    public function dayOfWeekSales(Carbon $from, Carbon $to): Collection
+    {
+        $dowExpr = 'WEEKDAY('.self::businessMoment().')';
+
+        $rows = $this->between($this->orders(), $from, $to)
+            ->select([
+                DB::raw("{$dowExpr} as dow"),
+                DB::raw('COUNT(*) as orders'),
+                DB::raw('SUM(orders.total) as sales'),
+            ])
+            ->groupBy(DB::raw($dowExpr))
+            ->get()
+            ->keyBy('dow');
+
+        $days = [
+            0 => ['Monday', 'Mon'],
+            1 => ['Tuesday', 'Tue'],
+            2 => ['Wednesday', 'Wed'],
+            3 => ['Thursday', 'Thu'],
+            4 => ['Friday', 'Fri'],
+            5 => ['Saturday', 'Sat'],
+            6 => ['Sunday', 'Sun'],
+        ];
+
+        $out = collect();
+        foreach ($days as $dow => [$fullName, $shortName]) {
+            $row = $rows->get($dow);
+            $out->push([
+                'day_index' => $dow,
+                'name' => $fullName,
+                'short_name' => $shortName,
+                'orders' => (int) ($row->orders ?? 0),
+                'sales' => self::money($row->sales ?? 0),
+            ]);
+        }
+
+        return $out;
+    }
+
+    /**
+     * Sales and order volume broken down by product category.
+     *
+     * @return Collection<int, array{name: string, orders: int, qty: int, revenue: string}>
+     */
+    public function categorySales(Carbon $from, Carbon $to): Collection
+    {
+        return $this->between($this->lines(), $from, $to)
+            ->join('products', 'products.id', '=', 'order_items.product_id')
+            ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
+            ->select([
+                DB::raw("COALESCE(categories.name, 'Uncategorized') as category_name"),
+                DB::raw('COUNT(DISTINCT orders.id) as orders_count'),
+                DB::raw('SUM(order_items.qty) as qty'),
+                DB::raw('SUM(order_items.subtotal) as revenue'),
+            ])
+            ->groupBy(DB::raw("COALESCE(categories.name, 'Uncategorized')"))
+            ->orderByDesc('revenue')
+            ->get()
+            ->map(fn (object $row) => [
+                'name' => $row->category_name,
+                'orders' => (int) $row->orders_count,
+                'qty' => (int) $row->qty,
+                'revenue' => self::money($row->revenue),
+            ]);
+    }
+
+    /**
+     * Total revenue, estimated product cost, gross profit, and margin.
+     *
+     * @return array{orders: int, items: int, revenue: string, cost: string, profit: string, margin_percent: float, avg_basket: string}
+     */
+    public function profitabilityOverview(Carbon $from, Carbon $to): array
+    {
+        $ordersQuery = $this->between($this->orders(), $from, $to);
+        $orderCount = (clone $ordersQuery)->count();
+        $revenue = (float) (clone $ordersQuery)->sum('orders.total');
+
+        $linesQuery = $this->between($this->lines(), $from, $to)
+            ->leftJoin('products', 'products.id', '=', 'order_items.product_id');
+
+        $totalItems = (int) (clone $linesQuery)->sum('order_items.qty');
+
+        $cost = (float) (clone $linesQuery)->sum(
+            DB::raw('order_items.qty * COALESCE(products.cost_price, 0)')
+        );
+
+        $grossProfit = max(0, $revenue - $cost);
+        $marginPercent = $revenue > 0 ? round(($grossProfit / $revenue) * 100, 1) : 0;
+        $avgBasket = $orderCount > 0 ? $revenue / $orderCount : 0;
+
+        return [
+            'orders' => $orderCount,
+            'items' => $totalItems,
+            'revenue' => self::money($revenue),
+            'cost' => self::money($cost),
+            'profit' => self::money($grossProfit),
+            'margin_percent' => $marginPercent,
+            'avg_basket' => self::money($avgBasket),
+        ];
+    }
+
+    /**
+     * Customer breakdown: named/registered customers vs walk-in sales.
+     *
+     * @return array{total_orders: int, named_orders: int, walkin_orders: int, unique_customers: int, named_revenue: string, walkin_revenue: string, named_pct: float}
+     */
+    public function customerInsights(Carbon $from, Carbon $to): array
+    {
+        $ordersQuery = $this->between($this->orders(), $from, $to);
+
+        $totalOrders = (clone $ordersQuery)->count();
+        $namedOrders = (clone $ordersQuery)->whereNotNull('orders.customer_id')->count();
+        $walkinOrders = $totalOrders - $namedOrders;
+
+        $uniqueCustomers = (clone $ordersQuery)
+            ->whereNotNull('orders.customer_id')
+            ->distinct('orders.customer_id')
+            ->count('orders.customer_id');
+
+        $namedRevenue = (float) (clone $ordersQuery)->whereNotNull('orders.customer_id')->sum('orders.total');
+        $walkinRevenue = (float) (clone $ordersQuery)->whereNull('orders.customer_id')->sum('orders.total');
+
+        return [
+            'total_orders' => $totalOrders,
+            'named_orders' => $namedOrders,
+            'walkin_orders' => $walkinOrders,
+            'unique_customers' => $uniqueCustomers,
+            'named_revenue' => self::money($namedRevenue),
+            'walkin_revenue' => self::money($walkinRevenue),
+            'named_pct' => $totalOrders > 0 ? round(($namedOrders / $totalOrders) * 100, 1) : 0,
+        ];
+    }
+
+    /**
+     * Top selling products by revenue with margin analysis.
+     *
+     * @return Collection<int, array{product_name: string, qty: int, revenue: string, cost: string, profit: string, margin_percent: float}>
+     */
+    public function productProfitability(Carbon $from, Carbon $to, int $limit = 10): Collection
+    {
+        return $this->between($this->lines(), $from, $to)
+            ->leftJoin('products', 'products.id', '=', 'order_items.product_id')
+            ->select([
+                'order_items.product_name',
+                DB::raw('SUM(order_items.qty) as qty'),
+                DB::raw('SUM(order_items.subtotal) as revenue'),
+                DB::raw('SUM(order_items.qty * COALESCE(products.cost_price, 0)) as cost'),
+            ])
+            ->groupBy('order_items.product_name')
+            ->orderByDesc('revenue')
+            ->limit($limit)
+            ->get()
+            ->map(function (object $row) {
+                $rev = (float) $row->revenue;
+                $cost = (float) $row->cost;
+                $profit = max(0, $rev - $cost);
+                $margin = $rev > 0 ? round(($profit / $rev) * 100, 1) : 0;
+
+                return [
+                    'product_name' => $row->product_name,
+                    'qty' => (int) $row->qty,
+                    'revenue' => self::money($rev),
+                    'cost' => self::money($cost),
+                    'profit' => self::money($profit),
+                    'margin_percent' => $margin,
+                ];
+            });
+    }
 }

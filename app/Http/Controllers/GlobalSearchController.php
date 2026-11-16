@@ -89,6 +89,13 @@ class GlobalSearchController extends Controller
                 'permission' => Permission::Reports,
             ],
             [
+                'title' => 'Analyze',
+                'description' => 'Business performance, peak trading hours, margins and sales analytics',
+                'url' => route('analyze.index'),
+                'icon' => 'TrendingUp',
+                'permission' => Permission::Reports,
+            ],
+            [
                 'title' => 'Staff',
                 'description' => 'Team accounts and access permissions',
                 'url' => route('users.index'),

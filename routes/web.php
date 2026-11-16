@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\AnalyzeController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ConsumptionController;
 use App\Http\Controllers\CustomerController;
@@ -101,6 +102,8 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
     Route::middleware('permission:reports')->group(function () {
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
+        Route::get('analyze', [AnalyzeController::class, 'index'])->name('analyze.index');
+        Route::get('analytics', fn () => redirect()->route('analyze.index'))->name('analytics');
     });
 
     Route::get('admin/ping', function () {

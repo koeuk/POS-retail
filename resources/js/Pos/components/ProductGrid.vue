@@ -126,16 +126,27 @@ defineExpose({ focusSearch: () => document.getElementById('pos-search')?.focus()
 const chipRail = ref<HTMLElement | null>(null);
 const canScrollLeft = ref(false);
 const canScrollRight = ref(false);
+const hasOverflow = ref(true);
+const isDraggingRail = ref(false);
 
 let scrollTarget: number | null = null;
 let scrollResetTimeout: ReturnType<typeof setTimeout> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 
+let startX = 0;
+let startScrollLeft = 0;
+let hasDragged = false;
+let momentumVelocity = 0;
+let lastMoveTime = 0;
+let lastMoveX = 0;
+
 function updateChipArrows() {
     const el = chipRail.value;
     if (!el) return;
-    canScrollLeft.value = el.scrollLeft > 4;
-    canScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+    const overflow = el.scrollWidth > el.clientWidth + 2;
+    hasOverflow.value = overflow;
+    canScrollLeft.value = overflow && el.scrollLeft > 4;
+    canScrollRight.value = overflow && el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
 }
 
 function onScroll() {
@@ -146,23 +157,146 @@ function scrollChips(direction: 1 | -1) {
     const el = chipRail.value;
     if (!el) return;
 
-    const step = Math.max(160, Math.round(el.clientWidth * 0.7));
+    const step = Math.max(180, Math.round(el.clientWidth * 0.6));
     const maxScroll = el.scrollWidth - el.clientWidth;
 
     const current = scrollTarget !== null ? scrollTarget : el.scrollLeft;
-    const target = Math.max(0, Math.min(maxScroll, current + direction * step));
-    scrollTarget = target;
+    let target = current + direction * step;
 
+    if (target <= 40) {
+        target = 0;
+    } else if (target >= maxScroll - 40) {
+        target = maxScroll;
+    } else {
+        target = Math.max(0, Math.min(maxScroll, target));
+    }
+
+    scrollTarget = target;
     el.scrollTo({ left: target, behavior: 'smooth' });
 
     if (scrollResetTimeout) clearTimeout(scrollResetTimeout);
     scrollResetTimeout = setTimeout(() => {
         scrollTarget = null;
         updateChipArrows();
-    }, 450);
+    }, 400);
 
-    canScrollLeft.value = target > 4;
-    canScrollRight.value = target < maxScroll - 4;
+    canScrollLeft.value = target > 2;
+    canScrollRight.value = target < maxScroll - 2;
+}
+
+function scrollChipIntoView(chipEl: HTMLElement) {
+    const rail = chipRail.value;
+    if (!rail) return;
+
+    const railRect = rail.getBoundingClientRect();
+    const chipRect = chipEl.getBoundingClientRect();
+
+    const chipCenterOffset = chipRect.left - railRect.left + chipRect.width / 2;
+    const targetScroll = rail.scrollLeft + chipCenterOffset - rail.clientWidth / 2;
+    const maxScroll = rail.scrollWidth - rail.clientWidth;
+
+    let target = Math.max(0, Math.min(maxScroll, Math.round(targetScroll)));
+    if (target <= 40) target = 0;
+    else if (target >= maxScroll - 40) target = maxScroll;
+
+    scrollTarget = null;
+    rail.scrollTo({ left: target, behavior: 'smooth' });
+}
+
+function handleCategoryClick(categoryId: number | null, e: MouseEvent) {
+    if (hasDragged) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+    }
+    activeCategory.value = categoryId;
+    if (e.currentTarget instanceof HTMLElement && chipRail.value) {
+        scrollChipIntoView(e.currentTarget);
+    }
+}
+
+function onWheel(e: WheelEvent) {
+    const el = chipRail.value;
+    if (!el) return;
+
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (Math.abs(delta) < 1) return;
+
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (maxScroll <= 0) return;
+
+    const canScroll = (delta > 0 && el.scrollLeft < maxScroll) || (delta < 0 && el.scrollLeft > 0);
+    if (canScroll) {
+        e.preventDefault();
+        scrollTarget = null;
+        el.scrollBy({ left: delta * 1.2, behavior: 'smooth' });
+        updateChipArrows();
+    }
+}
+
+function onRailMouseDown(e: MouseEvent) {
+    if (e.button !== 0) return;
+    const el = chipRail.value;
+    if (!el) return;
+
+    isDraggingRail.value = true;
+    hasDragged = false;
+    startX = e.pageX;
+    startScrollLeft = el.scrollLeft;
+    scrollTarget = null;
+    lastMoveX = e.pageX;
+    lastMoveTime = performance.now();
+    momentumVelocity = 0;
+
+    window.addEventListener('mousemove', onRailMouseMove);
+    window.addEventListener('mouseup', onRailMouseUp);
+}
+
+function onRailMouseMove(e: MouseEvent) {
+    if (!isDraggingRail.value) return;
+    const el = chipRail.value;
+    if (!el) return;
+
+    const dx = e.pageX - startX;
+    if (Math.abs(dx) > 4) {
+        hasDragged = true;
+    }
+
+    const now = performance.now();
+    const dt = now - lastMoveTime;
+    if (dt > 10) {
+        momentumVelocity = (e.pageX - lastMoveX) / dt;
+        lastMoveX = e.pageX;
+        lastMoveTime = now;
+    }
+
+    el.scrollLeft = startScrollLeft - dx;
+    updateChipArrows();
+}
+
+function onRailMouseUp() {
+    if (!isDraggingRail.value) return;
+    isDraggingRail.value = false;
+    window.removeEventListener('mousemove', onRailMouseMove);
+    window.removeEventListener('mouseup', onRailMouseUp);
+
+    const el = chipRail.value;
+    if (!el) return;
+
+    if (hasDragged && Math.abs(momentumVelocity) > 0.2) {
+        const momentumDistance = momentumVelocity * 220;
+        const maxScroll = el.scrollWidth - el.clientWidth;
+        let target = el.scrollLeft - momentumDistance;
+        if (target <= 40) target = 0;
+        else if (target >= maxScroll - 40) target = maxScroll;
+        else target = Math.max(0, Math.min(maxScroll, target));
+
+        el.scrollTo({ left: target, behavior: 'smooth' });
+    }
+
+    setTimeout(() => {
+        hasDragged = false;
+    }, 50);
 }
 
 watch(
@@ -186,6 +320,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
     window.removeEventListener('resize', updateChipArrows);
+    window.removeEventListener('mousemove', onRailMouseMove);
+    window.removeEventListener('mouseup', onRailMouseUp);
     resizeObserver?.disconnect();
     if (scrollResetTimeout) clearTimeout(scrollResetTimeout);
 });
@@ -207,45 +343,33 @@ onBeforeUnmount(() => {
                 />
             </div>
 
-            <div class="relative">
-                <!-- Paging chevrons: smoothly transitions visibility, avoiding jump on click -->
+            <div class="relative flex items-center gap-1.5">
+                <!-- Paging chevron: left -->
                 <button
+                    v-if="hasOverflow"
                     type="button"
-                    class="absolute -left-1 top-1/2 -mt-4 z-10 flex size-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-all duration-200 hover:text-foreground active:scale-95"
-                    :class="canScrollLeft ? 'opacity-100 scale-100 cursor-pointer' : 'opacity-0 scale-90 pointer-events-none'"
-                    :tabindex="canScrollLeft ? 0 : -1"
+                    class="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-all duration-200 hover:bg-accent hover:text-foreground active:scale-95 disabled:pointer-events-none disabled:opacity-20"
+                    :disabled="!canScrollLeft"
                     aria-label="Scroll categories left"
                     @click="scrollChips(-1)"
                 >
                     <ChevronLeft class="size-4" />
                 </button>
-                <button
-                    type="button"
-                    class="absolute -right-1 top-1/2 -mt-4 z-10 flex size-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-all duration-200 hover:text-foreground active:scale-95"
-                    :class="canScrollRight ? 'opacity-100 scale-100 cursor-pointer' : 'opacity-0 scale-90 pointer-events-none'"
-                    :tabindex="canScrollRight ? 0 : -1"
-                    aria-label="Scroll categories right"
-                    @click="scrollChips(1)"
+
+                <!-- Scrollable category chips rail with smooth drag and wheel support -->
+                <div
+                    ref="chipRail"
+                    class="scrollbar-none flex min-w-0 flex-1 cursor-grab select-none items-center gap-1.5 overflow-x-auto py-0.5 active:cursor-grabbing"
+                    :class="{ 'scroll-smooth': !isDraggingRail }"
+                    @scroll.passive="onScroll"
+                    @wheel="onWheel"
+                    @mousedown="onRailMouseDown"
                 >
-                    <ChevronRight class="size-4" />
-                </button>
-
-                <!-- Soft edges hint that the rail continues past the fold. -->
-                <div
-                    class="pointer-events-none absolute inset-y-0 left-0 z-[5] w-10 bg-gradient-to-r from-background to-transparent transition-opacity duration-200"
-                    :class="canScrollLeft ? 'opacity-100' : 'opacity-0'"
-                />
-                <div
-                    class="pointer-events-none absolute inset-y-0 right-0 z-[5] w-10 bg-gradient-to-l from-background to-transparent transition-opacity duration-200"
-                    :class="canScrollRight ? 'opacity-100' : 'opacity-0'"
-                />
-
-                <div ref="chipRail" class="scrollbar-none flex gap-1.5 overflow-x-auto" @scroll.passive="onScroll">
                     <button
                         type="button"
-                        class="press h-9 shrink-0 rounded-full border px-4 text-sm font-medium"
-                        :class="activeCategory === null ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'"
-                        @click="activeCategory = null"
+                        class="press h-9 shrink-0 rounded-full border px-4 text-sm font-medium transition-colors"
+                        :class="activeCategory === null ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground'"
+                        @click="handleCategoryClick(null, $event)"
                     >
                         All
                     </button>
@@ -253,24 +377,40 @@ onBeforeUnmount(() => {
                         v-for="c in usableCategories"
                         :key="c.id"
                         type="button"
-                        class="press h-9 shrink-0 rounded-full border px-4 text-sm font-medium"
-                        :class="activeCategory === c.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'"
-                        @click="activeCategory = c.id"
+                        class="press h-9 shrink-0 rounded-full border px-4 text-sm font-medium transition-colors"
+                        :class="activeCategory === c.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground'"
+                        @click="handleCategoryClick(c.id, $event)"
                     >
                         {{ c.name }}
                     </button>
                 </div>
+
+                <!-- Paging chevron: right -->
+                <button
+                    v-if="hasOverflow"
+                    type="button"
+                    class="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-all duration-200 hover:bg-accent hover:text-foreground active:scale-95 disabled:pointer-events-none disabled:opacity-20"
+                    :disabled="!canScrollRight"
+                    aria-label="Scroll categories right"
+                    @click="scrollChips(1)"
+                >
+                    <ChevronRight class="size-4" />
+                </button>
             </div>
         </div>
 
         <!-- Grid. No entrance animation: this re-renders on every keystroke,
              and a cashier tapping 60 items a minute needs it to feel instant. -->
-        <div class="min-h-0 flex-1 overflow-y-auto p-3">
-            <div v-if="visible.length" class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                <div v-for="product in visible" :key="product.id" class="relative">
+        <div class="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-3">
+            <div
+                v-if="visible.length"
+                class="grid gap-2.5"
+                style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));"
+            >
+                <div v-for="product in visible" :key="product.id" class="relative min-w-0">
                     <button
                         type="button"
-                        class="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-border bg-card text-left transition-colors"
+                        class="flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card text-left transition-colors"
                         :class="outOfStock(product) ? 'cursor-not-allowed opacity-60' : 'press hover:border-primary/50 active:border-primary'"
                         :disabled="outOfStock(product)"
                         @click="tap(product)"
@@ -303,15 +443,15 @@ onBeforeUnmount(() => {
                             </span>
                         </div>
 
-                        <div class="flex flex-1 flex-col gap-0.5 p-2.5">
-                            <p class="line-clamp-2 text-sm font-medium leading-snug">{{ product.name }}</p>
-                            <p class="tabular mt-auto font-mono text-base font-semibold text-primary">
+                        <div class="flex min-w-0 flex-1 flex-col gap-0.5 p-2.5">
+                            <p class="line-clamp-2 break-words text-sm font-medium leading-snug">{{ product.name }}</p>
+                            <p class="tabular mt-auto truncate font-mono text-base font-semibold text-primary">
                                 {{ formatMoney(Number(product.sell_price), currency) }}
-                                <span v-if="dearest(product)" class="text-xs font-normal text-muted-foreground">
+                                <span v-if="dearest(product)" class="truncate text-xs font-normal text-muted-foreground">
                                     – {{ formatMoney(Number(dearest(product)), currency) }}
                                 </span>
                             </p>
-                            <p class="tabular font-mono text-[0.7rem]" :class="stockTone(product)">
+                            <p class="tabular truncate font-mono text-[0.7rem]" :class="stockTone(product)">
                                 {{ product.track_stock ? `${product.stock_qty} ${product.unit}` : product.unit }}
                             </p>
                         </div>

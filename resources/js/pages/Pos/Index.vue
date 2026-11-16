@@ -279,7 +279,8 @@ const mainContainer = ref<HTMLElement | null>(null);
 function handlePointerMove(clientX: number) {
     if (!mainContainer.value) return;
     const rect = mainContainer.value.getBoundingClientRect();
-    const maxWidth = Math.max(MIN_CART_WIDTH, Math.min(rect.width * 0.7, rect.width - 320));
+    const minGridWidth = 320;
+    const maxWidth = Math.max(MIN_CART_WIDTH, rect.width - minGridWidth);
     const targetWidth = Math.round(rect.right - clientX);
     cartWidth.value = Math.min(maxWidth, Math.max(MIN_CART_WIDTH, targetWidth));
 }
@@ -417,7 +418,7 @@ onBeforeUnmount(() => {
             scroll internally instead.
         -->
         <div
-            class="flex h-[calc(100dvh-var(--safe-top)-var(--appbar-h)-var(--tabbar-h)-var(--safe-bottom))] min-h-[24rem] flex-col md:h-[calc(100dvh-4rem)]"
+            class="flex h-[calc(100dvh-var(--safe-top)-var(--appbar-h)-var(--tabbar-h)-var(--safe-bottom))] min-h-[24rem] min-w-0 flex-col overflow-x-hidden md:h-[calc(100dvh-4rem)]"
         >
             <div
                 v-if="sync.authExpired.value"
@@ -439,15 +440,15 @@ onBeforeUnmount(() => {
                 </button>
             </div>
 
-            <main v-else ref="mainContainer" class="flex min-h-0 flex-1 flex-col lg:flex-row">
-                <section class="min-h-0 flex-1">
+            <main v-else ref="mainContainer" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden lg:flex-row">
+                <section class="min-h-0 min-w-0 flex-1 overflow-hidden">
                     <ProductGrid :products="products" :categories="feed!.categories" :currency="currency" @add="cart.add($event)" />
                 </section>
 
                 <!-- Desktop keeps the cart permanently alongside the grid. -->
                 <aside
-                    class="relative hidden min-h-0 shrink-0 flex-col border-l border-border lg:flex"
-                    :style="{ width: `${cartWidth}px` }"
+                    class="relative hidden min-h-0 min-w-0 shrink-0 flex-col border-l border-border lg:flex"
+                    :style="{ width: `${cartWidth}px`, maxWidth: 'calc(100% - 320px)' }"
                 >
                     <!-- Draggable handle on the dividing border to resize cart width -->
                     <div

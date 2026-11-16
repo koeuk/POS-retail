@@ -11,6 +11,7 @@ import {
     ReceiptText,
     ScanBarcode,
     Shapes,
+    TrendingUp,
     Truck,
     Users,
     UsersRound,
@@ -32,6 +33,7 @@ export const navGroups: NavGroup[] = [
             { title: 'In Debt', href: '/debts', icon: HandCoins, requires: 'debts' },
             { title: 'Myself', href: '/consumption', icon: Utensils, requires: 'consumption' },
             { title: 'Reports', href: '/reports', icon: ChartNoAxesColumn, requires: 'reports' },
+            { title: 'Analyze', href: '/analyze', icon: TrendingUp, requires: 'reports' },
             // The public customer catalogue. No `requires`: a cashier may well
             // want to show someone the menu across the counter.
             { title: 'View Menu', href: '/menu', icon: BookOpen },
