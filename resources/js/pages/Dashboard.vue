@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BreakdownBars from '@/components/charts/BreakdownBars.vue';
 import SalesBarChart from '@/components/charts/SalesBarChart.vue';
 import StatTile from '@/components/charts/StatTile.vue';
 import DatePicker from '@/components/DatePicker.vue';
@@ -45,6 +46,18 @@ interface Spent {
     value: string;
 }
 
+interface ProductSale {
+    product_name: string;
+    qty: number;
+    revenue: string;
+}
+
+interface TopProducts {
+    today: ProductSale[];
+    week: ProductSale[];
+    month: ProductSale[];
+}
+
 const props = defineProps<{
     today: Summary;
     yesterday: Summary;
@@ -61,6 +74,7 @@ const props = defineProps<{
     offlineToday: number;
     debts: { count: number; owed: string };
     myself: { week: Spent; month: Spent; year: Spent };
+    topProducts: TopProducts;
     catalogue: { products: number; categories: number };
     canSeeReports: boolean;
     filters: { date: string; isToday: boolean };
@@ -93,7 +107,37 @@ const greeting = computed(() => {
     return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
 });
 
-const { money } = useCurrency();
+const { money, currency } = useCurrency();
+
+const topPeriod = ref<'today' | 'week' | 'month'>(props.topProducts?.today?.length ? 'today' : 'week');
+const topMetric = ref<'qty' | 'revenue'>('qty');
+
+const topProductRows = computed(() => {
+    const list = props.topProducts?.[topPeriod.value] ?? [];
+    if (!list.length) return [];
+
+    const sorted = [...list].sort((a, b) => {
+        if (topMetric.value === 'qty') {
+            return b.qty - a.qty;
+        }
+        return Number(b.revenue) - Number(a.revenue);
+    });
+
+    return sorted.slice(0, 5).map((p) => {
+        if (topMetric.value === 'qty') {
+            return {
+                label: p.product_name,
+                value: p.qty,
+                meta: money(p.revenue),
+            };
+        }
+        return {
+            label: p.product_name,
+            value: Number(p.revenue),
+            meta: `${p.qty} sold`,
+        };
+    });
+});
 
 const time = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '—');
 
@@ -237,16 +281,31 @@ const quickActions = computed(() =>
                             :tone="debts.count > 0 ? 'warning' : 'default'"
                             :hint="`${debts.count} sale${debts.count === 1 ? '' : 's'} on credit, not yet paid`"
                         />
-                        <StatTile label="Myself · week" :value="money(myself.week.value)" :icon="Utensils" :accent="4" :hint="times(myself.week.count)" />
-                        <StatTile label="Myself · month" :value="money(myself.month.value)" :icon="Utensils" :accent="4" :hint="times(myself.month.count)" />
-                        <StatTile label="Myself · year" :value="money(myself.year.value)" :icon="Utensils" :accent="4" :hint="times(myself.year.count)" />
+                        <StatTile
+                            label="Myself · week"
+                            :value="money(myself.week.value)"
+                            :icon="Utensils"
+                            :accent="4"
+                            :hint="times(myself.week.count)"
+                        />
+                        <StatTile
+                            label="Myself · month"
+                            :value="money(myself.month.value)"
+                            :icon="Utensils"
+                            :accent="4"
+                            :hint="times(myself.month.count)"
+                        />
+                        <StatTile
+                            label="Myself · year"
+                            :value="money(myself.year.value)"
+                            :icon="Utensils"
+                            :accent="4"
+                            :hint="times(myself.year.count)"
+                        />
                     </div>
 
                     <!-- Sales · last 7 days chart -->
-                    <section
-                        class="animate-rise min-w-0 rounded-2xl border border-border bg-card p-4"
-                        style="animation-delay: 120ms"
-                    >
+                    <section class="animate-rise min-w-0 rounded-2xl border border-border bg-card p-4" style="animation-delay: 120ms">
                         <div class="mb-3 flex items-baseline justify-between">
                             <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Sales · last 7 days</h2>
                             <p class="tabular font-mono text-sm font-semibold">{{ money(weekTotal) }}</p>
@@ -304,19 +363,110 @@ const quickActions = computed(() =>
                 <div class="space-y-4 lg:col-span-1">
                     <!-- Quick Actions Banner (matching green style & height of Row 1) -->
                     <section
-                        class="animate-rise hidden min-h-[105px] items-center justify-around rounded-2xl bg-teal-800 p-3.5 text-white shadow-sm lg:flex dark:from-green-800 dark:to-green-700"
+                        class="animate-rise hidden min-h-[105px] items-center justify-around rounded-2xl bg-teal-800 p-3.5 text-white shadow-sm dark:from-green-800 dark:to-green-700 lg:flex"
                     >
-                        <Link
-                            v-for="action in quickActions"
-                            :key="action.href"
-                            :href="action.href"
-                            class="press flex flex-col items-center gap-1"
-                        >
+                        <Link v-for="action in quickActions" :key="action.href" :href="action.href" class="press flex flex-col items-center gap-1">
                             <span class="flex size-10 items-center justify-center rounded-full bg-white/15 transition-colors hover:bg-white/25">
                                 <component :is="action.icon" class="size-5" />
                             </span>
                             <span class="text-[0.6875rem] font-medium opacity-80">{{ action.title }}</span>
                         </Link>
+                    </section>
+
+                    <!-- Top selling products chart -->
+                    <section class="animate-rise rounded-2xl border border-border bg-card p-4" style="animation-delay: 140ms">
+                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
+                            <div class="flex items-center gap-1.5">
+                                <h2 class="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Top selling products</h2>
+                                <Link
+                                    v-if="canSeeReports"
+                                    :href="route('reports.index')"
+                                    class="press flex items-center text-xs font-medium text-primary hover:underline"
+                                    title="View full reports"
+                                >
+                                    <ChevronRight class="size-3.5" />
+                                </Link>
+                            </div>
+
+                            <div class="flex items-center gap-1.5">
+                                <!-- Period Selector -->
+                                <div class="flex items-center rounded-lg bg-muted p-0.5 text-[0.7rem]" role="group" aria-label="Select period">
+                                    <button
+                                        type="button"
+                                        class="rounded-md px-2 py-0.5 font-medium transition-colors"
+                                        :class="
+                                            topPeriod === 'today'
+                                                ? 'bg-background text-foreground shadow-sm'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                        "
+                                        @click="topPeriod = 'today'"
+                                    >
+                                        {{ filters.isToday ? 'Today' : 'Day' }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded-md px-2 py-0.5 font-medium transition-colors"
+                                        :class="
+                                            topPeriod === 'week'
+                                                ? 'bg-background text-foreground shadow-sm'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                        "
+                                        @click="topPeriod = 'week'"
+                                    >
+                                        7d
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded-md px-2 py-0.5 font-medium transition-colors"
+                                        :class="
+                                            topPeriod === 'month'
+                                                ? 'bg-background text-foreground shadow-sm'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                        "
+                                        @click="topPeriod = 'month'"
+                                    >
+                                        30d
+                                    </button>
+                                </div>
+
+                                <!-- Metric Toggle: Qty / Revenue -->
+                                <div class="flex items-center rounded-lg bg-muted p-0.5 text-[0.7rem]" role="group" aria-label="Sort by metric">
+                                    <button
+                                        type="button"
+                                        class="rounded-md px-2 py-0.5 font-medium transition-colors"
+                                        :class="
+                                            topMetric === 'qty'
+                                                ? 'bg-background text-foreground shadow-sm'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                        "
+                                        title="Top products by units sold"
+                                        @click="topMetric = 'qty'"
+                                    >
+                                        Qty
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded-md px-2 py-0.5 font-medium transition-colors"
+                                        :class="
+                                            topMetric === 'revenue'
+                                                ? 'bg-background text-foreground shadow-sm'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                        "
+                                        title="Top products by revenue"
+                                        @click="topMetric = 'revenue'"
+                                    >
+                                        Rev
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <BreakdownBars
+                            :rows="topProductRows"
+                            :currency="currency"
+                            :format-value="topMetric === 'qty' ? (n) => `${n} sold` : undefined"
+                            show-rank
+                        />
                     </section>
 
                     <!-- Latest sales -->

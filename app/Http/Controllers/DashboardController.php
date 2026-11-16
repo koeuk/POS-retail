@@ -44,6 +44,13 @@ class DashboardController extends Controller
                 'debts' => $reporter->outstandingDebts(),
                 'myself' => $reporter->myselfSpent(),
 
+                // Top selling products across key windows for the dashboard ranking chart.
+                'topProducts' => [
+                    'today' => $reporter->salesByProduct($today, $today, 10),
+                    'week' => $reporter->salesByProduct($today->copy()->subDays(6), $today, 10),
+                    'month' => $reporter->salesByProduct($today->copy()->subDays(29), $today, 10),
+                ],
+
                 // How big the shelf is — shown as summary tiles on the phone.
                 'catalogue' => [
                     'products' => \App\Models\Product::query()->active()->base()->count(),
@@ -71,6 +78,7 @@ class DashboardController extends Controller
                 'offlineToday' => 0,
                 'debts' => ['count' => 0, 'owed' => '0.00'],
                 'myself' => ['week' => ['count' => 0, 'value' => '0.00'], 'month' => ['count' => 0, 'value' => '0.00'], 'year' => ['count' => 0, 'value' => '0.00']],
+                'topProducts' => ['today' => [], 'week' => [], 'month' => []],
                 'catalogue' => ['products' => 0, 'categories' => 0],
                 'canSeeReports' => $user->role->canAccessAdmin(),
                 'filters' => [

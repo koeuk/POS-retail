@@ -2,7 +2,6 @@
 import DevicePreviewSelect from '@/components/DevicePreviewSelect.vue';
 import GlobalSearch from '@/components/GlobalSearch.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { isPreviewFrame } from '@/composables/useDevicePreview';
 import { cn } from '@/lib/utils';
@@ -29,25 +28,6 @@ const props = withDefaults(
     >
         <div class="flex items-center gap-2">
             <SidebarTrigger class="-ml-1" />
-            <template v-if="breadcrumbs.length > 0">
-                <Breadcrumb>
-                    <BreadcrumbList>
-                        <template v-for="(item, index) in breadcrumbs" :key="index">
-                            <BreadcrumbItem>
-                                <template v-if="index === breadcrumbs.length - 1">
-                                    <BreadcrumbPage>{{ item.title }}</BreadcrumbPage>
-                                </template>
-                                <template v-else>
-                                    <BreadcrumbLink :href="item.href">
-                                        {{ item.title }}
-                                    </BreadcrumbLink>
-                                </template>
-                            </BreadcrumbItem>
-                            <BreadcrumbSeparator v-if="index !== breadcrumbs.length - 1" />
-                        </template>
-                    </BreadcrumbList>
-                </Breadcrumb>
-            </template>
         </div>
 
         <GlobalSearch class="mx-3 max-w-md flex-1 sm:mx-6 sm:max-w-xl lg:max-w-2xl xl:max-w-3xl" />

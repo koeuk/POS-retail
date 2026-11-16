@@ -22,8 +22,12 @@ const props = withDefaults(
         currency?: CurrencyDef;
         /** Categorical when each row is a different thing; single-hue otherwise. */
         categorical?: boolean;
+        /** Show 1, 2, 3 rank badge instead of a bullet dot. */
+        showRank?: boolean;
+        /** Custom value formatter instead of currency formatting. */
+        formatValue?: (value: number) => string;
     }>(),
-    { currency: () => USD, categorical: false },
+    { currency: () => USD, categorical: false, showRank: false },
 );
 
 /*
@@ -43,6 +47,8 @@ const seriesVar = (row: Row, index: number) => `var(--series-${((row.slot ?? ind
 const share = (value: number) => (total.value > 0 ? Math.round((value / total.value) * 100) : 0);
 
 const money = (n: number) => formatCurrency(n, props.currency ?? USD);
+
+const displayValue = (n: number) => (props.formatValue ? props.formatValue(n) : money(n));
 </script>
 
 <template>
@@ -50,12 +56,22 @@ const money = (n: number) => formatCurrency(n, props.currency ?? USD);
         <li v-for="(row, i) in rows" :key="row.label" class="space-y-1">
             <div class="flex items-baseline justify-between gap-3 text-sm">
                 <span class="flex min-w-0 items-center gap-2">
-                    <span class="size-2.5 shrink-0 rounded-[3px]" :style="{ background: categorical ? seriesVar(row, i) : 'hsl(var(--primary))' }" />
+                    <span
+                        v-if="showRank"
+                        class="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted font-mono text-[0.6875rem] font-semibold text-muted-foreground"
+                    >
+                        {{ i + 1 }}
+                    </span>
+                    <span
+                        v-else
+                        class="size-2.5 shrink-0 rounded-[3px]"
+                        :style="{ background: categorical ? seriesVar(row, i) : 'hsl(var(--primary))' }"
+                    />
                     <!-- No capitalize transform: labels arrive presentation-ready,
                          and it would mangle product names and initialisms. -->
                     <span class="truncate">{{ row.label }}</span>
                 </span>
-                <span class="tabular shrink-0 font-mono font-medium">{{ money(row.value) }}</span>
+                <span class="tabular shrink-0 font-mono font-medium">{{ displayValue(row.value) }}</span>
             </div>
 
             <div class="flex items-center gap-2">
@@ -69,7 +85,7 @@ const money = (n: number) => formatCurrency(n, props.currency ?? USD);
                         }"
                     />
                 </div>
-                <span class="tabular w-16 shrink-0 text-right font-mono text-[0.7rem] text-muted-foreground">
+                <span class="tabular shrink-0 text-right font-mono text-[0.7rem] text-muted-foreground">
                     {{ share(row.value) }}%<template v-if="row.meta"> · {{ row.meta }}</template>
                 </span>
             </div>

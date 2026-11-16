@@ -281,8 +281,10 @@ class SalesReporter
         return $out;
     }
 
-    public function salesByProduct(Carbon $from, Carbon $to, int $limit = 20): Collection
+    public function salesByProduct(Carbon $from, Carbon $to, int $limit = 20, string $orderBy = 'revenue'): Collection
     {
+        $orderCol = $orderBy === 'qty' ? 'qty' : 'revenue';
+
         return $this->between($this->lines(), $from, $to)
             // Group on the snapshot name: what the customer was actually sold,
             // even if the product has been renamed since.
@@ -292,7 +294,7 @@ class SalesReporter
                 DB::raw('SUM(order_items.subtotal) as revenue'),
             ])
             ->groupBy('order_items.product_name')
-            ->orderByDesc('revenue')
+            ->orderByDesc($orderCol)
             ->limit($limit)
             ->get()
             ->map(fn (object $row) => [
