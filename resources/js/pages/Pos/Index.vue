@@ -439,13 +439,36 @@ onBeforeUnmount(() => {
                 </button>
             </div>
 
-            <main v-else class="flex min-h-0 flex-1 flex-col lg:flex-row">
-                <section class="min-h-0 flex-1 lg:border-r lg:border-border">
+            <main v-else ref="mainContainer" class="flex min-h-0 flex-1 flex-col lg:flex-row">
+                <section class="min-h-0 flex-1">
                     <ProductGrid :products="products" :categories="feed!.categories" :currency="currency" @add="cart.add($event)" />
                 </section>
 
                 <!-- Desktop keeps the cart permanently alongside the grid. -->
-                <aside class="hidden min-h-0 w-[24rem] shrink-0 flex-col lg:flex">
+                <aside
+                    class="relative hidden min-h-0 shrink-0 flex-col border-l border-border lg:flex"
+                    :style="{ width: `${cartWidth}px` }"
+                >
+                    <!-- Draggable handle on the dividing border to resize cart width -->
+                    <div
+                        class="group absolute inset-y-0 -left-2.5 z-20 flex w-5 cursor-col-resize select-none items-center justify-center"
+                        title="Drag to resize cart width (double-click to reset)"
+                        @mousedown.prevent="startDrag"
+                        @touchstart="startTouchDrag"
+                        @dblclick="resetWidth"
+                    >
+                        <div
+                            class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 transition-colors"
+                            :class="isDragging ? 'bg-primary' : 'bg-transparent group-hover:bg-primary/50'"
+                        />
+                        <div
+                            class="z-10 flex h-9 w-4 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-all group-hover:scale-110 group-hover:border-primary/60 group-hover:bg-accent group-hover:text-foreground"
+                            :class="isDragging ? 'scale-110 border-primary bg-primary text-primary-foreground shadow-md' : ''"
+                        >
+                            <GripVertical class="size-3" />
+                        </div>
+                    </div>
+
                     <Cart :currency="currency" />
                     <Checkout
                         :currency="currency"

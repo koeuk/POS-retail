@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ArrowLeft, Calculator, Check, Copy, Delete, History, Trash2 } from 'lucide-vue-next';
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 interface HistoryEntry {
     equation: string;
@@ -16,11 +16,12 @@ const history = ref<HistoryEntry[]>([]);
 const copiedItemIndex = ref<number | null>(null);
 
 const display = ref('0');
-const prevValue = ref<number | null>(null);
-const operator = ref<string | null>(null);
-const waitingForOperand = ref(false);
 const equation = ref('');
+const tokens = ref<(number | string)[]>([]);
+const waitingForOperand = ref(false);
+const hasCalculated = ref(false);
 const copied = ref(false);
+const equationContainer = ref<HTMLElement | null>(null);
 
 const STORAGE_KEY = 'pos_calc_history';
 
@@ -62,16 +63,72 @@ function addHistoryEntry(eq: string, res: string) {
     saveHistory();
 }
 
-function useHistoryItem(item: HistoryEntry) {
-    display.value = item.result;
-    equation.value = item.equation;
-    prevValue.value = null;
-    operator.value = null;
-    waitingForOperand.value = true;
-    showHistory.value = false;
+function opSymbol(op: string) {
+    switch (op) {
+        case '+':
+            return '+';
+        case '-':
+            return '−';
+        case '*':
+            return '×';
+        case '/':
+            return '÷';
+        default:
+            return op;
+    }
+}
+
+function updateEquationDisplay() {
+    equation.value = tokens.value.map((t, idx) => (idx % 2 === 1 ? opSymbol(String(t)) : String(t))).join(' ');
+}
+
+function evaluateTokens(toks: (number | string)[]): number {
+    if (toks.length === 0) return 0;
+    if (toks.length === 1) return Number(toks[0]) || 0;
+
+    // Pass 1: resolve multiplication and division (* and /)
+    const pass1: (number | string)[] = [];
+    let i = 0;
+    while (i < toks.length) {
+        const token = toks[i];
+        if (token === '*' || token === '/') {
+            const prev = Number(pass1.pop());
+            const next = Number(toks[i + 1]);
+            const res = token === '*' ? prev * next : next === 0 ? 0 : prev / next;
+            pass1.push(Math.round(res * 1e10) / 1e10);
+            i += 2;
+        } else {
+            pass1.push(token);
+            i++;
+        }
+    }
+
+    // Pass 2: resolve addition and subtraction (+ and -)
+    let total = Number(pass1[0]) || 0;
+    for (let j = 1; j < pass1.length; j += 2) {
+        const op = pass1[j];
+        const next = Number(pass1[j + 1]) || 0;
+        if (op === '+') {
+            total += next;
+        } else if (op === '-') {
+            total -= next;
+        }
+        total = Math.round(total * 1e10) / 1e10;
+    }
+
+    return total;
 }
 
 function inputDigit(digit: string) {
+    if (hasCalculated.value) {
+        hasCalculated.value = false;
+        tokens.value = [];
+        equation.value = '';
+        display.value = digit;
+        waitingForOperand.value = false;
+        return;
+    }
+
     if (waitingForOperand.value) {
         display.value = digit;
         waitingForOperand.value = false;
@@ -81,6 +138,15 @@ function inputDigit(digit: string) {
 }
 
 function inputDot() {
+    if (hasCalculated.value) {
+        hasCalculated.value = false;
+        tokens.value = [];
+        equation.value = '';
+        display.value = '0.';
+        waitingForOperand.value = false;
+        return;
+    }
+
     if (waitingForOperand.value) {
         display.value = '0.';
         waitingForOperand.value = false;
@@ -91,16 +157,65 @@ function inputDot() {
     }
 }
 
+function performOperation(nextOperator: string) {
+    // If user just evaluated an equation with '=', continue chaining from that result
+    if (hasCalculated.value) {
+        const currentVal = parseFloat(display.value) || 0;
+        tokens.value = [currentVal, nextOperator];
+        hasCalculated.value = false;
+        waitingForOperand.value = true;
+        updateEquationDisplay();
+        return;
+    }
+
+    // If waiting for operand and tokens has elements, user is changing the trailing operator
+    if (waitingForOperand.value && tokens.value.length > 0) {
+        tokens.value[tokens.value.length - 1] = nextOperator;
+        updateEquationDisplay();
+        return;
+    }
+
+    const currentVal = parseFloat(display.value) || 0;
+    tokens.value.push(currentVal, nextOperator);
+
+    // Calculate intermediate running result for the display
+    const runningResult = evaluateTokens(tokens.value.slice(0, -1));
+    display.value = String(runningResult);
+
+    waitingForOperand.value = true;
+    updateEquationDisplay();
+}
+
+function equals() {
+    if (tokens.value.length === 0 || hasCalculated.value) return;
+
+    const currentVal = parseFloat(display.value) || 0;
+    tokens.value.push(currentVal);
+
+    const result = evaluateTokens(tokens.value);
+
+    // Build the complete equation string: e.g. "5 × 6 × 9 + 7 + 7 − 9 ="
+    const fullEquation = tokens.value.map((t, idx) => (idx % 2 === 1 ? opSymbol(String(t)) : String(t))).join(' ') + ' =';
+
+    equation.value = fullEquation;
+    display.value = String(result);
+    addHistoryEntry(fullEquation, String(result));
+
+    hasCalculated.value = true;
+    tokens.value = [];
+    waitingForOperand.value = true;
+}
+
 function clear() {
     display.value = '0';
-    prevValue.value = null;
-    operator.value = null;
-    waitingForOperand.value = false;
     equation.value = '';
+    tokens.value = [];
+    waitingForOperand.value = false;
+    hasCalculated.value = false;
 }
 
 function backspace() {
-    if (waitingForOperand.value) return;
+    if (waitingForOperand.value || hasCalculated.value) return;
     if (display.value.length === 1 || (display.value.length === 2 && display.value.startsWith('-'))) {
         display.value = '0';
     } else {
@@ -120,73 +235,13 @@ function percentage() {
     display.value = String(val / 100);
 }
 
-function opSymbol(op: string) {
-    switch (op) {
-        case '+':
-            return '+';
-        case '-':
-            return '−';
-        case '*':
-            return '×';
-        case '/':
-            return '÷';
-        default:
-            return op;
-    }
-}
-
-function calculate(prev: number, current: number, op: string): number {
-    let res = 0;
-    switch (op) {
-        case '+':
-            res = prev + current;
-            break;
-        case '-':
-            res = prev - current;
-            break;
-        case '*':
-            res = prev * current;
-            break;
-        case '/':
-            res = current === 0 ? 0 : prev / current;
-            break;
-        default:
-            return current;
-    }
-    return Math.round(res * 1e10) / 1e10;
-}
-
-function performOperation(nextOperator: string) {
-    const inputValue = parseFloat(display.value);
-
-    if (prevValue.value === null) {
-        prevValue.value = inputValue;
-    } else if (operator.value && !waitingForOperand.value) {
-        const eqStr = `${prevValue.value} ${opSymbol(operator.value)} ${inputValue}`;
-        const result = calculate(prevValue.value, inputValue, operator.value);
-        display.value = String(result);
-        addHistoryEntry(`${eqStr} =`, String(result));
-        prevValue.value = result;
-    }
-
+function useHistoryItem(item: HistoryEntry) {
+    display.value = item.result;
+    equation.value = item.equation;
+    tokens.value = [];
     waitingForOperand.value = true;
-    operator.value = nextOperator;
-    equation.value = `${prevValue.value} ${opSymbol(nextOperator)}`;
-}
-
-function equals() {
-    const inputValue = parseFloat(display.value);
-    if (operator.value && prevValue.value !== null) {
-        const eqStr = `${prevValue.value} ${opSymbol(operator.value)} ${inputValue}`;
-        equation.value = `${eqStr} =`;
-        const result = calculate(prevValue.value, inputValue, operator.value);
-        display.value = String(result);
-        addHistoryEntry(`${eqStr} =`, String(result));
-
-        prevValue.value = null;
-        operator.value = null;
-        waitingForOperand.value = true;
-    }
+    hasCalculated.value = true;
+    showHistory.value = false;
 }
 
 function copyText(text: string, index?: number) {
@@ -217,6 +272,9 @@ function handleKeyDown(e: KeyboardEvent) {
     } else if (e.key === '+' || e.key === '-' || e.key === '*' || e.key === '/') {
         e.preventDefault();
         performOperation(e.key);
+    } else if (e.key === 'x' || e.key === 'X') {
+        e.preventDefault();
+        performOperation('*');
     } else if (e.key === 'Enter' || e.key === '=') {
         e.preventDefault();
         equals();
@@ -234,6 +292,14 @@ function handleKeyDown(e: KeyboardEvent) {
         showHistory.value = !showHistory.value;
     }
 }
+
+watch(equation, () => {
+    nextTick(() => {
+        if (equationContainer.value) {
+            equationContainer.value.scrollLeft = equationContainer.value.scrollWidth;
+        }
+    });
+});
 
 watch(open, (isOpen) => {
     if (isOpen) {
@@ -253,7 +319,7 @@ onBeforeUnmount(() => {
         <PopoverTrigger as-child>
             <button
                 type="button"
-                class="press flex h-9 items-center gap-1.5 rounded-md border border-input/80 bg-card/60 px-2.5 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground select-none transition-colors"
+                class="press flex h-9 select-none items-center gap-1.5 rounded-md border border-input/80 bg-card/60 px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 title="Calculator"
                 aria-label="Open calculator"
             >
@@ -273,16 +339,13 @@ onBeforeUnmount(() => {
                     type="button"
                     class="press flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors"
                     :class="showHistory ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'"
-                    :title="showHistory ? 'Back to keypad' : 'View history'"
+                    :title="showHistory ? 'Back to keypad' : 'View history (H)'"
                     @click="showHistory = !showHistory"
                 >
                     <ArrowLeft v-if="showHistory" class="size-3" />
                     <History v-else class="size-3.5" />
                     <span>{{ showHistory ? 'Keypad' : 'History' }}</span>
-                    <span
-                        v-if="!showHistory && history.length"
-                        class="ml-0.5 rounded-full bg-primary/15 px-1 font-mono text-[10px] text-primary"
-                    >
+                    <span v-if="!showHistory && history.length" class="ml-0.5 rounded-full bg-primary/15 px-1 font-mono text-[10px] text-primary">
                         {{ history.length }}
                     </span>
                 </button>
@@ -337,16 +400,16 @@ onBeforeUnmount(() => {
                     <p class="text-[11px] text-muted-foreground/70">Completed calculations appear here</p>
                 </div>
 
-                <Button variant="outline" size="sm" class="w-full text-xs" @click="showHistory = false">
-                    Back to Keypad
-                </Button>
+                <Button variant="outline" size="sm" class="w-full text-xs" @click="showHistory = false"> Back to Keypad </Button>
             </div>
 
             <!-- View: Keypad & Display -->
             <div v-else>
                 <!-- Display -->
                 <div class="mb-3 rounded-lg border border-border/60 bg-muted/40 p-2.5 text-right">
-                    <p class="h-4 truncate font-mono text-xs text-muted-foreground">{{ equation }}</p>
+                    <div ref="equationContainer" class="scrollbar-none h-4.5 overflow-x-auto whitespace-nowrap text-right">
+                        <p class="font-mono text-xs text-muted-foreground">{{ equation || '\u00A0' }}</p>
+                    </div>
                     <div class="mt-1 flex items-center justify-between gap-2">
                         <div class="flex items-center gap-1">
                             <button
@@ -367,7 +430,7 @@ onBeforeUnmount(() => {
                                 <History class="size-3.5" />
                             </button>
                         </div>
-                        <span class="truncate font-mono text-2xl font-bold tracking-tight text-foreground select-all">
+                        <span class="select-all truncate font-mono text-2xl font-bold tracking-tight text-foreground">
                             {{ display }}
                         </span>
                     </div>
@@ -376,42 +439,35 @@ onBeforeUnmount(() => {
                 <!-- Keypad -->
                 <div class="grid grid-cols-4 gap-1.5">
                     <!-- Row 1 -->
-                    <Button variant="secondary" size="sm" class="h-9 font-medium text-destructive hover:bg-destructive/10 hover:text-destructive" @click="clear">
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        class="h-9 font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        @click="clear"
+                    >
                         AC
                     </Button>
-                    <Button variant="secondary" size="sm" class="h-9 font-medium" @click="toggleSign">
-                        ±
-                    </Button>
-                    <Button variant="secondary" size="sm" class="h-9 font-medium" @click="percentage">
-                        %
-                    </Button>
-                    <Button variant="secondary" size="sm" class="h-9 font-semibold text-primary" @click="performOperation('/')">
-                        ÷
-                    </Button>
+                    <Button variant="secondary" size="sm" class="h-9 font-medium" @click="toggleSign"> ± </Button>
+                    <Button variant="secondary" size="sm" class="h-9 font-medium" @click="percentage"> % </Button>
+                    <Button variant="secondary" size="sm" class="h-9 font-semibold text-primary" @click="performOperation('/')"> ÷ </Button>
 
                     <!-- Row 2 -->
                     <Button variant="outline" size="sm" class="h-9 text-sm font-medium" @click="inputDigit('7')">7</Button>
                     <Button variant="outline" size="sm" class="h-9 text-sm font-medium" @click="inputDigit('8')">8</Button>
                     <Button variant="outline" size="sm" class="h-9 text-sm font-medium" @click="inputDigit('9')">9</Button>
-                    <Button variant="secondary" size="sm" class="h-9 font-semibold text-primary" @click="performOperation('*')">
-                        ×
-                    </Button>
+                    <Button variant="secondary" size="sm" class="h-9 font-semibold text-primary" @click="performOperation('*')"> × </Button>
 
                     <!-- Row 3 -->
                     <Button variant="outline" size="sm" class="h-9 text-sm font-medium" @click="inputDigit('4')">4</Button>
                     <Button variant="outline" size="sm" class="h-9 text-sm font-medium" @click="inputDigit('5')">5</Button>
                     <Button variant="outline" size="sm" class="h-9 text-sm font-medium" @click="inputDigit('6')">6</Button>
-                    <Button variant="secondary" size="sm" class="h-9 font-semibold text-primary" @click="performOperation('-')">
-                        −
-                    </Button>
+                    <Button variant="secondary" size="sm" class="h-9 font-semibold text-primary" @click="performOperation('-')"> − </Button>
 
                     <!-- Row 4 -->
                     <Button variant="outline" size="sm" class="h-9 text-sm font-medium" @click="inputDigit('1')">1</Button>
                     <Button variant="outline" size="sm" class="h-9 text-sm font-medium" @click="inputDigit('2')">2</Button>
                     <Button variant="outline" size="sm" class="h-9 text-sm font-medium" @click="inputDigit('3')">3</Button>
-                    <Button variant="secondary" size="sm" class="h-9 font-semibold text-primary" @click="performOperation('+')">
-                        +
-                    </Button>
+                    <Button variant="secondary" size="sm" class="h-9 font-semibold text-primary" @click="performOperation('+')"> + </Button>
 
                     <!-- Row 5 -->
                     <Button variant="outline" size="sm" class="h-9 text-sm font-medium" @click="inputDigit('0')">0</Button>
@@ -419,9 +475,7 @@ onBeforeUnmount(() => {
                     <Button variant="ghost" size="sm" class="h-9 text-muted-foreground hover:text-foreground" title="Backspace" @click="backspace">
                         <Delete class="size-4" />
                     </Button>
-                    <Button size="sm" class="h-9 bg-primary font-bold text-primary-foreground hover:bg-primary/90" @click="equals">
-                        =
-                    </Button>
+                    <Button size="sm" class="h-9 bg-primary font-bold text-primary-foreground hover:bg-primary/90" @click="equals"> = </Button>
                 </div>
             </div>
         </PopoverContent>
