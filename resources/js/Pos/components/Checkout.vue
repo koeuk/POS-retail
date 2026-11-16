@@ -18,7 +18,7 @@ const cart = useCart();
  */
 const types: { value: SaleType; label: string; icon: typeof UserRound; hint: string }[] = [
     { value: 'customer', label: 'Customer', icon: UserRound, hint: 'A normal sale' },
-    { value: 'debt', label: 'In debt', icon: HandCoins, hint: 'Pay later — needs a name' },
+    { value: 'debt', label: 'Pay later', icon: HandCoins, hint: 'Pay later — needs a customer name' },
     { value: 'myself', label: 'Myself', icon: Utensils, hint: 'Not a sale' },
 ];
 
@@ -28,13 +28,18 @@ function choose(t: SaleType) {
     if (t === 'debt' && !cart.customerId) emit('pick-customer');
 }
 
+function onPayLater() {
+    cart.saleType = 'debt';
+    emit('pay');
+}
+
 /* A debt with nobody attached must not be completable. */
 const blocked = computed(() => cart.saleType === 'debt' && !cart.customerId);
 
 const cta = computed(() => {
     switch (cart.saleType) {
         case 'debt':
-            return blocked.value ? 'Choose who owes this' : 'Record debt';
+            return blocked.value ? 'Choose who owes this' : 'Record pay later';
         case 'myself':
             return 'Take for myself';
         default:
@@ -87,13 +92,39 @@ const cta = computed(() => {
                 </p>
             </div>
 
+            <!-- Action buttons: Pay later & Complete sale in Customer mode -->
+            <div v-if="cart.saleType === 'customer'" class="grid grid-cols-2 gap-2">
+                <button
+                    type="button"
+                    :disabled="cart.isEmpty"
+                    class="press flex h-14 items-center justify-center gap-2 rounded-xl border-2 border-primary/40 bg-background text-sm font-semibold text-primary transition-all hover:border-primary hover:bg-primary/5 disabled:opacity-40"
+                    title="Pay later — records to customer debt"
+                    @click="onPayLater"
+                >
+                    <HandCoins class="size-5" />
+                    Pay later
+                </button>
+
+                <button
+                    type="button"
+                    :disabled="cart.isEmpty"
+                    class="press flex h-14 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/95 disabled:opacity-40"
+                    @click="emit('pay')"
+                >
+                    <CreditCard class="size-5" />
+                    Complete sale
+                </button>
+            </div>
+
+            <!-- Single action button in Pay later (debt) or Myself mode -->
             <button
+                v-else
                 type="button"
                 :disabled="cart.isEmpty || blocked"
                 class="press flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-semibold text-primary-foreground disabled:opacity-40"
                 @click="emit('pay')"
             >
-                <CreditCard class="size-5" />
+                <component :is="cart.saleType === 'debt' ? HandCoins : CreditCard" class="size-5" />
                 {{ cta }}
             </button>
         </div>
