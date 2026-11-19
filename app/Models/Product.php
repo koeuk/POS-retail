@@ -69,9 +69,11 @@ class Product extends Model
         return $this->belongsTo(Unit::class, 'unit_id');
     }
 
-    public function scopeInCategory(Builder $query, int $categoryId): Builder
+    public function scopeInCategory(Builder $query, int|array $categoryId): Builder
     {
-        return $query->whereIn('category_id', Category::select('id')->where('id', $categoryId)->orWhere('parent_id', $categoryId));
+        $ids = array_map('intval', (array) $categoryId);
+
+        return $query->whereIn('category_id', Category::select('id')->whereIn('id', $ids)->orWhereIn('parent_id', $ids));
     }
 
     public function category(): BelongsTo

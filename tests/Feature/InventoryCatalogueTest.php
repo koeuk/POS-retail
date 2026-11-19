@@ -82,6 +82,19 @@ class InventoryCatalogueTest extends TestCase
         $this->get(route('pos.data.products'))->assertJsonFragment(['parent_id' => $parent->id]);
     }
 
+    public function test_multiple_category_filters_remain_supported(): void
+    {
+        $parent = Category::factory()->create();
+        $child = Category::factory()->create(['parent_id' => $parent->id]);
+        $other = Category::factory()->create();
+        Product::factory()->create(['category_id' => $child->id]);
+        Product::factory()->create(['category_id' => $other->id]);
+        Product::factory()->create();
+        $this->actingAs($this->admin)->get(route('products.index', [
+            'filter' => ['category_id' => $parent->id.','.$other->id],
+        ]))->assertInertia(fn (AssertableInertia $page) => $page->has('products.data', 2));
+    }
+
     public function test_admin_can_manage_unused_units_and_symbols_are_unique(): void
     {
         $this->actingAs($this->admin)->post(route('units.store'), ['name' => 'Crate', 'symbol' => 'crate'])
