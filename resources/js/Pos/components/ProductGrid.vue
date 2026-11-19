@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { CurrencyDef } from '@/composables/useCurrency';
+import { imageSrc } from '@/lib/utils';
 import { useCart } from '@/Pos/composables/useCart';
 import { formatMoney } from '@/Pos/lib/money';
-import { imageSrc } from '@/lib/utils';
 import type { PosCategory, PosProduct } from '@/Pos/types';
 import { ChevronLeft, ChevronRight, Layers, PackageOpen, Search } from 'lucide-vue-next';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -49,7 +49,12 @@ const visible = computed(() => {
 
     return props.products.filter((p) => {
         if (p.parent_product_id !== null) return false;
-        if (activeCategory.value !== null && p.category_id !== activeCategory.value) return false;
+        if (
+            activeCategory.value !== null &&
+            p.category_id !== activeCategory.value &&
+            !props.categories.some((c) => c.id === p.category_id && c.parent_id === activeCategory.value)
+        )
+            return false;
         if (!q) return true;
 
         return matches(p, q) || (packsByParent.value.get(p.id) ?? []).some((pack) => matches(pack, q));
@@ -94,6 +99,7 @@ function choose(option: PosProduct) {
 /** Only categories that actually have something in the current filter. */
 const usableCategories = computed(() => {
     const ids = new Set(props.products.map((p) => p.category_id));
+    for (const c of props.categories) if (ids.has(c.id) && c.parent_id) ids.add(c.parent_id);
     return props.categories.filter((c) => ids.has(c.id));
 });
 
@@ -368,7 +374,11 @@ onBeforeUnmount(() => {
                     <button
                         type="button"
                         class="press h-9 shrink-0 rounded-full border px-4 text-sm font-medium transition-colors"
-                        :class="activeCategory === null ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground'"
+                        :class="
+                            activeCategory === null
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground'
+                        "
                         @click="handleCategoryClick(null, $event)"
                     >
                         All
@@ -378,7 +388,11 @@ onBeforeUnmount(() => {
                         :key="c.id"
                         type="button"
                         class="press h-9 shrink-0 rounded-full border px-4 text-sm font-medium transition-colors"
-                        :class="activeCategory === c.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground'"
+                        :class="
+                            activeCategory === c.id
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground'
+                        "
                         @click="handleCategoryClick(c.id, $event)"
                     >
                         {{ c.name }}

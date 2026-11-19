@@ -48,7 +48,7 @@ class CatalogueController extends Controller
                         ->orWhere('sku', 'like', "%{$search}%")
                         ->orWhere('barcode', 'like', "%{$search}%"));
                 }),
-                AllowedFilter::exact('category_id'),
+                AllowedFilter::callback('category_id', fn (Builder $q, string $id) => $q->inCategory((int) $id)),
                 AllowedFilter::callback('status', fn (Builder $q, string $status) => $q->where('is_active', $status === 'active')),
             ])
             ->latest('id')

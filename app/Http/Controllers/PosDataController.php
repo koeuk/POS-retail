@@ -101,7 +101,7 @@ class PosDataController extends Controller
             'store_id' => $storeId,
             'synced_at' => now()->toIso8601String(),
             'products' => $products,
-            'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'categories' => Category::orderBy('name')->get(['id', 'name', 'parent_id']),
             'registers' => Register::where('store_id', $storeId)
                 ->active()
                 ->get(['id', 'name']),

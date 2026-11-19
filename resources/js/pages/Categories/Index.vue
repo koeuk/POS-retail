@@ -8,15 +8,17 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Category } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { Pencil, Plus, Search, Shapes, Trash2 } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
     categories: Category[];
+    parents: Category[];
     filters: { search?: string };
 }>();
 
@@ -40,7 +42,8 @@ watch(search, () => {
 const editing = ref<Category | null>(null);
 const dialogOpen = ref(false);
 
-const form = useForm({ name: '' });
+const form = useForm({ name: '', parent_id: 'none' });
+const parentChoices = computed(() => props.parents.filter((c) => c.id !== editing.value?.id));
 
 function openCreate() {
     editing.value = null;
@@ -53,11 +56,14 @@ function openEdit(category: Category) {
     editing.value = category;
     form.clearErrors();
     form.name = category.name;
+    form.parent_id = category.parent_id ? String(category.parent_id) : 'none';
     dialogOpen.value = true;
 }
 
 function submit() {
     const payload = { onSuccess: () => (dialogOpen.value = false), preserveScroll: true };
+
+    form.transform((data) => ({ ...data, parent_id: data.parent_id === 'none' ? null : data.parent_id }));
 
     if (editing.value) {
         form.put(route('categories.update', { category: editing.value.uuid }), payload);
@@ -82,7 +88,7 @@ function confirmDelete() {
 
     <AppLayout :breadcrumbs="[{ title: 'Categories', href: '/categories' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader title="Categories" description="Used to group products and filter the POS grid.">
+            <PageHeader title="Categories" description="Group products into categories and subcategories, such as Drinks → Soft drinks.">
                 <template #actions>
                     <Button v-if="may('categories', 'create')" class="press hidden md:inline-flex" @click="openCreate">
                         <Plus class="size-4" />
@@ -112,7 +118,7 @@ function confirmDelete() {
                         >
                             <Shapes class="size-4 shrink-0 text-primary" />
 
-                            <p class="min-w-0 flex-1 truncate font-medium leading-tight">{{ c.name }}</p>
+                            <p class="min-w-0 flex-1 truncate font-medium leading-tight">{{ c.parent ? `${c.parent.name} → ${c.name}` : c.name }}</p>
 
                             <Badge variant="outline" class="tabular shrink-0 font-mono">
                                 {{ c.products_count ?? 0 }} product{{ c.products_count === 1 ? '' : 's' }}
@@ -143,7 +149,7 @@ function confirmDelete() {
                     title="No categories yet"
                     description="Categories group products so cashiers can find them quickly."
                 >
-                    <Button variant="outline" class="press" @click="openCreate">Add a category</Button>
+                    <Button v-if="may('categories', 'create')" variant="outline" class="press" @click="openCreate">Add a category</Button>
                 </EmptyState>
             </div>
         </div>
@@ -170,6 +176,20 @@ function confirmDelete() {
 
                     <div class="grid gap-4 py-5">
                         <div class="grid gap-2">
+                            <Label for="cat-parent">Parent category</Label>
+                            <Select v-model="form.parent_id" :disabled="!!editing?.children_count">
+                                <SelectTrigger id="cat-parent"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">None — top-level category</SelectItem>
+                                    <SelectItem v-for="parent in parentChoices" :key="parent.id" :value="String(parent.id)">{{
+                                        parent.name
+                                    }}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p class="text-xs text-muted-foreground">Choose a parent to create a subcategory. Two levels are supported.</p>
+                            <InputError :message="form.errors.parent_id" />
+                        </div>
+                        <div class="grid gap-2">
                             <Label for="cat-name">Name</Label>
                             <Input id="cat-name" v-model="form.name" required autofocus />
                             <InputError :message="form.errors.name" />
@@ -191,7 +211,7 @@ function confirmDelete() {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Delete “{{ pendingDelete?.name }}”?</DialogTitle>
-                    <DialogDescription> A category that still holds products cannot be deleted. </DialogDescription>
+                    <DialogDescription> A category that still holds products or subcategories cannot be deleted. </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                     <Button variant="ghost" class="press" @click="pendingDelete = null">Cancel</Button>

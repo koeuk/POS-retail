@@ -44,6 +44,7 @@ export const navGroups: NavGroup[] = [
         items: [
             { title: 'Products', href: '/products', icon: Boxes, requires: 'products' },
             { title: 'Categories', href: '/categories', icon: Shapes, requires: 'categories' },
+            { title: 'Units', href: '/units', icon: Boxes, requires: 'units' },
             { title: 'Inventory', href: '/inventory', icon: PackageSearch, requires: 'inventory' },
         ],
     },

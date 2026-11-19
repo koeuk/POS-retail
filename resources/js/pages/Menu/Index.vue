@@ -31,7 +31,7 @@ interface MenuProduct {
 
 const props = defineProps<{
     products: MenuProduct[];
-    categories: { id: number; name: string }[];
+    categories: { id: number; name: string; parent_id?: number | null }[];
     filters: { search: string; category: number | null };
     shop: { name: string; footer: string | null; currency: CurrencyDef };
 }>();
@@ -47,7 +47,11 @@ const visible = computed(() => {
     const q = search.value.trim().toLowerCase();
 
     return props.products.filter((p) => {
-        if (activeCategory.value !== null && p.category_id !== activeCategory.value) {
+        if (
+            activeCategory.value !== null &&
+            p.category_id !== activeCategory.value &&
+            !props.categories.some((c) => c.id === p.category_id && c.parent_id === activeCategory.value)
+        ) {
             return false;
         }
         if (!q) return true;

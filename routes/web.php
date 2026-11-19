@@ -17,6 +17,7 @@ use App\Http\Controllers\PosQrController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StoreController;
+use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VendorController;
 use Illuminate\Support\Facades\Route;
@@ -119,6 +120,8 @@ Route::middleware(['auth', 'verified', 'role'])->group(function () {
         Route::post('inventory/movements', [InventoryController::class, 'store'])->name('inventory.store');
         Route::put('inventory/threshold', [InventoryController::class, 'updateThreshold'])->name('inventory.threshold');
     });
+
+    Route::resource('units', UnitController::class)->only(['index', 'store', 'update', 'destroy'])->middleware('permission:units');
 
     Route::resource('products', ProductController::class)->middleware('permission:products');
 

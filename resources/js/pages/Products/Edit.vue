@@ -4,15 +4,16 @@ import PageHeader from '@/components/PageHeader.vue';
 import ProductForm from '@/components/ProductForm.vue';
 import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/AppLayout.vue';
-import type { Category, Product, Stock } from '@/types';
+import type { Category, Product, Stock, Unit } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 const props = defineProps<{
     product: Product;
     categories: Category[];
+    units: Unit[];
     vendors: Array<{ id: number; name: string; is_active: boolean }>;
-    packs: Array<{ id: number; name: string; units_per_pack: number; sell_price: string; is_active: boolean }>;
+    packs: Array<{ id: number; name: string; unit_id: number | null; units_per_pack: number; sell_price: string; is_active: boolean }>;
     stores: Array<{ id: number; name: string }>;
     stocks: Stock[];
 }>();
@@ -70,7 +71,15 @@ const tone = (s: Stock) => {
                 </div>
             </section>
 
-            <ProductForm :categories="categories" :vendors="vendors" :product="product" :packs="packs" :stores="stores" :on-hand="onHand" />
+            <ProductForm
+                :units="units"
+                :categories="categories"
+                :vendors="vendors"
+                :product="product"
+                :packs="packs"
+                :stores="stores"
+                :on-hand="onHand"
+            />
         </div>
     </AppLayout>
 </template>

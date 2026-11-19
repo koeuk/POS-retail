@@ -11,6 +11,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Stock;
 use App\Models\Store;
+use App\Models\Unit;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Support\PerPage;
@@ -65,7 +66,7 @@ class ProductController extends Controller
                                 ->orWhere('barcode', 'like', "%{$search}%"));
                     });
                 }),
-                AllowedFilter::exact('category_id'),
+                AllowedFilter::callback('category_id', fn (Builder $q, string $id) => $q->inCategory((int) $id)),
                 AllowedFilter::callback('status', fn (Builder $q, string $status) => $q->where('is_active', $status === 'active')),
             ])
             ->latest('id')
@@ -74,7 +75,7 @@ class ProductController extends Controller
 
         return Inertia::render('Products/Index', [
             'products' => $products,
-            'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'categories' => Category::with('parent:id,name')->orderBy('name')->get(['id', 'name', 'parent_id']),
             'filters' => $filters,
         ]);
     }
@@ -84,7 +85,8 @@ class ProductController extends Controller
         $this->authorize('create', Product::class);
 
         return Inertia::render('Products/Create', [
-            'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'categories' => Category::with('parent:id,name')->orderBy('name')->get(['id', 'name', 'parent_id']),
+            'units' => Unit::orderBy('name')->get(['id', 'name', 'symbol']),
             'vendors' => Vendor::orderBy('name')->get(['id', 'name', 'is_active']),
         ]);
     }
@@ -94,7 +96,7 @@ class ProductController extends Controller
         try {
             $this->authorize('create', Product::class);
 
-            $data = $request->validated();
+            $data = $this->withUnit($request->validated());
             $openingQty = (int) ($data['opening_qty'] ?? 0);
             $threshold = $data['low_stock_threshold'] ?? null;
             $packs = $data['packs'] ?? [];
@@ -182,7 +184,7 @@ class ProductController extends Controller
             // so this is where the individual prices live.
             'packs' => $product->packs()
                 ->orderBy('units_per_pack')
-                ->get(['id', 'name', 'units_per_pack', 'sell_price', 'is_active']),
+                ->get(['id', 'name', 'unit_id', 'units_per_pack', 'sell_price', 'is_active']),
             'stocks' => $product->stocks()->with('store:id,name')->get(),
             'movements' => $product->inventoryLogs()
                 ->with(['store:id,name', 'creator:id,name'])
@@ -202,9 +204,10 @@ class ProductController extends Controller
 
         return Inertia::render('Products/Edit', [
             'product' => $product->load('category:id,name', 'parent:id,name'),
-            'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'categories' => Category::with('parent:id,name')->orderBy('name')->get(['id', 'name', 'parent_id']),
+            'units' => Unit::orderBy('name')->get(['id', 'name', 'symbol']),
             'vendors' => Vendor::orderBy('name')->get(['id', 'name', 'is_active']),
-            'packs' => $product->packs()->orderBy('units_per_pack')->get(['id', 'name', 'units_per_pack', 'sell_price', 'is_active']),
+            'packs' => $product->packs()->orderBy('units_per_pack')->get(['id', 'name', 'unit_id', 'units_per_pack', 'sell_price', 'is_active']),
             // Only worth offering a choice when there is one to make.
             'stores' => Store::orderBy('name')->get(['id', 'name']),
             'stocks' => $product->stocks()->with('store:id,name')->get(),
@@ -216,7 +219,7 @@ class ProductController extends Controller
         try {
             $this->authorize('update', $product);
 
-            $data = $request->validated();
+            $data = $this->withUnit($request->validated());
             $packs = $data['packs'] ?? [];
             $receipt = [
                 'qty' => (int) ($data['add_stock'] ?? 0),
@@ -420,6 +423,18 @@ class ProductController extends Controller
      *
      * @param  array<int, array<string, mixed>>  $packs
      */
+    private function withUnit(array $data): array
+    {
+        // Preserve the legacy string for POS feeds and older API clients.
+        $unit = ! empty($data['unit_id'])
+            ? Unit::findOrFail($data['unit_id'])
+            : Unit::firstOrCreate(['symbol' => $data['unit']], ['name' => $data['unit']]);
+        $data['unit_id'] = $unit->id;
+        $data['unit'] = $unit->symbol;
+
+        return $data;
+    }
+
     private function syncPacks(Product $product, array $packs): void
     {
         $keptIds = [];
@@ -433,7 +448,8 @@ class ProductController extends Controller
                 'units_per_pack' => (int) $pack['units_per_pack'],
                 'sell_price' => $pack['sell_price'],
                 'barcode' => ($pack['barcode'] ?? null) ?: null,
-                'unit' => $product->unit,
+                'unit_id' => $pack['unit_id'] ?? $product->unit_id,
+                'unit' => ! empty($pack['unit_id']) ? Unit::findOrFail($pack['unit_id'])->symbol : $product->unit,
                 'track_stock' => $product->track_stock,
                 'is_active' => true,
             ];

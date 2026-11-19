@@ -130,7 +130,7 @@ function stockTone(qty: number | null | undefined) {
                         <SelectContent>
                             <SelectItem :value="ALL">All categories</SelectItem>
                             <SelectItem v-for="c in categories" :key="c.id" :value="String(c.id)">
-                                {{ c.name }}
+                                {{ c.parent ? `${c.parent.name} → ${c.name}` : c.name }}
                             </SelectItem>
                         </SelectContent>
                     </Select>

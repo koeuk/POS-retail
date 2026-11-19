@@ -40,7 +40,7 @@ class MenuController extends Controller
                         ->orWhere('description', 'like', "%{$search}%");
                 });
             })
-            ->when($categoryId, fn ($q, $id) => $q->where('category_id', $id))
+            ->when($categoryId, fn ($q, $id) => $q->inCategory((int) $id))
             ->orderBy('name')
             ->get()
             ->map(function (Product $p) {
@@ -85,9 +85,9 @@ class MenuController extends Controller
         return Inertia::render('Menu/Index', [
             'products' => $products,
             'categories' => Category::query()
-                ->whereIn('id', $usedCategoryIds)
+                ->where(fn ($q) => $q->whereIn('id', $usedCategoryIds)->orWhereHas('children', fn ($c) => $c->whereIn('id', $usedCategoryIds)))
                 ->orderBy('name')
-                ->get(['id', 'name']),
+                ->get(['id', 'name', 'parent_id']),
             'filters' => [
                 'search' => $search,
                 'category' => $categoryId ? (int) $categoryId : null,

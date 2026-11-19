@@ -19,6 +19,7 @@ enum Permission: string
     case Reports = 'reports';
     case Products = 'products';
     case Categories = 'categories';
+    case Units = 'units';
     case Inventory = 'inventory';
     case Customers = 'customers';
     case Users = 'users';
@@ -36,6 +37,7 @@ enum Permission: string
             self::Reports => 'Reports',
             self::Products => 'Products',
             self::Categories => 'Categories',
+            self::Units => 'Units',
             self::Inventory => 'Inventory',
             self::Customers => 'Customers',
             self::Users => 'Staff',
@@ -50,7 +52,7 @@ enum Permission: string
     {
         return match ($this) {
             self::Pos, self::Orders, self::Debts, self::Consumption, self::Reports => 'Selling',
-            self::Products, self::Categories, self::Inventory => 'Catalogue',
+            self::Products, self::Categories, self::Units, self::Inventory => 'Catalogue',
             self::Customers, self::Users, self::Stores, self::Vendors => 'People & stores',
             self::Activity => 'Audit',
         };

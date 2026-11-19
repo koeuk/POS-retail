@@ -22,12 +22,13 @@ class CategoryController extends Controller
 
         return Inertia::render('Categories/Index', [
             'categories' => QueryBuilder::for(Category::class)
-                ->withCount('products')
+                ->with('parent:id,name')->withCount(['products', 'children'])
                 ->allowedFilters(...[
                     AllowedFilter::callback('search', fn (Builder $q, string $search) => $q->where('name', 'like', "%{$search}%")),
                 ])
                 ->orderBy('name')
                 ->get(),
+            'parents' => Category::whereNull('parent_id')->orderBy('name')->get(['id', 'name']),
             'filters' => ['search' => (string) $request->input('filter.search', '')],
         ]);
     }
@@ -63,9 +64,9 @@ class CategoryController extends Controller
         try {
             $this->authorize('delete', $category);
 
-            if ($category->products()->exists()) {
+            if ($category->products()->exists() || $category->children()->exists()) {
                 return back()->withErrors([
-                    'category' => 'This category still has products. Move them first.',
+                    'category' => 'This category still has products or subcategories. Move them first.',
                 ]);
             }
 

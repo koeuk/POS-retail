@@ -107,6 +107,17 @@ export interface Category {
     uuid: string;
     name: string;
     products_count?: number;
+    parent_id?: number | null;
+    parent?: Pick<Category, 'id' | 'name'> | null;
+    children_count?: number;
+}
+
+export interface Unit {
+    id: number;
+    uuid: string;
+    name: string;
+    symbol: string;
+    products_count?: number;
 }
 
 export interface Product {
@@ -135,6 +146,7 @@ export interface Product {
     /** Extra photos: public-disk paths or full external URLs. */
     gallery: string[] | null;
     unit: string;
+    unit_id?: number | null;
     track_stock: boolean;
     is_active: boolean;
     /** Summed across stores by the index query. */

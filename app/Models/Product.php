@@ -27,6 +27,7 @@ class Product extends Model
         'image',
         'gallery',
         'unit',
+        'unit_id',
         'units_per_pack',
         'case_size',
         'track_stock',
@@ -43,6 +44,7 @@ class Product extends Model
         'cost_price',
         'sell_price',
         'unit',
+        'unit_id',
         'units_per_pack',
         'case_size',
         'track_stock',
@@ -60,6 +62,16 @@ class Product extends Model
             'track_stock' => 'boolean',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function measurementUnit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class, 'unit_id');
+    }
+
+    public function scopeInCategory(Builder $query, int $categoryId): Builder
+    {
+        return $query->whereIn('category_id', Category::select('id')->where('id', $categoryId)->orWhere('parent_id', $categoryId));
     }
 
     public function category(): BelongsTo

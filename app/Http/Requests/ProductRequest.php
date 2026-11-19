@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Unit;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -61,7 +62,9 @@ class ProductRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:2000'],
             // One price, and it is what the customer pays. No cost, no tax.
             'sell_price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
-            'unit' => ['required', 'string', 'max:20'],
+            'unit' => ['required_without:unit_id', 'nullable', 'string', 'max:20'],
+            'unit_id' => ['nullable', 'integer', Rule::exists('units', 'id')],
+            'packs.*.unit_id' => ['nullable', 'integer', Rule::exists('units', 'id')],
             // Units per case, for counting the shelf only — a case is not sold.
             'case_size' => ['nullable', 'integer', 'min:2', 'max:100000'],
             'track_stock' => ['boolean'],
@@ -120,6 +123,23 @@ class ProductRequest extends FormRequest
             'add_stock_store_id' => ['nullable', 'integer', Rule::exists('stores', 'id')],
             'add_stock_note' => ['nullable', 'string', 'max:255'],
         ];
+    }
+
+    public function after(): array
+    {
+        return [function ($validator) {
+            $product = $this->route('product');
+            if (! $product || $validator->errors()->isNotEmpty()) {
+                return;
+            }
+            $symbol = $this->filled('unit_id')
+                ? Unit::find($this->input('unit_id'))?->symbol
+                : $this->input('unit');
+            if (strcasecmp((string) $symbol, $product->unit) !== 0 && ($product->stocks()->where('qty', '!=', 0)->exists()
+                || $product->inventoryLogs()->exists() || $product->orderItems()->exists() || $product->packs()->exists())) {
+                $validator->errors()->add('unit_id', 'The base unit cannot change after stock, movements, sales or packs have been recorded.');
+            }
+        }];
     }
 
     public function messages(): array

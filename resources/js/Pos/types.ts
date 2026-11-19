@@ -78,6 +78,7 @@ export interface PosRegister {
 }
 
 export interface PosCategory {
+    parent_id?: number | null;
     id: number;
     name: string;
 }

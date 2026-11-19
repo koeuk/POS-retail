@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useCurrency } from '@/composables/useCurrency';
 import { imageSrc } from '@/lib/utils';
-import type { Category, Product } from '@/types';
+import type { Category, Product, Unit } from '@/types';
 import { Link, useForm } from '@inertiajs/vue3';
 import { ImageUp, LoaderCircle, Plus, Trash2, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
@@ -18,6 +18,7 @@ interface PackRow {
        of plain objects needs this index signature to qualify. */
     [key: string]: string | number | null;
     id: number | null;
+    unit_id: string;
     name: string;
     units_per_pack: number | string;
     sell_price: string;
@@ -26,11 +27,12 @@ interface PackRow {
 const props = withDefaults(
     defineProps<{
         categories: Category[];
+        units: Unit[];
         /** Suppliers to pick from; the product's own is kept even if inactive. */
         vendors?: Array<{ id: number; name: string; is_active: boolean }>;
         product?: Product;
         /** Larger sizes already saved against this product. */
-        packs?: Array<{ id: number; name: string; units_per_pack: number; sell_price: string }>;
+        packs?: Array<{ id: number; unit_id?: number | null; name: string; units_per_pack: number; sell_price: string }>;
         /** Stores that can receive goods, and what is on the shelf now. */
         stores?: Array<{ id: number; name: string }>;
         onHand?: number;
@@ -82,13 +84,22 @@ const RECEIPT_KEYS = ['add_stock', 'add_stock_pack_id', 'add_stock_units_each', 
 const form = useForm({
     category_id: props.product ? String(props.product.category_id) : '',
     vendor_id: props.product?.vendor_id ? String(props.product.vendor_id) : NO_VENDOR,
-    packs: props.packs.map((p): PackRow => ({ id: p.id, name: p.name, units_per_pack: p.units_per_pack, sell_price: forEditing(p.sell_price) })),
+    packs: props.packs.map(
+        (p): PackRow => ({
+            id: p.id,
+            unit_id: p.unit_id ? String(p.unit_id) : 'base',
+            name: p.name,
+            units_per_pack: p.units_per_pack,
+            sell_price: forEditing(p.sell_price),
+        }),
+    ),
     name: props.product?.name ?? '',
     sku: props.product?.sku ?? '',
     barcode: props.product?.barcode ?? '',
     description: props.product?.description ?? '',
     sell_price: props.product ? forEditing(props.product.sell_price) : '',
     unit: props.product?.unit ?? 'pcs',
+    unit_id: String(props.product?.unit_id ?? props.units.find((u) => u.symbol === (props.product?.unit ?? 'pcs'))?.id ?? ''),
     case_size: (props.product?.case_size ?? '') as string | number,
     track_stock: props.product?.track_stock ?? true,
     is_active: props.product?.is_active ?? true,
@@ -122,8 +133,17 @@ const form = useForm({
  * its own, and no SKU to invent: the server derives one.
  */
 function addPack() {
-    form.packs.push({ id: null, name: '', units_per_pack: 6, sell_price: forEditing(form.sell_price) });
+    form.packs.push({ id: null, unit_id: 'base', name: '', units_per_pack: 6, sell_price: forEditing(form.sell_price) });
 }
+
+watch(
+    () => form.unit_id,
+    (id) => {
+        form.unit = props.units.find((u) => String(u.id) === id)?.symbol ?? form.unit;
+    },
+);
+
+const packsPayload = () => form.packs.map((p) => ({ ...p, unit_id: p.unit_id === 'base' ? null : p.unit_id }));
 
 function removePack(index: number) {
     form.packs.splice(index, 1);
@@ -245,6 +265,7 @@ function submit() {
         form.transform((data) => ({
             ...data,
             _method: 'put',
+            packs: packsPayload(),
             vendor_id: data.vendor_id === NO_VENDOR ? null : data.vendor_id,
             // SINGLE is a sentinel the Select needs; the server wants a real
             // pack id or nothing at all.
@@ -272,6 +293,7 @@ function submit() {
     form.transform((data) => {
         const payload: Record<string, unknown> = { ...data };
 
+        payload.packs = packsPayload();
         payload.vendor_id = data.vendor_id === NO_VENDOR ? null : data.vendor_id;
 
         for (const key of RECEIPT_KEYS) delete payload[key];
@@ -306,7 +328,7 @@ function submit() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem v-for="c in categories" :key="c.id" :value="String(c.id)">
-                                    {{ c.name }}
+                                    {{ c.parent ? `${c.parent.name} → ${c.name}` : c.name }}
                                 </SelectItem>
                             </SelectContent>
                         </Select>
@@ -362,7 +384,7 @@ function submit() {
 
                 <div v-if="form.packs.length" class="mb-3 space-y-3">
                     <div v-for="(pack, index) in form.packs" :key="index" class="rounded-lg border border-border p-3">
-                        <div class="grid gap-3 sm:grid-cols-[1fr_6rem_7rem_auto] sm:items-start">
+                        <div class="grid gap-3 sm:grid-cols-2 sm:items-start">
                             <div class="grid gap-1.5">
                                 <Label :for="`pack-name-${index}`" class="text-xs text-muted-foreground">Name</Label>
                                 <Input :id="`pack-name-${index}`" v-model="pack.name" placeholder="Half case" />
@@ -393,11 +415,23 @@ function submit() {
                                 <InputError :message="packError(index, 'sell_price')" />
                             </div>
 
+                            <div class="grid gap-2">
+                                <Label :for="`pack-unit-${index}`">Pack unit</Label>
+                                <Select v-model="pack.unit_id">
+                                    <SelectTrigger :id="`pack-unit-${index}`"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="base">Same as base unit</SelectItem>
+                                        <SelectItem v-for="u in units" :key="u.id" :value="String(u.id)">{{ u.name }} ({{ u.symbol }})</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <InputError :message="packError(index, 'unit_id')" />
+                            </div>
+
                             <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                class="press touch-target mt-0 self-start text-muted-foreground hover:text-destructive sm:mt-[1.6rem]"
+                                class="press touch-target justify-self-end text-muted-foreground hover:text-destructive sm:col-span-2"
                                 :aria-label="`Remove ${pack.name || 'pack'}`"
                                 @click="removePack(index)"
                             >
@@ -616,7 +650,11 @@ function submit() {
 
                 <div class="grid grid-cols-3 gap-2">
                     <!-- Saved photos being kept -->
-                    <div v-for="(src, i) in form.gallery_existing" :key="`e${i}`" class="group relative aspect-square overflow-hidden rounded-lg border border-border">
+                    <div
+                        v-for="(src, i) in form.gallery_existing"
+                        :key="`e${i}`"
+                        class="group relative aspect-square overflow-hidden rounded-lg border border-border"
+                    >
                         <img :src="imageSrc(src)" alt="" class="size-full object-cover" />
                         <button
                             type="button"
@@ -629,7 +667,11 @@ function submit() {
                     </div>
 
                     <!-- Uploads picked this session -->
-                    <div v-for="(src, i) in galleryPending" :key="`p${i}`" class="group relative aspect-square overflow-hidden rounded-lg border border-border">
+                    <div
+                        v-for="(src, i) in galleryPending"
+                        :key="`p${i}`"
+                        class="group relative aspect-square overflow-hidden rounded-lg border border-border"
+                    >
                         <img :src="src" alt="" class="size-full object-cover" />
                         <button
                             type="button"
@@ -642,7 +684,11 @@ function submit() {
                     </div>
 
                     <!-- Links pasted this session -->
-                    <div v-for="(url, i) in form.gallery_urls" :key="`u${i}`" class="group relative aspect-square overflow-hidden rounded-lg border border-border">
+                    <div
+                        v-for="(url, i) in form.gallery_urls"
+                        :key="`u${i}`"
+                        class="group relative aspect-square overflow-hidden rounded-lg border border-border"
+                    >
                         <img :src="url" alt="" class="size-full object-cover" />
                         <button
                             type="button"
@@ -684,8 +730,17 @@ function submit() {
 
                 <div class="grid gap-4">
                     <div class="grid gap-2">
-                        <Label for="unit">Unit</Label>
-                        <Input id="unit" v-model="form.unit" placeholder="pcs" />
+                        <Label for="unit">Base unit</Label>
+                        <Select v-model="form.unit_id">
+                            <SelectTrigger id="unit"><SelectValue placeholder="Choose a unit" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem v-for="u in units" :key="u.id" :value="String(u.id)">{{ u.name }} ({{ u.symbol }})</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <p class="text-xs text-muted-foreground">
+                            Stock is counted in whole base units. Use grams or milliliters for smaller quantities. Set pack conversions below.
+                        </p>
+                        <InputError :message="form.errors.unit_id" />
                         <InputError :message="form.errors.unit" />
                     </div>
 
