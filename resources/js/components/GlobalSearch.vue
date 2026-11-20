@@ -244,7 +244,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div ref="containerRef" :class="cn('relative w-full max-w-md sm:max-w-xl lg:max-w-2xl xl:max-w-3xl', props.class)">
+    <div ref="containerRef" :class="cn('relative w-full max-w-[540px]', props.class)">
         <form @submit.prevent="handleSubmit" class="relative flex items-center">
             <Search class="pointer-events-none absolute left-3.5 size-5 text-primary/70" />
             <input

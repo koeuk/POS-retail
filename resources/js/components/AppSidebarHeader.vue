@@ -32,7 +32,7 @@ const props = withDefaults(
             <SidebarTrigger class="-ml-1" />
         </div>
 
-        <GlobalSearch class="mx-3 max-w-md flex-1 sm:mx-6 sm:max-w-xl lg:max-w-2xl xl:max-w-3xl" />
+        <GlobalSearch class="mx-3 min-w-0 max-w-[540px] flex-1 sm:mx-6" />
 
         <!-- Page-supplied chrome (a sync badge, a register picker) sits with
              the breadcrumb rather than inside the page body, so it stays put
