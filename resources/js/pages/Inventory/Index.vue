@@ -575,7 +575,8 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                 <div class="relative">
                     <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                     <LoaderCircle v-if="pickerLoading" class="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-                    <Input v-model="pickerQuery" placeholder="Search name, SKU or barcode…" class="pl-9" autocomplete="off" autofocus />
+                    <Input v-model="pickerQuery" placeholder="Search name, SKU or barcode…" class="pl-9 pr-10" autocomplete="off" autofocus />
+                    <ClearFiltersButton v-if="pickerQuery" compact class="absolute right-1 top-1/2 -translate-y-1/2" @clear="pickerQuery = ''" />
                 </div>
 
                 <ul v-if="pickerResults.length" class="-mx-1 max-h-[45vh] overflow-y-auto">

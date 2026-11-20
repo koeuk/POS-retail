@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ClearFiltersButton from '@/components/ClearFiltersButton.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -184,7 +185,8 @@ const money = (v: number) => (props.currency ? formatMoney(v, props.currency) : 
             <div v-else class="space-y-3 py-2">
                 <div class="relative">
                     <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input v-model="query" placeholder="Name or phone…" class="pl-9" autofocus autocomplete="off" />
+                    <Input v-model="query" placeholder="Name or phone…" class="pl-9 pr-10" autofocus autocomplete="off" />
+                    <ClearFiltersButton v-if="query" compact class="absolute right-1 top-1/2 -translate-y-1/2" @clear="query = ''" />
                 </div>
 
                 <p v-if="failed" class="text-xs text-destructive">Could not load customers — check the connection.</p>

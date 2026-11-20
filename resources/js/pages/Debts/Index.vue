@@ -530,7 +530,13 @@ function clearFilters() {
                             <template v-else>
                                 <div class="relative">
                                     <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                                    <Input v-model="customerQuery" placeholder="Name or phone…" class="pl-9" autocomplete="off" autofocus />
+                                    <Input v-model="customerQuery" placeholder="Name or phone…" class="pl-9 pr-10" autocomplete="off" autofocus />
+                                    <ClearFiltersButton
+                                        v-if="customerQuery"
+                                        compact
+                                        class="absolute right-1 top-1/2 -translate-y-1/2"
+                                        @clear="customerQuery = ''"
+                                    />
                                 </div>
                                 <ul v-if="customerResults.length" class="max-h-40 overflow-y-auto rounded-lg border border-border">
                                     <li v-for="c in customerResults" :key="c.id" class="border-b border-border last:border-b-0">
@@ -590,7 +596,13 @@ function clearFilters() {
                             <template v-else>
                                 <div class="relative">
                                     <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                                    <Input v-model="productQuery" placeholder="Product, SKU or barcode…" class="pl-9" autocomplete="off" />
+                                    <Input v-model="productQuery" placeholder="Product, SKU or barcode…" class="pl-9 pr-10" autocomplete="off" />
+                                    <ClearFiltersButton
+                                        v-if="productQuery"
+                                        compact
+                                        class="absolute right-1 top-1/2 -translate-y-1/2"
+                                        @clear="productQuery = ''"
+                                    />
                                 </div>
                                 <ul v-if="productResults.length" class="max-h-40 overflow-y-auto rounded-lg border border-border">
                                     <li v-for="pr in productResults" :key="pr.id" class="border-b border-border last:border-b-0">

@@ -261,10 +261,11 @@ onUnmounted(() => {
             <div class="absolute right-3 flex items-center gap-1.5">
                 <Loader2 v-if="isLoading" class="size-4.5 animate-spin text-primary/70" />
                 <button
-                    v-else-if="searchQuery"
+                    v-if="searchQuery"
                     type="button"
                     class="flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
                     title="Clear search"
+                    aria-label="Clear search"
                     @click="clearSearch"
                 >
                     <X class="size-4" />
