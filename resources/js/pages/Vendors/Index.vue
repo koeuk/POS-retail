@@ -15,13 +15,14 @@ import { Switch } from '@/components/ui/switch';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { useCurrency } from '@/composables/useCurrency';
+import { useFilterReload } from '@/composables/useFilterReload';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
 import type { Paginated, Vendor } from '@/types';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { Boxes, CheckCircle2, Pencil, Plus, Search, Trash2, TrendingUp, Truck } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 
 type VendorSales = { orders: number; qty: number; revenue: string };
 type VendorRow = Vendor & { sales: VendorSales };
@@ -39,7 +40,6 @@ const { may } = usePermissions();
 const { money } = useCurrency();
 
 const search = ref(props.filters.search ?? '');
-let debounce: ReturnType<typeof setTimeout>;
 
 function reload(extra: Record<string, unknown> = {}) {
     router.get(
@@ -49,10 +49,7 @@ function reload(extra: Record<string, unknown> = {}) {
     );
 }
 
-watch(search, () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(() => reload(), 300);
-});
+useFilterReload(search, [], () => reload());
 
 const editing = ref<Vendor | null>(null);
 const dialogOpen = ref(false);

@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useFilterReload } from '@/composables/useFilterReload';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
@@ -66,7 +67,6 @@ const search = ref(props.filters.search ?? '');
 const storeId = ref(props.filters.store_id ?? ALL);
 const state = ref(props.filters.state ?? ALL);
 const sort = ref(props.filters.sort ?? 'qty');
-let debounce: ReturnType<typeof setTimeout>;
 
 function reload() {
     router.get(
@@ -84,11 +84,7 @@ function reload() {
     );
 }
 
-watch(search, () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(reload, 300);
-});
-watch([storeId, state, sort], reload);
+useFilterReload(search, [storeId, state, sort], reload);
 
 /* ------------------------------------------------------------------ */
 /* Movement dialog                                                     */

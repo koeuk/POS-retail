@@ -13,12 +13,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
+import { useFilterReload } from '@/composables/useFilterReload';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
 import type { Paginated } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Banknote, Check, Clock, CloudOff, CreditCard, Eye, HandCoins, Printer, QrCode, ReceiptText, Search, Utensils } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 
 interface OrderRow {
     id: number;
@@ -54,8 +55,6 @@ const method = ref(props.filters.method ?? ALL);
 const from = ref(props.filters.from ?? '');
 const to = ref(props.filters.to ?? '');
 
-let debounce: ReturnType<typeof setTimeout>;
-
 function reload() {
     router.get(
         route('orders.index'),
@@ -73,11 +72,7 @@ function reload() {
     );
 }
 
-watch(search, () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(reload, 300);
-});
-watch([status, method, from, to], reload);
+useFilterReload(search, [status, method, from, to], reload);
 
 /* The moment the sale happened, which for an offline order is not the moment
    the row was created here. */

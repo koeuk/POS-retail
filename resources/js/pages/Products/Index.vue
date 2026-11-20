@@ -21,13 +21,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useFilterReload } from '@/composables/useFilterReload';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage, imageSrc } from '@/lib/utils';
 import type { Category, Paginated, Product } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Boxes, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 
 const props = defineProps<{
     products: Paginated<Product>;
@@ -44,7 +45,6 @@ const categoryId = ref(props.filters.category_id ?? 'all');
 const status = ref(props.filters.status ?? 'all');
 
 const ALL = 'all';
-let debounce: ReturnType<typeof setTimeout>;
 
 function applyFilters() {
     router.get(
@@ -61,12 +61,7 @@ function applyFilters() {
     );
 }
 
-watch(search, () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(applyFilters, 300);
-});
-
-watch([categoryId, status], applyFilters);
+useFilterReload(search, [categoryId, status], applyFilters);
 
 const pendingDelete = ref<Product | null>(null);
 

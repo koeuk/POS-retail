@@ -30,7 +30,7 @@ const currentPath = computed(() => new URL(page.url, 'http://x').pathname);
     <div class="px-4 py-6">
         <Heading title="Settings" description="Manage your profile and account settings" />
 
-        <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-x-12 lg:space-y-0">
+        <div class="flex flex-col gap-y-8 md:gap-y-0 lg:flex-row lg:gap-x-12">
             <!--
                 Phone: one row of tabs. The stacked list cost four rows of a
                 430px screen before the page itself began. It scrolls sideways

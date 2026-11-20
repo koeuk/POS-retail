@@ -9,12 +9,13 @@ import Pagination from '@/components/Pagination.vue';
 import { Input } from '@/components/ui/input';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
+import { useFilterReload } from '@/composables/useFilterReload';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
 import type { Paginated } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Search, Utensils } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 
 interface Row {
     id: number;
@@ -46,7 +47,6 @@ const search = ref(props.filters.search);
 // The picker hands back undefined when a range is cleared; '' from the server means the same thing.
 const from = ref<string | undefined>(props.filters.from || undefined);
 const to = ref<string | undefined>(props.filters.to || undefined);
-let debounce: ReturnType<typeof setTimeout>;
 
 function reload() {
     router.get(
@@ -55,11 +55,7 @@ function reload() {
         { preserveState: true, preserveScroll: true, replace: true },
     );
 }
-watch(search, () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(reload, 300);
-});
-watch([from, to], reload);
+useFilterReload(search, [from, to], reload);
 
 const when = (r: Row) => new Date(r.created_offline_at ?? r.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 

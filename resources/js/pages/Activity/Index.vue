@@ -9,12 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useFilterReload } from '@/composables/useFilterReload';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
 import type { Paginated } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
 import { History, Search, X } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 
 interface Change {
     field: string;
@@ -77,8 +78,6 @@ const subjectId = ref(props.filters.subject_id ?? '');
 
 const subjectScope = computed(() => (subjectType.value && subjectId.value ? `${subjectType.value} #${subjectId.value}` : null));
 
-let debounce: ReturnType<typeof setTimeout>;
-
 const clean = (value: string) => (value === ALL || value === '' ? undefined : value);
 
 function reload() {
@@ -102,12 +101,7 @@ function reload() {
     );
 }
 
-watch(search, () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(reload, 300);
-});
-
-watch([logName, event, causerId, storeId, subjectType, subjectId, from, to], reload);
+useFilterReload(search, [logName, event, causerId, storeId, subjectType, subjectId, from, to], reload);
 
 const hasFilters = computed(
     () =>

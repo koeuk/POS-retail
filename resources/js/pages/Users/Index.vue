@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useFilterReload } from '@/composables/useFilterReload';
 import { useInitials } from '@/composables/useInitials';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -99,7 +100,6 @@ const NONE = 'none';
 
 const search = ref(props.filters.search ?? '');
 const roleFilter = ref(props.filters.role ?? ALL);
-let debounce: ReturnType<typeof setTimeout>;
 
 function reload() {
     router.get(
@@ -115,11 +115,7 @@ function reload() {
     );
 }
 
-watch(search, () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(reload, 300);
-});
-watch(roleFilter, reload);
+useFilterReload(search, [roleFilter], reload);
 
 const editing = ref<User | null>(null);
 const dialogOpen = ref(false);

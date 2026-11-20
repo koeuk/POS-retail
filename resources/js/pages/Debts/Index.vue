@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
+import { useFilterReload } from '@/composables/useFilterReload';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { currentPerPage } from '@/lib/utils';
@@ -54,7 +55,6 @@ const amountStep = computed(() => (currency.value.decimals > 0 ? '0.01' : '1'));
 
 const search = ref(props.filters.search);
 const state = ref(props.filters.state);
-let debounce: ReturnType<typeof setTimeout>;
 
 function reload() {
     router.get(
@@ -63,11 +63,7 @@ function reload() {
         { preserveState: true, preserveScroll: true, replace: true },
     );
 }
-watch(search, () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(reload, 300);
-});
-watch(state, reload);
+useFilterReload(search, [state], reload);
 
 const owed = (d: Debt) => Math.max(0, Number(d.total) - Number(d.paid_amount));
 

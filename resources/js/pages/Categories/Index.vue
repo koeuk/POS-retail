@@ -11,12 +11,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useFilterReload } from '@/composables/useFilterReload';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { Category } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { Pencil, Plus, Search, Shapes, Trash2 } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps<{
     categories: Category[];
@@ -28,17 +29,13 @@ const props = defineProps<{
 const { may } = usePermissions();
 
 const search = ref(props.filters.search ?? '');
-let debounce: ReturnType<typeof setTimeout>;
 
-watch(search, () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(() => {
-        router.get(
-            route('categories.index'),
-            { filter: { search: search.value || undefined } },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }, 300);
+useFilterReload(search, [], () => {
+    router.get(
+        route('categories.index'),
+        { filter: { search: search.value || undefined } },
+        { preserveState: true, preserveScroll: true, replace: true },
+    );
 });
 
 const editing = ref<Category | null>(null);
