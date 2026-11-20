@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
 import { usePermissions } from '@/composables/usePermissions';
@@ -307,7 +307,10 @@ function submitAdd() {
                             </p>
                         </button>
 
-                        <div v-if="(d.customer && may('debts', 'create')) || (owed(d) > 0 && may('debts', 'update'))" class="flex gap-2 border-t border-border px-3.5 py-2">
+                        <div
+                            v-if="(d.customer && may('debts', 'create')) || (owed(d) > 0 && may('debts', 'update'))"
+                            class="flex gap-2 border-t border-border px-3.5 py-2"
+                        >
                             <Button
                                 v-if="d.customer && may('debts', 'create')"
                                 variant="outline"
@@ -319,7 +322,9 @@ function submitAdd() {
                                 <Plus class="size-3.5" />
                                 Add
                             </Button>
-                            <Button v-if="owed(d) > 0 && may('debts', 'update')" size="sm" class="press flex-1" @click="openSettle(d)">Record payment</Button>
+                            <Button v-if="owed(d) > 0 && may('debts', 'update')" size="sm" class="press flex-1" @click="openSettle(d)"
+                                >Record payment</Button
+                            >
                         </div>
                     </li>
                 </ul>
@@ -378,7 +383,9 @@ function submitAdd() {
                                             <Plus class="size-3.5" />
                                             Add
                                         </Button>
-                                        <Button v-if="owed(d) > 0 && may('debts', 'update')" size="sm" class="press" @click="openSettle(d)">Record payment</Button>
+                                        <Button v-if="owed(d) > 0 && may('debts', 'update')" size="sm" class="press" @click="openSettle(d)"
+                                            >Record payment</Button
+                                        >
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -486,18 +493,18 @@ function submitAdd() {
         </Sheet>
 
         <!-- Add debt: an amount straight onto the book. -->
-        <Dialog v-model:open="adding">
-            <DialogContent class="sm:max-w-sm">
-                <form @submit.prevent="submitAdd">
-                    <DialogHeader>
-                        <DialogTitle>Add debt</DialogTitle>
-                        <DialogDescription>
+        <Sheet v-model:open="adding">
+            <SheetContent side="right" class="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
+                <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="submitAdd">
+                    <SheetHeader class="shrink-0 border-b border-border px-5 pb-4 pt-5 text-left">
+                        <SheetTitle>Add debt</SheetTitle>
+                        <SheetDescription>
                             Goods taken on credit, typed as an amount. It counts as a sale today and is settled with Record payment like any other
                             debt.
-                        </DialogDescription>
-                    </DialogHeader>
+                        </SheetDescription>
+                    </SheetHeader>
 
-                    <div class="grid gap-4 py-5">
+                    <div class="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto px-5 py-5">
                         <div class="grid gap-2">
                             <Label>Customer</Label>
 
@@ -633,7 +640,7 @@ function submitAdd() {
                         </div>
                     </div>
 
-                    <DialogFooter>
+                    <SheetFooter class="shrink-0 gap-2 border-t border-border p-4">
                         <Button type="button" variant="ghost" class="press" @click="adding = false">Cancel</Button>
                         <Button
                             type="submit"
@@ -642,10 +649,10 @@ function submitAdd() {
                         >
                             Add to debt
                         </Button>
-                    </DialogFooter>
+                    </SheetFooter>
                 </form>
-            </DialogContent>
-        </Dialog>
+            </SheetContent>
+        </Sheet>
 
         <Dialog :open="!!settling" @update:open="(v) => !v && (settling = null)">
             <DialogContent class="sm:max-w-sm">
