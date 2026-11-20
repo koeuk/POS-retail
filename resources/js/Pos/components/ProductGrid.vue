@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ClearFiltersButton from '@/components/ClearFiltersButton.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { CurrencyDef } from '@/composables/useCurrency';
@@ -331,22 +332,29 @@ onBeforeUnmount(() => {
     resizeObserver?.disconnect();
     if (scrollResetTimeout) clearTimeout(scrollResetTimeout);
 });
+function clearFilters() {
+    search.value = '';
+    activeCategory.value = null;
+}
 </script>
 
 <template>
     <div class="flex h-full min-h-0 flex-col">
         <!-- Filters -->
         <div class="shrink-0 space-y-2 border-b border-border p-3">
-            <div class="relative">
-                <Search class="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-                <input
-                    id="pos-search"
-                    v-model="search"
-                    type="search"
-                    placeholder="Search or scan…"
-                    autocomplete="off"
-                    class="h-12 w-full rounded-xl border border-input bg-background pl-11 pr-3 text-base outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                />
+            <div class="flex items-center gap-2">
+                <div class="relative min-w-0 flex-1">
+                    <Search class="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                        id="pos-search"
+                        v-model="search"
+                        type="search"
+                        placeholder="Search or scan…"
+                        autocomplete="off"
+                        class="h-12 w-full rounded-xl border border-input bg-background pl-11 pr-3 text-base outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                </div>
+                <ClearFiltersButton :disabled="!search && activeCategory === null" @clear="clearFilters" />
             </div>
 
             <div class="relative flex items-center gap-1.5">

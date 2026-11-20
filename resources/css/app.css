@@ -69,7 +69,7 @@
            teal in the palette and everything on it is light text — which
            is why these tokens do not follow --background the way the rest
            of the surfaces do. */
-        --sidebar-background: 176.1 69.37% 21.76%;
+        --sidebar-background: var(--brand);
         --sidebar-foreground: 166.15 76.47% 96.67%;
         --sidebar-primary: 167.23 85.45% 89.22%;
         --sidebar-primary-foreground: 178.6 84.31% 10%;
@@ -139,7 +139,7 @@
         --series-3: #199e70;
         --series-4: #c98500;
 
-        --sidebar-background: 178.6 84.31% 10%;
+        --sidebar-background: var(--brand);
         --sidebar-foreground: 40 15% 88%;
         --sidebar-primary: 170.57 76.92% 64.31%;
         --sidebar-primary-foreground: 178.6 84.31% 10%;

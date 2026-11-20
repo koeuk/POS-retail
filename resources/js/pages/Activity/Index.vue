@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ClearFiltersButton from '@/components/ClearFiltersButton.vue';
 import DateRangePicker from '@/components/DateRangePicker.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -246,10 +247,7 @@ const subjectLabel = (row: ActivityRow) => (row.subject_type ? `${row.subject_ty
                             @update:to="(v) => (to = v ?? '')"
                         />
 
-                        <Button v-if="hasFilters" variant="ghost" class="press h-10 shrink-0 rounded-full" @click="clearFilters">
-                            <X class="size-4" />
-                            Clear
-                        </Button>
+                        <ClearFiltersButton :disabled="!hasFilters" @clear="clearFilters" />
                     </div>
                 </div>
 

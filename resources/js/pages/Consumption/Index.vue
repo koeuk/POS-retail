@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import StatTile from '@/components/charts/StatTile.vue';
+import ClearFiltersButton from '@/components/ClearFiltersButton.vue';
 import DateRangePicker from '@/components/DateRangePicker.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import Money from '@/components/Money.vue';
@@ -64,6 +65,11 @@ const when = (r: Row) => new Date(r.created_offline_at ?? r.created_at).toLocale
 
 /** "Cola 330ml ×2, Bar Soap" — the whole take on one line. */
 const summarise = (r: Row) => r.items.map((i) => (i.qty > 1 ? `${i.product_name} ×${i.qty}` : i.product_name)).join(', ');
+function clearFilters() {
+    search.value = '';
+    from.value = undefined;
+    to.value = undefined;
+}
 </script>
 
 <template>
@@ -95,6 +101,7 @@ const summarise = (r: Row) => r.items.map((i) => (i.qty > 1 ? `${i.product_name}
                     <div class="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 py-2 md:m-0 md:overflow-visible md:p-0">
                         <DateRangePicker v-model:from="from" v-model:to="to" placeholder="Any date" class="h-9 shrink-0 rounded-full" />
                     </div>
+                    <ClearFiltersButton :disabled="!search && !from && !to" @clear="clearFilters" />
                 </div>
 
                 <!-- Phone: one card per take. -->

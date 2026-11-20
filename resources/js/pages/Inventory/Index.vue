@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import StatTile from '@/components/charts/StatTile.vue';
+import ClearFiltersButton from '@/components/ClearFiltersButton.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import HistoryButton from '@/components/HistoryButton.vue';
 import InputError from '@/components/InputError.vue';
@@ -267,7 +268,7 @@ function submitThreshold() {
 
 /* ------------------------------------------------------------------ */
 
-const anyFilter = computed(() => !!search.value || storeId.value !== ALL || state.value !== ALL);
+const anyFilter = computed(() => !!search.value || storeId.value !== ALL || state.value !== ALL || sort.value !== 'qty');
 
 /*
  * An empty table after a filter is usually an answer, not a failure. Saying
@@ -295,6 +296,7 @@ function clearFilters() {
     search.value = '';
     storeId.value = ALL;
     state.value = ALL;
+    sort.value = 'qty';
 }
 
 /*
@@ -413,6 +415,7 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
                                 <SelectItem value="name">Name A–Z</SelectItem>
                             </SelectContent>
                         </Select>
+                        <ClearFiltersButton :disabled="!anyFilter" @clear="clearFilters" />
                     </div>
 
                     <!-- Phone: one card per shelf row. -->

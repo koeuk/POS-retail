@@ -2,6 +2,7 @@
 import BreakdownBars from '@/components/charts/BreakdownBars.vue';
 import SalesBarChart from '@/components/charts/SalesBarChart.vue';
 import StatTile from '@/components/charts/StatTile.vue';
+import ClearFiltersButton from '@/components/ClearFiltersButton.vue';
 import DateRangePicker from '@/components/DateRangePicker.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
@@ -119,6 +120,9 @@ const debtCustomers = computed(() =>
 const totalDebtOwed = computed(() => props.debtorsList.reduce((sum, d) => sum + Number(d.total_owed), 0));
 
 const exportUrl = computed(() => route('reports.export', { from: from.value, to: to.value }));
+function clearFilters() {
+    router.get(route('reports.index'), {}, { preserveScroll: true, replace: true });
+}
 </script>
 
 <template>
@@ -140,6 +144,7 @@ const exportUrl = computed(() => route('reports.export', { from: from.value, to:
             <!-- Filters: one row, above the charts. -->
             <div class="animate-rise mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3">
                 <DateRangePicker v-model:from="from" v-model:to="to" placeholder="Pick a period" class="w-full sm:w-[16rem]" />
+                <ClearFiltersButton @clear="clearFilters" />
 
                 <div class="ml-auto flex gap-1">
                     <button

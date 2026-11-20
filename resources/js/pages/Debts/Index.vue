@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import StatTile from '@/components/charts/StatTile.vue';
+import ClearFiltersButton from '@/components/ClearFiltersButton.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import InputError from '@/components/InputError.vue';
 import Money from '@/components/Money.vue';
@@ -243,6 +244,10 @@ function submitAdd() {
             onSuccess: () => (adding.value = false),
         });
 }
+function clearFilters() {
+    search.value = '';
+    state.value = 'open';
+}
 </script>
 
 <template>
@@ -272,7 +277,7 @@ function submitAdd() {
 
             <div class="animate-rise rounded-xl border border-border bg-card" style="animation-delay: 60ms">
                 <!-- Same shape as Order History: full-width search, chips below. -->
-                <div class="flex items-center gap-2 border-b border-border p-3">
+                <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
                     <div class="relative min-w-0 flex-1">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input v-model="search" placeholder="Customer, phone or order no…" class="h-10 rounded-full pl-9" autocomplete="off" />
@@ -284,6 +289,7 @@ function submitAdd() {
                             <SelectItem value="settled">Settled</SelectItem>
                         </SelectContent>
                     </Select>
+                    <ClearFiltersButton :disabled="!search && state === 'open'" @clear="clearFilters" />
                 </div>
 
                 <!-- Phone: one card per debt — who, how much still owed, and the

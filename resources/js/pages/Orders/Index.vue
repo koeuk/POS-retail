@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ClearFiltersButton from '@/components/ClearFiltersButton.vue';
 import DateRangePicker from '@/components/DateRangePicker.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import Money from '@/components/Money.vue';
@@ -130,6 +131,13 @@ function submitPayment() {
         },
     );
 }
+function clearFilters() {
+    search.value = '';
+    status.value = ALL;
+    method.value = ALL;
+    from.value = '';
+    to.value = '';
+}
 </script>
 
 <template>
@@ -168,6 +176,7 @@ function submitPayment() {
                     </Select>
 
                     <DateRangePicker v-model:from="from" v-model:to="to" placeholder="Any date" class="h-10 shrink-0 rounded-full" />
+                    <ClearFiltersButton :disabled="!search && status === ALL && method === ALL && !from && !to" @clear="clearFilters" />
                 </div>
 
                 <!-- Phone: one card per sale. A seven-column table has no honest

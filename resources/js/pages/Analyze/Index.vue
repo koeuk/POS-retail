@@ -2,6 +2,7 @@
 import BreakdownBars from '@/components/charts/BreakdownBars.vue';
 import HourlyBarChart, { type HourlyRow } from '@/components/charts/HourlyBarChart.vue';
 import StatTile from '@/components/charts/StatTile.vue';
+import ClearFiltersButton from '@/components/ClearFiltersButton.vue';
 import DateRangePicker from '@/components/DateRangePicker.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -150,6 +151,9 @@ function dowBarWidth(d: DowData): string {
     const val = dowMetric.value === 'sales' ? Number(d.sales) : d.orders;
     return `${Math.max(2, (val / peakDowVal.value) * 100)}%`;
 }
+function clearFilters() {
+    router.get(route('analyze.index'), {}, { preserveScroll: true, replace: true });
+}
 </script>
 
 <template>
@@ -162,6 +166,7 @@ function dowBarWidth(d: DowData): string {
             <!-- Filter Bar -->
             <div class="animate-rise mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3">
                 <DateRangePicker v-model:from="from" v-model:to="to" placeholder="Pick a period" class="w-full sm:w-[16rem]" />
+                <ClearFiltersButton @clear="clearFilters" />
 
                 <div class="ml-auto flex gap-1">
                     <button

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ClearFiltersButton from '@/components/ClearFiltersButton.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import HistoryButton from '@/components/HistoryButton.vue';
 import InputError from '@/components/InputError.vue';
@@ -325,6 +326,10 @@ function confirmDelete() {
 }
 
 const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'manager' || role === 'vendor' ? 'secondary' : 'outline');
+function clearFilters() {
+    search.value = '';
+    roleFilter.value = ALL;
+}
 </script>
 
 <template>
@@ -343,7 +348,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
 
             <div class="list-panel animate-rise" style="animation-delay: 60ms">
                 <!-- Same shape as Order History: full-width search, chips below. -->
-                <div class="flex items-center gap-2 border-b border-border p-3">
+                <div class="flex flex-wrap items-center gap-2 border-b border-border p-3">
                     <div class="relative min-w-0 flex-1">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input v-model="search" placeholder="Search name or email…" class="h-10 rounded-full pl-9" autocomplete="off" />
@@ -359,6 +364,7 @@ const roleTone = (role: string) => (role === 'admin' ? 'default' : role === 'man
                             </SelectItem>
                         </SelectContent>
                     </Select>
+                    <ClearFiltersButton :disabled="!search && roleFilter === ALL" @clear="clearFilters" />
                 </div>
 
                 <div v-if="users.data.length" class="hidden overflow-x-auto md:block">

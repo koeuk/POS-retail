@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ClearFiltersButton from '@/components/ClearFiltersButton.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import { Input } from '@/components/ui/input';
 import { formatCurrency, type CurrencyDef } from '@/composables/useCurrency';
@@ -117,6 +118,10 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => window.removeEventListener('resize', updateChipArrows));
+function clearFilters() {
+    search.value = '';
+    activeCategory.value = null;
+}
 </script>
 
 <template>
@@ -167,9 +172,12 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateChipArrows));
         <!-- Sticky filter bar -->
         <div class="sticky top-0 z-20 border-b border-border bg-card/95 shadow-sm backdrop-blur">
             <div class="mx-auto max-w-5xl px-5 py-3">
-                <div class="relative">
-                    <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input v-model="search" type="search" placeholder="Search the menu…" class="pl-9" aria-label="Search the menu" />
+                <div class="flex items-center gap-2">
+                    <div class="relative min-w-0 flex-1">
+                        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input v-model="search" type="search" placeholder="Search the menu…" class="pl-9" aria-label="Search the menu" />
+                    </div>
+                    <ClearFiltersButton :disabled="!search && activeCategory === null" @clear="clearFilters" />
                 </div>
 
                 <div v-if="categories.length" class="relative mt-3">

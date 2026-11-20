@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ClearFiltersButton from '@/components/ClearFiltersButton.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import HistoryButton from '@/components/HistoryButton.vue';
 import InventoryNavigation from '@/components/InventoryNavigation.vue';
@@ -95,6 +96,11 @@ function stockTone(qty: number | null | undefined) {
     if (n <= 10) return 'text-primary';
     return '';
 }
+function clearFilters() {
+    search.value = '';
+    categoryId.value = ALL;
+    status.value = ALL;
+}
 </script>
 
 <template>
@@ -148,6 +154,7 @@ function stockTone(qty: number | null | undefined) {
                             <SelectItem value="inactive">Inactive</SelectItem>
                         </SelectContent>
                     </Select>
+                    <ClearFiltersButton :disabled="!search && categoryId === ALL && status === ALL" @clear="clearFilters" />
                 </div>
 
                 <!-- Table -->
