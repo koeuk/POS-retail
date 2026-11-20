@@ -27,10 +27,10 @@ const currentPath = computed(() => new URL(page.url, 'http://x').pathname);
 </script>
 
 <template>
-    <div class="px-4 py-6">
+    <div class="px-4 py-6 lg:px-2">
         <Heading title="Settings" description="Manage your profile and account settings" />
 
-        <div class="flex flex-col gap-y-8 md:gap-y-0 lg:flex-row lg:gap-x-12">
+        <div class="flex flex-col gap-y-8 md:gap-y-0 lg:flex-row lg:gap-x-6">
             <!--
                 Phone: one row of tabs. The stacked list cost four rows of a
                 430px screen before the page itself began. It scrolls sideways
