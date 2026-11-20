@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import EmptyState from '@/components/EmptyState.vue';
 import InputError from '@/components/InputError.vue';
+import InventoryNavigation from '@/components/InventoryNavigation.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -70,17 +71,19 @@ function confirmDelete() {
 
     <AppLayout :breadcrumbs="[{ title: 'Units', href: '/units' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader
-                title="Units"
-                description="Define the units used to count stock and sell packs. Conversion quantities belong to each product."
-            >
+            <InventoryNavigation>
                 <template #actions>
                     <Button v-if="may('units', 'create')" class="press hidden md:inline-flex" @click="openCreate">
                         <Plus class="size-4" />
                         New unit
                     </Button>
                 </template>
-            </PageHeader>
+            </InventoryNavigation>
+
+            <PageHeader
+                title="Units"
+                description="Define the units used to count stock and sell packs. Conversion quantities belong to each product."
+            />
 
             <div class="list-panel animate-rise" style="animation-delay: 60ms">
                 <div class="border-b border-border p-3">

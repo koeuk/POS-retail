@@ -23,6 +23,17 @@ import {
  * the phone tab bar renders the first few items plus a "More" sheet — if the
  * two kept separate lists they would drift the first time a screen was added.
  */
+export const inventoryItems: NavItem[] = [
+    { title: 'Stock', href: '/inventory', icon: PackageSearch, requires: 'inventory' },
+    { title: 'Products', href: '/products', icon: Boxes, requires: 'products' },
+    { title: 'Categories', href: '/categories', icon: Shapes, requires: 'categories' },
+    { title: 'Units', href: '/units', icon: Boxes, requires: 'units' },
+];
+
+export function isInventoryPath(path: string): boolean {
+    return inventoryItems.some((item) => path === item.href || path.startsWith(`${item.href}/`));
+}
+
 export const navGroups: NavGroup[] = [
     {
         label: 'Selling',
@@ -41,12 +52,7 @@ export const navGroups: NavGroup[] = [
     },
     {
         label: 'Catalogue',
-        items: [
-            { title: 'Products', href: '/products', icon: Boxes, requires: 'products' },
-            { title: 'Categories', href: '/categories', icon: Shapes, requires: 'categories' },
-            { title: 'Units', href: '/units', icon: Boxes, requires: 'units' },
-            { title: 'Inventory', href: '/inventory', icon: PackageSearch, requires: 'inventory' },
-        ],
+        items: [{ title: 'Inventory', href: '/inventory', icon: PackageSearch, requires: 'inventory' }],
     },
     {
         label: 'People',
@@ -73,7 +79,16 @@ const permitted = (item: NavItem, can: Can) => !item.requires || !!can[item.requ
 /** Groups the user can see something in, with the forbidden items removed. */
 export function visibleGroups(can: Can): NavGroup[] {
     return navGroups
-        .map((group) => ({ ...group, items: group.items.filter((item) => permitted(item, can)) }))
+        .map((group) => ({
+            ...group,
+            items: group.items.flatMap((item) => {
+                if (item.href === '/inventory') {
+                    const destination = inventoryItems.find((tab) => permitted(tab, can));
+                    return destination ? [{ ...item, href: destination.href }] : [];
+                }
+                return permitted(item, can) ? [item] : [];
+            }),
+        }))
         .filter((group) => group.items.length > 0);
 }
 
@@ -105,5 +120,6 @@ export function overflowItems(can: Can): NavItem[] {
 
 /** `/products` must light up on `/products/4/edit`, but `/` must not swallow all. */
 export function isActivePath(href: string, path: string): boolean {
+    if (inventoryItems.some((item) => item.href === href) && isInventoryPath(path)) return true;
     return path === href || path.startsWith(`${href}/`);
 }

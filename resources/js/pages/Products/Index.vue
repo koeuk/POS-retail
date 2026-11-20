@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import EmptyState from '@/components/EmptyState.vue';
 import HistoryButton from '@/components/HistoryButton.vue';
+import InventoryNavigation from '@/components/InventoryNavigation.vue';
 import Money from '@/components/Money.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
@@ -101,7 +102,7 @@ function stockTone(qty: number | null | undefined) {
 
     <AppLayout :breadcrumbs="[{ title: 'Products', href: '/products' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader title="Products" description="Everything you sell, with live stock across all stores.">
+            <InventoryNavigation>
                 <template #actions>
                     <Button v-if="may('products', 'create')" as-child class="press hidden md:inline-flex">
                         <Link :href="route('products.create')">
@@ -110,7 +111,9 @@ function stockTone(qty: number | null | undefined) {
                         </Link>
                     </Button>
                 </template>
-            </PageHeader>
+            </InventoryNavigation>
+
+            <PageHeader title="Products" description="Everything you sell, with live stock across all stores." />
 
             <div class="list-panel animate-rise" style="animation-delay: 60ms">
                 <!-- Filters -->

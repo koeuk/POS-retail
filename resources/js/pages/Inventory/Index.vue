@@ -3,6 +3,7 @@ import StatTile from '@/components/charts/StatTile.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import HistoryButton from '@/components/HistoryButton.vue';
 import InputError from '@/components/InputError.vue';
+import InventoryNavigation from '@/components/InventoryNavigation.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import { Badge } from '@/components/ui/badge';
@@ -330,17 +331,19 @@ const typeTone = (type: string) => (type === 'sale' ? 'outline' : type === 'rest
 
     <AppLayout :breadcrumbs="[{ title: 'Inventory', href: '/inventory' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader
-                title="Inventory"
-                description="Stock is never typed in directly — record what happened and the quantity follows, so every change has a reason attached."
-            >
+            <InventoryNavigation>
                 <template #actions>
                     <Button class="press hidden md:inline-flex" @click="openPicker">
                         <Plus class="size-4" />
                         Adjust stock
                     </Button>
                 </template>
-            </PageHeader>
+            </InventoryNavigation>
+
+            <PageHeader
+                title="Inventory"
+                description="Stock is never typed in directly — record what happened and the quantity follows, so every change has a reason attached."
+            />
 
             <!-- Phone: a swipeable tile rail; a five-tile stack costs a screen
                  and a half of scrolling before the list even starts. -->

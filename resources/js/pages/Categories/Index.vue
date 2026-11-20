@@ -2,6 +2,7 @@
 import EmptyState from '@/components/EmptyState.vue';
 import HistoryButton from '@/components/HistoryButton.vue';
 import InputError from '@/components/InputError.vue';
+import InventoryNavigation from '@/components/InventoryNavigation.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -88,14 +89,16 @@ function confirmDelete() {
 
     <AppLayout :breadcrumbs="[{ title: 'Categories', href: '/categories' }]">
         <div class="px-2.5 py-6 md:px-8">
-            <PageHeader title="Categories" description="Group products into categories and subcategories, such as Drinks → Soft drinks.">
+            <InventoryNavigation>
                 <template #actions>
                     <Button v-if="may('categories', 'create')" class="press hidden md:inline-flex" @click="openCreate">
                         <Plus class="size-4" />
                         New category
                     </Button>
                 </template>
-            </PageHeader>
+            </InventoryNavigation>
+
+            <PageHeader title="Categories" description="Group products into categories and subcategories, such as Drinks → Soft drinks." />
 
             <div class="list-panel animate-rise" style="animation-delay: 60ms">
                 <div class="border-b border-border p-3">
