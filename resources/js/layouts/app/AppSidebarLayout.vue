@@ -32,7 +32,9 @@ withDefaults(defineProps<Props>(), {
             descendant — which silently defeats every overflow-x-auto inside
             and stretches the whole page instead of scrolling one table.
         -->
-        <AppContent variant="sidebar" class="min-w-0">
+        <!-- The desktop panel scrolls inside its inset frame, keeping the
+             rounded corners and top gap visible while the header sticks. -->
+        <AppContent variant="sidebar" class="min-w-0 md:h-[calc(100svh-1rem)] md:overflow-y-auto md:overscroll-contain md:rounded-2xl">
             <!-- One header per breakpoint: breadcrumbs on desktop, app bar on phone. -->
             <!--
                 The actions slot is rendered into both headers. Only one is

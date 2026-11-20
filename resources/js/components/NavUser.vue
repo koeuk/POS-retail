@@ -16,7 +16,11 @@ const user = page.props.auth.user as User;
         <SidebarMenuItem>
             <DropdownMenu>
                 <DropdownMenuTrigger as-child>
-                    <SidebarMenuButton size="lg" class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+                    <SidebarMenuButton
+                        size="lg"
+                        class="border border-sidebar-foreground/20 bg-sidebar-foreground/10 text-sidebar-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                        aria-label="Open account menu"
+                    >
                         <UserInfo :user="user" />
                         <ChevronsUpDown class="ml-auto size-4" />
                     </SidebarMenuButton>

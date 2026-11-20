@@ -13,16 +13,17 @@ const active = (href: string) => path.value === href || path.value.startsWith(`$
 
 <template>
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-        <nav aria-label="Inventory sections" class="flex max-w-full items-center gap-1 overflow-x-auto rounded-lg bg-muted p-1">
+        <nav
+            aria-label="Inventory sections"
+            class="isolate flex max-w-full items-stretch overflow-x-auto rounded-full border border-border bg-card shadow-sm"
+        >
             <Link
                 v-for="item in items"
                 :key="item.href"
                 :href="item.href"
                 :aria-current="active(item.href) ? 'page' : undefined"
-                class="flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                :class="
-                    active(item.href) ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:bg-background/60 hover:text-foreground'
-                "
+                class="relative flex shrink-0 items-center justify-center gap-2 border-r border-border px-4 py-2.5 text-sm font-medium transition-colors first:rounded-l-full last:rounded-r-full last:border-r-0 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                :class="active(item.href) ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'"
             >
                 <component :is="item.icon" class="size-4" />
                 {{ item.title }}

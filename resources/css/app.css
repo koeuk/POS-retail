@@ -4,12 +4,12 @@
 
 /*
 |--------------------------------------------------------------------------
-| Theme — "soft silver & deep green"
+| Theme — "soft silver & teal"
 |--------------------------------------------------------------------------
 | A retail back-office lives on screen for eight hours at a stretch, so the
 | ground is a barely-tinted cool silver rather than glaring white: white cards
-| float on it, and a single deep-green accent does all the signalling. At this
-| darkness the green carries white text cleanly instead of glowing.
+| float on it, and a single teal accent does all the signalling. At this
+| darkness the teal carries white text cleanly instead of glowing.
 */
 
 @layer base {
@@ -28,31 +28,26 @@
         --card-foreground: 220 18% 14%;
         --popover: 0 0% 100%;
         --popover-foreground: 220 18% 14%;
-        --primary: 155 58% 26%;
-        --primary-foreground: 150 30% 98%;
+        --primary: 176.1 69.37% 21.76%;
+        --primary-foreground: 0 0% 100%;
 
-        /*
-         * Brand band. Deliberately NOT --primary: the primary token has to
-         * lighten in dark mode so buttons stay legible on a near-black page,
-         * but the shop's name board is a painted surface — it should look like
-         * the same paint whatever the screen is doing.
-         */
-        --brand: 155 58% 26%;
-        --brand-bright: 158 55% 32%;
-        --brand-foreground: 150 30% 98%;
+        /* Brand surfaces keep the same teal-800 fill in both themes. */
+        --brand: 176.1 69.37% 21.76%;
+        --brand-bright: 175.34 77.44% 26.08%;
+        --brand-foreground: 0 0% 100%;
         --secondary: 220 14% 95%;
         --secondary-foreground: 220 12% 22%;
         --muted: 220 16% 96%;
         --muted-foreground: 220 9% 46%;
-        --accent: 150 32% 93%;
-        --accent-foreground: 155 50% 20%;
+        --accent: 166.15 76.47% 96.67%;
+        --accent-foreground: 176.1 69.37% 21.76%;
         --destructive: 5 72% 51%;
         --destructive-foreground: 220 16% 98%;
         --border: 220 15% 91%;
         --input: 220 15% 88%;
-        --ring: 155 58% 26%;
+        --ring: 176.1 69.37% 21.76%;
 
-        --chart-1: 155 58% 30%;
+        --chart-1: 176.1 69.37% 21.76%;
         --chart-2: 173 48% 38%;
         --chart-3: 12 70% 52%;
         --chart-4: 43 88% 48%;
@@ -69,21 +64,21 @@
 
         --radius: 0.75rem;
 
-        /* A solid deep-green panel, not a tinted grey one. The sidebar is
+        /* A solid teal panel, not a tinted grey one. The sidebar is
            the app's one piece of brand colour, so it carries the darkest
-           green in the palette and everything on it is light text — which
+           teal in the palette and everything on it is light text — which
            is why these tokens do not follow --background the way the rest
            of the surfaces do. */
-        --sidebar-background: 158 42% 14%;
-        --sidebar-foreground: 150 20% 88%;
-        --sidebar-primary: 150 45% 70%;
-        --sidebar-primary-foreground: 158 45% 10%;
+        --sidebar-background: 176.1 69.37% 21.76%;
+        --sidebar-foreground: 166.15 76.47% 96.67%;
+        --sidebar-primary: 167.23 85.45% 89.22%;
+        --sidebar-primary-foreground: 178.6 84.31% 10%;
         /* The active pill: a lift off the panel rather than a colour change,
            so the current screen reads without shouting. */
-        --sidebar-accent: 158 38% 22%;
-        --sidebar-accent-foreground: 145 55% 88%;
-        --sidebar-border: 158 32% 20%;
-        --sidebar-ring: 150 45% 70%;
+        --sidebar-accent: 175.34 77.44% 26.08%;
+        --sidebar-accent-foreground: 0 0% 100%;
+        --sidebar-border: 175.34 77.44% 26.08%;
+        --sidebar-ring: 170.57 76.92% 64.31%;
 
         /* Motion. One easing curve everywhere keeps the app feeling like one
            object. Durations are deliberately short — this is a work tool. */
@@ -113,27 +108,26 @@
         --card-foreground: 40 20% 93%;
         --popover: 28 8% 11%;
         --popover-foreground: 40 20% 93%;
-        --primary: 152 48% 46%;
-        --primary-foreground: 155 40% 7%;
+        --primary: 170.57 76.92% 64.31%;
+        --primary-foreground: 178.6 84.31% 10%;
 
-        /* Deeper still on a dark page: the same green at full lightness would
-           glow against near-black instead of sitting behind the type. */
-        --brand: 155 55% 17%;
-        --brand-bright: 158 50% 22%;
-        --brand-foreground: 150 25% 96%;
+        /* Keep the teal-800 brand surface consistent in both themes. */
+        --brand: 176.1 69.37% 21.76%;
+        --brand-bright: 175.34 77.44% 26.08%;
+        --brand-foreground: 0 0% 100%;
         --secondary: 28 7% 17%;
         --secondary-foreground: 40 20% 93%;
         --muted: 28 7% 15%;
         --muted-foreground: 34 8% 62%;
         --accent: 28 10% 20%;
-        --accent-foreground: 150 55% 68%;
+        --accent-foreground: 170.57 76.92% 64.31%;
         --destructive: 5 68% 52%;
         --destructive-foreground: 40 20% 95%;
         --border: 28 7% 19%;
         --input: 28 7% 22%;
-        --ring: 152 48% 46%;
+        --ring: 170.57 76.92% 64.31%;
 
-        --chart-1: 152 48% 50%;
+        --chart-1: 172.46 66.01% 50.39%;
         --chart-2: 173 55% 48%;
         --chart-3: 12 78% 60%;
         --chart-4: 43 92% 58%;
@@ -145,14 +139,14 @@
         --series-3: #199e70;
         --series-4: #c98500;
 
-        --sidebar-background: 28 10% 10%;
+        --sidebar-background: 178.6 84.31% 10%;
         --sidebar-foreground: 40 15% 88%;
-        --sidebar-primary: 152 48% 46%;
-        --sidebar-primary-foreground: 155 40% 7%;
-        --sidebar-accent: 28 9% 17%;
-        --sidebar-accent-foreground: 150 55% 68%;
-        --sidebar-border: 28 7% 18%;
-        --sidebar-ring: 152 48% 46%;
+        --sidebar-primary: 170.57 76.92% 64.31%;
+        --sidebar-primary-foreground: 178.6 84.31% 10%;
+        --sidebar-accent: 175.93 60.82% 19.02%;
+        --sidebar-accent-foreground: 167.23 85.45% 89.22%;
+        --sidebar-border: 175.93 60.82% 19.02%;
+        --sidebar-ring: 170.57 76.92% 64.31%;
     }
 }
 

@@ -16,10 +16,7 @@ const logoUrl = computed(() => {
     <!-- The fallback mark sits on the deep-green sidebar, so it takes the
          panel's light accent rather than --primary, which would be dark
          green on dark green. -->
-    <div
-        v-else
-        class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-    >
+    <div v-else class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground shadow-sm">
         <svg
             viewBox="0 0 24 24"
             class="size-4"
@@ -39,6 +36,6 @@ const logoUrl = computed(() => {
         <span class="truncate font-display text-[0.95rem] font-semibold leading-tight tracking-tight">
             {{ appName }}
         </span>
-        <span class="truncate font-mono text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground"> Retail </span>
+        <span class="truncate font-mono text-[0.6rem] uppercase tracking-[0.18em] text-sidebar-foreground/80"> Retail </span>
     </div>
 </template>

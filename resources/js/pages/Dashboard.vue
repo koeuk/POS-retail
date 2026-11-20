@@ -230,7 +230,7 @@ const quickActions = computed(() =>
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <!-- Today's Sales Hero Tile -->
                         <article
-                            class="animate-rise relative flex flex-col justify-between overflow-hidden rounded-2xl bg-teal-800 p-4 text-white shadow-sm dark:from-green-800 dark:to-green-700"
+                            class="animate-rise relative flex flex-col justify-between overflow-hidden rounded-2xl bg-brand p-4 text-brand-foreground shadow-sm"
                         >
                             <div class="relative flex items-start justify-between gap-1">
                                 <p class="font-mono text-[0.65rem] uppercase tracking-[0.14em] opacity-85">
@@ -363,7 +363,7 @@ const quickActions = computed(() =>
                 <div class="space-y-4 lg:col-span-1">
                     <!-- Quick Actions Banner (matching green style & height of Row 1) -->
                     <section
-                        class="animate-rise hidden min-h-[105px] items-center justify-around rounded-2xl bg-teal-800 p-3.5 text-white shadow-sm dark:from-green-800 dark:to-green-700 lg:flex"
+                        class="animate-rise hidden min-h-[105px] items-center justify-around rounded-2xl bg-brand p-3.5 text-brand-foreground shadow-sm lg:flex"
                     >
                         <Link v-for="action in quickActions" :key="action.href" :href="action.href" class="press flex flex-col items-center gap-1">
                             <span class="flex size-10 items-center justify-center rounded-full bg-white/15 transition-colors hover:bg-white/25">
