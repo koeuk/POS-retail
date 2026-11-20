@@ -415,10 +415,11 @@ onBeforeUnmount(() => {
             Fills the viewport exactly. The layout wrapper already reserves the
             tab bar via pb-tabbar, so this height must subtract it too or the
             page gains a scrollbar it should never have. The grid and cart each
-            scroll internally instead.
+            scroll internally instead. Desktop also reserves the panel's 1rem
+            inset and uses the shorter header when the sidebar is collapsed.
         -->
         <div
-            class="flex h-[calc(100dvh-var(--safe-top)-var(--appbar-h)-var(--tabbar-h)-var(--safe-bottom))] min-h-[24rem] min-w-0 flex-col overflow-x-hidden md:h-[calc(100dvh-4rem)]"
+            class="flex h-[calc(100dvh-var(--safe-top)-var(--appbar-h)-var(--tabbar-h)-var(--safe-bottom))] min-h-[24rem] min-w-0 flex-col overflow-x-hidden md:h-[calc(100dvh-5rem)] md:min-h-0 md:group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-[calc(100dvh-4rem)]"
         >
             <div
                 v-if="sync.authExpired.value"
@@ -459,7 +460,7 @@ onBeforeUnmount(() => {
                         @dblclick="resetWidth"
                     >
                         <div
-                            class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 transition-colors"
+                            class="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 transition-colors"
                             :class="isDragging ? 'bg-primary' : 'bg-transparent group-hover:bg-primary/50'"
                         />
                         <div

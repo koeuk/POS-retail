@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { CurrencyDef } from '@/composables/useCurrency';
 import { imageSrc } from '@/lib/utils';
@@ -92,7 +93,6 @@ function tap(product: PosProduct) {
 }
 
 function choose(option: PosProduct) {
-    viewing.value = null;
     emit('add', option);
 }
 
@@ -498,7 +498,7 @@ onBeforeUnmount(() => {
             <DialogContent class="sm:max-w-sm">
                 <DialogHeader>
                     <DialogTitle>{{ viewing?.name }}</DialogTitle>
-                    <DialogDescription>Tap a size to add it to the cart.</DialogDescription>
+                    <DialogDescription>Tap a size to add it. Keep tapping to add more, then select Done.</DialogDescription>
                 </DialogHeader>
 
                 <ul v-if="viewing" class="-mx-1 divide-y divide-border">
@@ -518,6 +518,9 @@ onBeforeUnmount(() => {
                                     ×{{ option.units_per_pack }} {{ viewing.unit }}
                                 </span>
                                 <span v-if="outOfStock(option)" class="block text-xs font-medium text-destructive">Out of stock</span>
+                                <span v-if="inCart(option.id)" class="block text-xs font-medium text-primary" aria-live="polite">
+                                    In cart: {{ inCart(option.id) }}
+                                </span>
                             </span>
                             <span class="tabular shrink-0 font-mono text-base font-semibold text-primary">
                                 {{ formatMoney(Number(option.sell_price), currency) }}
@@ -525,6 +528,7 @@ onBeforeUnmount(() => {
                         </button>
                     </li>
                 </ul>
+                <Button type="button" class="w-full" @click="viewing = null">Done</Button>
             </DialogContent>
         </Dialog>
     </div>
